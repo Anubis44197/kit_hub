@@ -32,9 +32,10 @@ AI 기반 웹소설 창작 하네스. Claude Code 위에서 동작하며, 18개 
 /plugin install novel-studio@awesome-ai-studio
 ```
 
-#### 리로드
+#### 세션 재시작으로 활성화
 ```shell
-/reload-plugins
+/exit
+claude
 ```
 
 ---

@@ -34,9 +34,10 @@ An end-to-end web novel production system built on Claude Code. Combines 18 spec
 /plugin install novel-studio@awesome-ai-studio
 ```
 
-#### Reload
+#### Restart session to activate
 ```shell
-/reload-plugins
+/exit
+claude
 ```
 
 ---
