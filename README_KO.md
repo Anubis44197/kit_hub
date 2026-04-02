@@ -20,8 +20,15 @@ AI 기반 웹소설 창작 하네스. Claude Code 위에서 동작하며, 18개 
 
 ## 설치
 
-```bash
+### 마켓플레이스
+
+#### 마켓플레이스 등록
+```shell
 /plugin marketplace add MJbae/novel-studio
+```
+
+#### 플러그인 설치
+```shell
 /plugin install novel-studio@awesome-ai-studio
 ```
 
@@ -30,23 +37,19 @@ AI 기반 웹소설 창작 하네스. Claude Code 위에서 동작하며, 18개 
 ## 빠른 시작
 
 ```bash
-# 1. 프로젝트 디렉토리에서 Claude Code 실행
-cd novel-studio
-claude
-
-# 2. 새 소설 기획안 생성
+# 1. 새 소설 기획안 생성
 /propose
 
-# 3. 큰 설계 (부트스트랩 + 캐릭터시트 + 플롯훅가이드)
+# 2. 큰 설계 (부트스트랩 + 캐릭터시트 + 플롯훅가이드)
 /design-big
 
-# 4. 작은 설계 (25화 단위 세부 설계)
+# 3. 작은 설계 (25화 단위 세부 설계)
 /design-small
 
-# 5. 에피소드 집필
+# 4. 에피소드 집필
 /create
 
-# 6. 윤문
+# 5. 윤문
 /polish
 ```
 

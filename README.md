@@ -22,37 +22,36 @@ An end-to-end web novel production system built on Claude Code. Combines 18 spec
 
 ## Installation
 
-```bash
+### Via Marketplace
+
+#### Add the marketplace
+```shell
 /plugin marketplace add MJbae/novel-studio
-/plugin install novel-studio@awesome-ai-studio
 ```
 
-### Requirements
-
-- [Claude Code](https://claude.com/claude-code) installed
+#### Install the plugin
+```shell
+/plugin install novel-studio@awesome-ai-studio
+```
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Launch Claude Code in the project directory
-cd novel-studio
-claude
-
-# 2. Generate 3 novel proposals, pick one
+# 1. Generate 3 novel proposals, pick one
 /propose
 
-# 3. Big design (bootstrap + character sheet + plot-hook guide)
+# 2. Big design (bootstrap + character sheet + plot-hook guide)
 /design-big
 
-# 4. Small design (25-episode detailed design)
+# 3. Small design (25-episode detailed design)
 /design-small
 
-# 5. Write episodes
+# 4. Write episodes
 /create
 
-# 6. Polish
+# 5. Polish
 /polish
 ```
 
