@@ -297,7 +297,7 @@ footer .links{display:flex;gap:2rem;justify-content:center;margin-bottom:1rem}
   <div class="container text-center">
     <div class="section-tag reveal">THE WALL</div>
     <h2 class="reveal" data-i18n="wall.title" data-i18n-html="true">The Real Reason AI<br><span style="color:#ef4444">Can't Write Long-Form Fiction</span></h2>
-    <p class="section-desc reveal" data-i18n="wall.desc" data-i18n-html="true">Writing a single 5,000-character episode is easy.<br>The challenge is scaling to <strong>300 episodes and 1.5 million characters</strong>. That's where AI breaks down.</p>
+    <p class="section-desc reveal" data-i18n="wall.desc" data-i18n-html="true">Writing a single 5,000-character episode is easy.<br>The challenge is scaling to <strong>300 episodes and 1.5 million characters</strong>.<br>That's where AI breaks down.</p>
 
     <div class="problem-grid">
       <div class="problem-card card-amber reveal">
@@ -390,7 +390,7 @@ footer .links{display:flex;gap:2rem;justify-content:center;margin-bottom:1rem}
   <div class="container text-center">
     <div class="section-tag reveal">AGENTS</div>
     <h2 class="reveal" data-i18n="agents.title" data-i18n-html="true">Design big, break it down,<br>let <span style="color:#f59e0b">18 agents</span> refine it</h2>
-    <p class="section-desc reveal" data-i18n="agents.desc">First, lay out the full narrative arc. Then decompose it into 25-episode blocks. From drafting to polishing, specialized agents handle every step.</p>
+    <p class="section-desc reveal" data-i18n="agents.desc" data-i18n-html="true">First, lay out the full narrative arc.<br>Then decompose it into 25-episode blocks.<br>From drafting to polishing, specialized agents handle every step.</p>
 
     <div class="agent-grid reveal">
       <!-- Design 5 -->
@@ -461,7 +461,7 @@ footer .links{display:flex;gap:2rem;justify-content:center;margin-bottom:1rem}
   <div class="container text-center">
     <div class="section-tag reveal">QUALITY AXES</div>
     <h2 class="reveal" data-i18n="axes.title" data-i18n-html="true"><span style="color:#f59e0b">16</span>-Axis Polish System</h2>
-    <p class="section-desc reveal" data-i18n="axes.desc">Every episode goes through 16 verification passes. Banned expressions, character voice, foreshadowing continuity, mobile readability — catching what even human editors miss.</p>
+    <p class="section-desc reveal" data-i18n="axes.desc" data-i18n-html="true">Every episode goes through 16 verification passes.<br>Banned expressions, character voice, foreshadowing continuity, mobile readability<br>— catching what even human editors miss.</p>
 
     <div class="axes-grid reveal">
       <div class="axis-item ax-red"><div class="axis-id">1</div><div class="axis-name">BANNED</div><div class="axis-desc" data-i18n="ax.1">Prohibited phrases</div></div>
@@ -554,8 +554,8 @@ const i18n = {
     ko: 'AI가 장편을<br><span style="color:#ef4444">못 쓰는 진짜 이유</span>'
   },
   "wall.desc": {
-    en: 'Writing a single 5,000-character episode is easy.<br>The challenge is scaling to <strong>300 episodes and 1.5 million characters</strong>. That\'s where AI breaks down.',
-    ko: '1화 5,000자는 어렵지 않습니다.<br>문제는 <strong>300화, 150만 자</strong>입니다. 여기서 AI는 무너집니다.'
+    en: 'Writing a single 5,000-character episode is easy.<br>The challenge is scaling to <strong>300 episodes and 1.5 million characters</strong>.<br>That\'s where AI breaks down.',
+    ko: '1화 5,000자는 어렵지 않습니다.<br>문제는 <strong>300화, 150만 자</strong>입니다.<br>여기서 AI는 무너집니다.'
   },
   "wall.p1_title": { en: "Characters Lose Their Depth", ko: "인물의 입체성 붕괴" },
   "wall.p1_desc": { en: "A tough character in episode 50 turns indecisive by episode 200. Across dozens of characters, distinct voices, mannerisms, and motivations blur into sameness over time.", ko: "50화에서 강인했던 캐릭터가 200화에서 갑자기 우유부단해집니다. 수십 명의 등장인물 성격\xB7말투\xB7동기가 회차를 거듭할수록 획일화됩니다." },
@@ -589,7 +589,7 @@ const i18n = {
     en: 'Design big, break it down,<br>let <span style="color:#f59e0b">18 agents</span> refine it',
     ko: '크게 설계하고, 잘게 쪼개고,<br><span style="color:#f59e0b">18개 에이전트</span>가 깎는다'
   },
-  "agents.desc": { en: "First, lay out the full narrative arc. Then decompose it into 25-episode blocks. From drafting to polishing, specialized agents handle every step.", ko: "전체 서사를 먼저 잡고, 25화 단위로 분해한 뒤, 집필부터 윤문까지 전문 에이전트가 나눠 맡습니다." },
+  "agents.desc": { en: "First, lay out the full narrative arc.<br>Then decompose it into 25-episode blocks.<br>From drafting to polishing, specialized agents handle every step.", ko: "전체 서사를 먼저 잡고, 25화 단위로 분해한 뒤,<br>집필부터 윤문까지 전문 에이전트가 나눠 맡습니다." },
   "agents.design": { en: "Design", ko: "설계" },
   "agents.creation": { en: "Creation", ko: "집필" },
   "agents.polish": { en: "Polish", ko: "윤문" },
@@ -599,7 +599,7 @@ const i18n = {
     en: '<span style="color:#f59e0b">16</span>-Axis Polish System',
     ko: '<span style="color:#f59e0b">16</span>축 윤문 시스템'
   },
-  "axes.desc": { en: "Every episode goes through 16 verification passes. Banned expressions, character voice, foreshadowing continuity, mobile readability \u2014 catching what even human editors miss.", ko: "에피소드 하나에 16번의 검증. 금지 표현, 캐릭터 음성, 복선 정합성, 모바일 가독성 \u2014 사람 편집자도 놓치는 것까지 잡습니다." },
+  "axes.desc": { en: "Every episode goes through 16 verification passes.<br>Banned expressions, character voice, foreshadowing continuity, mobile readability<br>\u2014 catching what even human editors miss.", ko: "에피소드 하나에 16번의 검증.<br>금지 표현, 캐릭터 음성, 복선 정합성, 모바일 가독성<br>\u2014 사람 편집자도 놓치는 것까지 잡습니다." },
   "ax.1": { en: "Prohibited phrases", ko: "금지 표현" },
   "ax.2": { en: "Character voice", ko: "캐릭터 음성" },
   "ax.3": { en: "Form of address", ko: "호칭 규칙" },
