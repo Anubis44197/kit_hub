@@ -20,33 +20,19 @@ AI 기반 웹소설 창작 하네스. Claude Code 위에서 동작하며, 18개 
 
 ## 설치
 
-### 방법 1: 플러그인 마켓플레이스 (권장)
+### 방법 1: 플러그인 설치 (권장)
 
 ```bash
-# 1단계: 마켓플레이스 등록
-/plugin marketplace add MJbae/novel-studio
+# 플러그인 설치
+/plugin install novel-studio
 
-# 2단계: 플러그인 설치
-/plugin install novel-studio@novel-studio-marketplace
-
-# 3단계: 리로드 (재시작 불필요)
-/reload-plugins
-
-# 스킬 호출 (플러그인 네임스페이스)
+# 스킬 호출
 /novel-studio:propose
 /novel-studio:create
 /novel-studio:polish
 ```
 
-### 방법 2: 로컬 개발
-
-```bash
-# 클론 후 로컬 플러그인으로 로드
-git clone https://github.com/MJbae/novel-studio
-claude --plugin-dir ./novel-studio
-```
-
-### 방법 3: Git 클론 (직접 실행)
+### 방법 2: Git 클론
 
 ```bash
 git clone https://github.com/MJbae/novel-studio my-novel

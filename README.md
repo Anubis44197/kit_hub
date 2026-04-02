@@ -22,33 +22,19 @@ An end-to-end web novel production system built on Claude Code. Combines 18 spec
 
 ## Installation
 
-### Method 1: Plugin Marketplace (Recommended)
+### Method 1: Plugin Install (Recommended)
 
 ```bash
-# Step 1: Add the marketplace
-/plugin marketplace add MJbae/novel-studio
+# Install the plugin
+/plugin install novel-studio
 
-# Step 2: Install the plugin
-/plugin install novel-studio@novel-studio-marketplace
-
-# Step 3: Reload (no restart needed)
-/reload-plugins
-
-# Invoke skills (plugin namespace)
+# Invoke skills
 /novel-studio:propose
 /novel-studio:create
 /novel-studio:polish
 ```
 
-### Method 2: Local Development
-
-```bash
-# Clone and load as a local plugin
-git clone https://github.com/MJbae/novel-studio
-claude --plugin-dir ./novel-studio
-```
-
-### Method 3: Git Clone (Direct)
+### Method 2: Git Clone
 
 ```bash
 git clone https://github.com/MJbae/novel-studio my-novel
