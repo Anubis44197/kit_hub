@@ -216,6 +216,10 @@ custom_axes:
 
 > `quality-verifier`는 집필과 재작성 단계에서 공유됩니다 (고유 에이전트 총 18개).
 
+## 감사의 말
+
+[황민호(revfactory)](https://github.com/revfactory)님께 감사드립니다. [Harness](https://github.com/revfactory/harness) 플러그인 덕분에 초기 하네스 구축이 수월했습니다. 링크드인을 비롯한 여러 채널에서 나눠주시는 인사이트에 항상 큰 도움을 받고 있습니다.
+
 ## 라이선스
 
 [Apache 2.0](LICENSE)

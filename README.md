@@ -218,6 +218,10 @@ custom_axes:
 
 > `quality-verifier` is shared between Creation and Rewrite phases (18 unique agents total).
 
+## Acknowledgments
+
+Special thanks to [Minho Hwang (revfactory)](https://github.com/revfactory) — his [Harness](https://github.com/revfactory/harness) plugin made it easy to bootstrap the initial harness architecture. The insights he shares on LinkedIn and other channels have been a constant source of inspiration.
+
 ## License
 
 [Apache 2.0](LICENSE)
