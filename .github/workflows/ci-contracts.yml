@@ -1,0 +1,25 @@
+name: CI Contracts
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  contract-lint-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run contract lint
+        run: bash scripts/ci/validate_contracts.sh
+
+      - name: Run smoke test
+        run: bash scripts/ci/smoke_test.sh
+
+      - name: Run regression contract smoke
+        run: bash scripts/ci/regression_contract_smoke.sh
+
+      - name: Run final readiness check
+        run: bash scripts/ci/final_readiness_check.sh

@@ -1,0 +1,8 @@
+{
+  "expected_layout_issue_types": [
+    "DIALOGUE_BLOCK_SPLIT",
+    "PARAGRAPH_DENSITY",
+    "CHAPTER_HEADING_FORMAT"
+  ],
+  "max_critical": 0
+}

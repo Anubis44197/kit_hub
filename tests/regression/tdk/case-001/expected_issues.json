@@ -1,0 +1,9 @@
+{
+  "expected_issue_types": [
+    "DE_DA",
+    "KI_USAGE",
+    "QUESTION_PARTICLE",
+    "PUNCTUATION"
+  ],
+  "max_critical": 0
+}
