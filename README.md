@@ -2,71 +2,78 @@
 
 Professional multi-agent pipeline for Turkish long-form fiction production.
 
+## Overview
+This repository provides an agent + skill based writing system for end-to-end novel production.
+
+Primary flow:
+`/propose -> /design-big -> /design-small -> /create -> /polish -> /rewrite -> /export-word`
+
 ## What This Repository Is
-- A plugin-style agent/skill system for IDE-based LLM workflows
-- A structured pipeline for proposal, design, creation, polishing, rewriting, and Word export
-- A contract-driven architecture with CI checks and reproducible validation scripts
+- Contract-driven writing pipeline for long-form projects
+- Runtime-compatible plugin structure (`agents/`, `skills/`, `.claude-plugin/`)
+- Turkish-first quality model with mandatory TDK and layout gates
+- Approval-gated Word export pipeline
 
 ## What This Repository Is Not
-- Not a typical web app with `npm start` or `python app.py`
-- `index.html` is a local technical utility page, not the agent runtime engine
-- Main execution happens through agent commands and runner scripts
+- Not a classic web application (`npm start` / API server)
+- `index.html` is a local utility tool (Word-style preview), not the core runtime engine
+- Main orchestration is command-based in IDE/runtime or via runner scripts
 
 ## Core Capabilities
-- Multi-phase writing workflow: `propose -> design -> create -> polish -> rewrite -> export`
-- Turkish language quality gates via `tdk-polisher`
-- Book layout normalization via `tdk-layout-agent`
-- Approval-gated DOCX export with structural validation
-- Local Word-style preview page (`index.html`) for quick visual checks before export
+| Capability | Description | Main Components |
+|---|---|---|
+| Multi-Phase Writing | Structured progression from concept to export | propose/design/create/polish/rewrite/export |
+| Turkish Language Quality | Spelling, punctuation, grammar particles, dialogue normalization | `tdk-polisher` |
+| Book Layout Normalization | Readability-focused paragraph/dialogue page shaping | `tdk-layout-agent` |
+| Quality Gating | Contract checks before canonical writeback | `quality-verifier`, `revision-reviewer`, CI scripts |
+| Word Export Safety | Explicit user approval and export validation | `export-approval-gate`, `export-validator`, `book-exporter` |
+| Local Visual Preview | Book-like page preview before export | `index.html` |
 
 ## Long-Form Reliability Model (Three Walls)
-Long-form AI fiction usually fails on three recurring problem areas. This repository handles them with explicit contracts and agent gates.
+Long-form AI fiction commonly fails in three areas. This repository addresses each with explicit controls.
 
-1. Character Depth Drift
-   - Risk: character voice and intent become generic over many episodes.
-   - Mitigation in this repo:
-     - `design-big` and `design-small` define character behavior constraints.
-     - `continuity-bridge`, `episode-creator`, `revision-reviewer` enforce continuity and voice consistency.
-
-2. Story Coherence Breakdown
-   - Risk: cause-effect chain weakens, foreshadowing and timeline drift.
-   - Mitigation in this repo:
-     - `novel-config.md` and episode range mapping define source-of-truth documents.
-     - `rule-checker`, `quality-verifier`, and rewrite flow gates block inconsistent outputs.
-
-3. Language and Mechanics Degradation
-   - Risk: punctuation, dialogue structure, readability, and formatting quality decay over time.
-   - Mitigation in this repo:
-     - `tdk-polisher` enforces Turkish spelling, punctuation, dialogue consistency, and readability rules.
-     - `tdk-layout-agent` enforces book/page-oriented paragraph and dialogue layout.
-     - canonical writeback is restricted to validated artifacts only.
+| Wall | Typical Failure | Mitigation in This Repository |
+|---|---|---|
+| Character Depth Drift | Characters become generic over many episodes | Character constraints from design docs + continuity checks (`continuity-bridge`, `episode-creator`, `revision-reviewer`) |
+| Story Coherence Breakdown | Timeline, cause-effect, and foreshadowing drift | `novel-config.md` as source-of-truth + `rule-checker` and `quality-verifier` gates |
+| Language/Mechanics Degradation | Punctuation, dialogue flow, readability degrade | `tdk-polisher` + `tdk-layout-agent` + canonical writeback restrictions |
 
 ## Turkish Novel Quality Layer (TDK + Layout)
-- `tdk-polisher` responsibilities:
-  - spelling and punctuation corrections
-  - `de/da`, `ki`, and question particle usage
-  - dialogue consistency and paragraph readability
-  - minimal-edit policy to preserve literary voice
-- `tdk-layout-agent` responsibilities:
-  - page-readability shaping for book mode
-  - paragraph splitting and dialogue block clarity
-  - stable structure for downstream DOCX export
-- Quality gate order:
-  - `create -> tdk-polisher -> tdk-layout-agent -> quality-verifier -> canonical episode`
+### TDK Polisher Scope
+| Rule Group | What Is Checked | Example |
+|---|---|---|
+| Spelling | Common misspellings and typo cleanup | `yanliz -> yalnız`, `birsey -> bir şey` |
+| Turkish Characters | Character restoration where unambiguous | `cok -> çok`, `yagmur -> yağmur` |
+| Question Particle | Separate `mi/mı/mu/mü` usage | `geliyormu -> geliyor mu` |
+| Conjunctions | `de/da`, `ki` corrections | `dedimki -> dedim ki`, `bende de` |
+| Punctuation | Comma/period/quote spacing and consistency | Remove spaces before punctuation |
+| Dialogue Readability | Dialogue block clarity and consistency | Separate cramped dialogue lines |
+| Paragraph Readability | Split wall-of-text blocks carefully | Keep dramatic short lines intact |
+
+### Layout Agent Scope
+| Area | Behavior |
+|---|---|
+| Book Mode | Enforces page-oriented readability when `book_mode.enabled=true` |
+| Paragraph Engine | Breaks overly dense blocks without changing story meaning |
+| Dialogue Blocks | Keeps speaker flow legible for reading and export |
+| Export Preparation | Stabilizes structure for DOCX output |
+
+### Gate Order (Mandatory)
+`create -> tdk-polisher -> tdk-layout-agent -> quality-verifier -> canonical episode`
 
 ## Prerequisites
 - Git
 - PowerShell 7+ (recommended on Windows)
-- An IDE/runtime that supports plugin-style command execution (agents + skills)
+- IDE/runtime that supports plugin command execution
 
 ## Installation
-1. Clone the repository:
+1. Clone repository:
    - `git clone https://github.com/Anubis44197/kit_hub.git`
-2. Open the repository in your IDE/runtime workspace.
-3. Ensure plugin metadata is visible to the runtime:
+2. Open repository in your IDE/runtime workspace.
+3. Ensure plugin metadata is discoverable:
    - `.claude-plugin/plugin.json`
    - `.claude-plugin/marketplace.json`
-4. Restart the runtime session to reload agents and skills.
+4. Restart runtime session to reload agents and skills.
 5. Optional bootstrap:
    - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
 
@@ -76,49 +83,60 @@ Long-form AI fiction usually fails on three recurring problem areas. This reposi
 3. `/design-small`
 4. `/create`
 5. `/polish`
-6. `/rewrite` (only when needed)
+6. `/rewrite` (only if needed)
 7. `/export-word` (requires explicit user approval)
 
 ## Command Reference
-- `/propose`: generate proposal candidates
-- `/design`: route to big/small design flows
-- `/design-big`: macro architecture (concept, characters, plot hooks)
-- `/design-small`: episode-range detailed planning
-- `/create`: draft episode generation
-- `/polish`: quality correction loop
-- `/rewrite`: structural revision after design drift
-- `/export-word`: gated DOCX export
+| Command | Purpose | Output |
+|---|---|---|
+| `/propose` | Generate project proposals | Candidate concepts |
+| `/design` | Router for design phases | Big/small design selection |
+| `/design-big` | Macro architecture | Concept + character + plot framework |
+| `/design-small` | Episode-range planning | Scene/continuity/hook maps |
+| `/create` | Draft generation | Episode manuscripts |
+| `/polish` | Correction + style stabilization | Polished episode artifacts |
+| `/rewrite` | Structural revision after design drift | Rewritten canonical content |
+| `/export-word` | Approval-gated export | DOCX artifact + validator reports |
 
 ## Pipeline Contracts
-- `tdk-polisher` is mandatory in create/polish/rewrite episode flows
-- `tdk-layout-agent` is mandatory when `book_mode.enabled=true`
-- `quality-verifier` (and revision gates) must return PASS before canonical writeback
+- `tdk-polisher` is mandatory in create/polish/rewrite episode flows.
+- `tdk-layout-agent` is mandatory when `book_mode.enabled=true`.
+- `quality-verifier` and revision gates must return PASS before canonical writeback.
 - Canonical episode source:
-  - `09_tdk-layout_bookmode_EP{NNN}.md` when book mode is enabled
-  - `08_tdk-polisher_polished_EP{NNN}.md` when book mode is disabled
+  - `09_tdk-layout_bookmode_EP{NNN}.md` when book mode enabled
+  - `08_tdk-polisher_polished_EP{NNN}.md` when book mode disabled
 
 ## Language and Content Policy
-- Story/chapter content language: Turkish
-- Agent and skill contract language: English
-- Disallowed scripts in story outputs: Hangul, Han, Hiragana, Katakana
+| Policy | Requirement |
+|---|---|
+| Story/Chapter Language | Turkish |
+| Agent/Skill Contract Language | English |
+| Disallowed Scripts in Story Text | Hangul, Han, Hiragana, Katakana |
+
+## Export and Approval Model
+| Stage | Result |
+|---|---|
+| Approval missing (`approval=false`) | Export blocked with `E_EXPORT_APPROVAL` |
+| Approval granted (`approval=true`) | Export proceeds through validator/manifests |
+| DOCX integrity check | Must pass structural verification (`verify_docx_integrity.ps1`) |
 
 ## Local Validation
-- Windows:
-  - `powershell -ExecutionPolicy Bypass -File scripts/ci/final_readiness_check.ps1`
-- Linux/macOS:
-  - `bash scripts/ci/final_readiness_check.sh`
-- External IDE smoke (Windows):
-  - `powershell -ExecutionPolicy Bypass -File scripts/ci/external_smoke_test.ps1 -WorkspaceRoot <repo-path> -TestRunPath test-run`
-- DOCX integrity:
-  - `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_docx_integrity.ps1 -DocxPath <absolute-path-to-docx>`
+| Task | Command |
+|---|---|
+| Final readiness (Windows) | `powershell -ExecutionPolicy Bypass -File scripts/ci/final_readiness_check.ps1` |
+| Final readiness (Linux/macOS) | `bash scripts/ci/final_readiness_check.sh` |
+| External IDE smoke test (Windows) | `powershell -ExecutionPolicy Bypass -File scripts/ci/external_smoke_test.ps1 -WorkspaceRoot <repo-path> -TestRunPath test-run` |
+| DOCX structural integrity | `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_docx_integrity.ps1 -DocxPath <absolute-path-to-docx>` |
 
 ## Local Word Preview
-- Start a simple local server from repository root:
-  - `python -m http.server 3000`
-- Open:
-  - `http://localhost:3000/`
-- Purpose:
-  - Paste manuscript text and preview Word/book-like page layout before DOCX export
+1. Start a local server from repository root:
+   - `python -m http.server 3000`
+2. Open:
+   - `http://localhost:3000/`
+3. Use cases:
+   - Paste manuscript text
+   - Preview page rhythm, dialogue blocks, and paragraph density
+   - Run visual checks before DOCX export
 
 ## Runner Automation
 - Initialize runtime config:
@@ -127,6 +145,15 @@ Long-form AI fiction usually fails on three recurring problem areas. This reposi
   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase export`
 - Detailed runner guide:
   - `docs/RUNNER_USAGE.md`
+
+## Agent Architecture
+| Metric | Value |
+|---|---|
+| Base architecture | 18 specialist agents |
+| Added for Turkish + layout quality | `tdk-polisher`, `tdk-layout-agent` |
+| Current total | 20 agents |
+
+For complete mapping see `docs/ARCHITECTURE_MAP.md`.
 
 ## Repository Structure
 ```text
