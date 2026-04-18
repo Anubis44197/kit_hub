@@ -40,6 +40,7 @@ test -f skills/polish/references/adapter-claude-codex.md
 test -f skills/polish/references/adapter-generic-ide-model.md
 test -f skills/polish/references/verdict-report-standard.md
 test -f skills/polish/references/multi-model-comparison-test-spec.md
+test -f skills/polish/references/tdk-source-assurance-chain.md
 
 echo "[contract-lint] validating quality-verifier strict metadata contract..."
 grep -q "## Required Report Metadata (Strict)" agents/quality-verifier.md
@@ -50,5 +51,6 @@ grep -q "## Minimal Markdown Verdict Template (Required)" agents/quality-verifie
 echo "[contract-lint] validating Windows validation scripts..."
 test -f scripts/ci/verify_docx_integrity.ps1
 test -f scripts/ci/external_smoke_test.ps1
+test -f scripts/ci/tdk_dict_check.py
 
 echo "[contract-lint] done"

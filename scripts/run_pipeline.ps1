@@ -7,6 +7,7 @@ param(
   [ValidateSet("manual","command")]
   [string]$Mode = "manual",
   [string]$ConfigPath = "",
+  [switch]$EnableDictionaryCheck,
   [switch]$NoWait
 )
 
@@ -112,6 +113,44 @@ function Expand-Template {
   return $out
 }
 
+function Invoke-DictionaryCheck {
+  param(
+    [string]$Phase,
+    [string]$Root,
+    [string]$RunId,
+    [object]$Config,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+
+  if ($Phase -notin @("create","polish","rewrite")) {
+    return
+  }
+
+  $template = ""
+  if ($Config -and $Config.quality_flags -and $Config.quality_flags.dictionary_check_command) {
+    $template = [string]$Config.quality_flags.dictionary_check_command
+  }
+  if (-not $template) {
+    $template = "python scripts/ci/tdk_dict_check.py --project-root ""{project_root}"" --phase {phase} --run-id {run_id}"
+  }
+
+  $cmd = Expand-Template -Template $template -Values @{
+    phase = $Phase
+    project_root = $Root
+    run_id = $RunId
+  }
+
+  Write-Host "[runner] dictionary-check: $cmd"
+  Invoke-Expression $cmd
+  if ($LASTEXITCODE -ne 0) {
+    throw "Dictionary check failed (exit=$LASTEXITCODE): $cmd"
+  }
+}
+
 $phases = @("propose","design-big","design-small","create","polish","rewrite","export")
 $fromIdx = [Array]::IndexOf($phases, $FromPhase)
 $toIdx = [Array]::IndexOf($phases, $ToPhase)
@@ -130,6 +169,14 @@ if ($Mode -eq "manual" -and $cfg.execution_mode -eq "command") {
   $effectiveMode = "command"
 }
 
+$dictionaryCheckEnabled = $false
+if ($cfg -and $cfg.quality_flags -and $cfg.quality_flags.enable_dictionary_check -eq $true) {
+  $dictionaryCheckEnabled = $true
+}
+if ($EnableDictionaryCheck) {
+  $dictionaryCheckEnabled = $true
+}
+
 $runId = "RUN-" + (Get-Date -Format "yyyyMMdd-HHmmss")
 $summaryPath = Join-Path $runtimeDir ("runs/" + $runId + "/run-summary.json")
 $summary = [ordered]@{
@@ -144,6 +191,7 @@ $summary = [ordered]@{
 Write-Host "[runner] run_id=$runId"
 Write-Host "[runner] phase range: $FromPhase -> $ToPhase"
 Write-Host "[runner] mode: $effectiveMode"
+Write-Host "[runner] dictionary_check: $dictionaryCheckEnabled"
 
 for ($i = $fromIdx; $i -le $toIdx; $i++) {
   $phase = $phases[$i]
@@ -200,6 +248,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     }
 
     Validate-PhaseArtifacts -Phase $phase -Root $ProjectRoot
+    Invoke-DictionaryCheck -Phase $phase -Root $ProjectRoot -RunId $runId -Config $cfg -Enabled $dictionaryCheckEnabled
     $step.status = "completed"
     $step.message = "Artifact validation passed."
   }

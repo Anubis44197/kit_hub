@@ -93,6 +93,7 @@ Assert-File "skills/polish/references/adapter-claude-codex.md"
 Assert-File "skills/polish/references/adapter-generic-ide-model.md"
 Assert-File "skills/polish/references/verdict-report-standard.md"
 Assert-File "skills/polish/references/multi-model-comparison-test-spec.md"
+Assert-File "skills/polish/references/tdk-source-assurance-chain.md"
 
 Write-Host "[final-readiness-ps] checking fixture presence..."
 Assert-File "tests/fixtures/sample-project/novel-config.md"
@@ -204,6 +205,7 @@ Assert-File "tests/snapshots/create/case-001/expected/issues.json"
 Write-Host "[final-readiness-ps] checking Windows validation utilities..."
 Assert-File "scripts/ci/verify_docx_integrity.ps1"
 Assert-File "scripts/ci/external_smoke_test.ps1"
+Assert-File "scripts/ci/tdk_dict_check.py"
 
 Write-Host "[final-readiness-ps] checking agent golden placeholders..."
 foreach ($agent in $agentFiles) {

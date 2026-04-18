@@ -1,0 +1,9 @@
+{
+  "expected_issue_types": [
+    "QUESTION_PARTICLE",
+    "KI_USAGE",
+    "SPELLING",
+    "DICTIONARY_VERIFICATION"
+  ],
+  "max_critical": 0
+}

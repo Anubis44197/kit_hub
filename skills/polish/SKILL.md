@@ -17,6 +17,7 @@ Run systematic editorial correction over existing episodes.
    - alive-enhancer
 2. Correction execution (`revision-executor`)
 3. Turkish language and book-mode polish (`tdk-polisher`, POLISH mode) [mandatory]
+   - Optional dictionary verification layer (`tdk_dict_check`) can run after this step
 4. Book layout normalization (`tdk-layout-agent`) [mandatory when `book_mode.enabled=true`]
 5. Correction review (`revision-reviewer`)
 6. Self-loop until episode batch is complete
@@ -81,6 +82,7 @@ Run systematic editorial correction over existing episodes.
 - updated episodes
 - polish reports in workspace
 - mandatory TDK polisher outputs (`08_tdk-polisher_*`)
+- optional dictionary verification report (`10_tdk-dictionary-check_<phase>.json`)
 - mandatory layout outputs when book mode is enabled (`09_tdk-layout_*`)
 - updated fix plan and trackers
 

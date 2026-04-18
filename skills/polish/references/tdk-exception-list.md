@@ -1,6 +1,6 @@
-# TDK Exception List (Project Baseline)
+﻿# TDK Exception List (Project Baseline)
 
-Use this list to prevent false positives in automated TDK checks.
+Use this list to reduce false positives in automated TDK checks.
 
 ## Scope
 These exceptions are allowed when clearly intentional and contextually valid.
@@ -17,16 +17,16 @@ These exceptions are allowed when clearly intentional and contextually valid.
 
 ### 3) Lexicalized Forms and Fixed Expressions
 - Words that should not be split by mechanical heuristics.
-- Examples should be maintained in project-level allowlist as needed.
+- Add them to project allowlist when repeated.
 
-### 4) Poetic/Stylistic Line Breaks
+### 4) Poetic or Stylistic Line Breaks
 - Intentional short lines for dramatic pacing.
 - Do not merge automatically if emotional rhythm is intentional.
 
 ### 5) Quoted Foreign Terms
-- Foreign terms inside quotes may be kept as-is if meaning is clear.
+- Foreign terms inside quotes may remain as-is if meaning is clear.
 - Still block disallowed scripts in core story body per language policy.
 
 ## Operational Rule
-- If a candidate correction matches an exception category, mark as `manual_review` instead of auto-fix.
+- If a candidate correction matches an exception category, mark it as `manual_review` instead of auto-fix.
 - Record exception reason in issue metadata for traceability.

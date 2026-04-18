@@ -22,9 +22,14 @@
     "rewrite": "",
     "export": ""
   },
+  "quality_flags": {
+    "enable_dictionary_check": false,
+    "dictionary_check_command": "python scripts/ci/tdk_dict_check.py --project-root \"{project_root}\" --phase {phase} --run-id {run_id}"
+  },
   "notes": [
     "Preferred: set execution_mode='command' and fill adapter.command_template once.",
     "Template placeholders: {phase}, {project_root}, {run_id}, {from_phase}, {to_phase}, {phase_prompt}",
-    "Alternative: fill phase_commands.<phase> for explicit per-phase commands."
+    "Alternative: fill phase_commands.<phase> for explicit per-phase commands.",
+    "Dictionary check is optional and only runs for create/polish/rewrite when enabled."
   ]
 }

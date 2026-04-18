@@ -29,6 +29,7 @@ No conditional or partial variants are allowed.
 - Plausibility and guard-rail compliance
 - Language smoothness and repetitive-form controls
 - TDK and book-mode polish compliance (must consume `tdk-polisher` outputs)
+- Dictionary verification compliance when dictionary-check artifact exists
 - Layout compliance when `book_mode.enabled=true` (must consume `tdk-layout-agent` outputs)
 
 ## Deterministic Scoring Policy
@@ -41,6 +42,7 @@ No conditional or partial variants are allowed.
 - Re-run checks from scratch on every retry.
 - Do not trust previous verdict summaries without re-validation.
 - Read `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` before verdict.
+- If available, read `{WORK_DIR}/_workspace/10_tdk-dictionary-check_{phase}.json` before verdict.
 - If `book_mode.enabled=true`, also read `09_tdk-layout_issues_EP{NNN}.json` and `09_tdk-layout_report_EP{NNN}.md`.
 
 ## CREATE Pass Criteria (Minimum)
@@ -49,6 +51,7 @@ No conditional or partial variants are allowed.
 - Hook thresholds met
 - Guard rails/custom axes satisfied
 - No unresolved `critical` issue from `tdk-polisher`
+- No unresolved `critical` dictionary issue if dictionary-check artifact reports `status=review_required` with high-confidence misspellings
 - No unresolved `critical` layout issue when `book_mode.enabled=true`
 
 ## REWRITE Pass Criteria (Minimum)
@@ -57,6 +60,7 @@ No conditional or partial variants are allowed.
 - Voice and continuity remain valid
 - Guard rails/custom axes satisfied
 - No unresolved `critical` issue from `tdk-polisher`
+- No unresolved `critical` dictionary issue if dictionary-check artifact reports `status=review_required` with high-confidence misspellings
 - No unresolved `critical` layout issue when `book_mode.enabled=true`
 
 ## Required Output

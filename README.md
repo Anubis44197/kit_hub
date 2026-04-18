@@ -61,10 +61,25 @@ Long-form AI fiction commonly fails in three areas. This repository addresses ea
 ### Gate Order (Mandatory)
 `create -> tdk-polisher -> tdk-layout-agent -> quality-verifier -> canonical episode`
 
+### TDK Source Assurance Chain
+| Layer | Source | Role |
+|---|---|---|
+| 1 | Official TDK rule set (7 references) | Primary writing and punctuation authority |
+| 2 | `tdk-py` dictionary check (optional) | Detect probable misspellings and unknown forms |
+| 3 | Project exception list | Prevent false positives on names, voice, and style |
+| 4 | Regression fixtures | Keep repeated correctness over time |
+| 5 | Human editorial pass | Final publication-grade decision |
+
+Reference documents:
+- `skills/polish/references/tdk-official-baseline.md`
+- `skills/polish/references/tdk-source-assurance-chain.md`
+- `skills/polish/references/tdk-exception-list.md`
+
 ## Prerequisites
 - Git
 - PowerShell 7+ (recommended on Windows)
 - IDE/runtime that supports plugin command execution
+- Python 3.10+ (recommended for optional dictionary-check layer)
 
 ## Installation
 1. Clone repository:
@@ -127,6 +142,7 @@ Long-form AI fiction commonly fails in three areas. This repository addresses ea
 | Final readiness (Linux/macOS) | `bash scripts/ci/final_readiness_check.sh` |
 | External IDE smoke test (Windows) | `powershell -ExecutionPolicy Bypass -File scripts/ci/external_smoke_test.ps1 -WorkspaceRoot <repo-path> -TestRunPath test-run` |
 | DOCX structural integrity | `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_docx_integrity.ps1 -DocxPath <absolute-path-to-docx>` |
+| Optional dictionary verification | `python scripts/ci/tdk_dict_check.py --project-root . --phase polish --run-id RUN-LOCAL` |
 
 ## Local Word Preview
 1. Start a local server from repository root:
@@ -143,6 +159,8 @@ Long-form AI fiction commonly fails in three areas. This repository addresses ea
   - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
 - Run full pipeline:
   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase export`
+- Run with optional dictionary check enabled:
+  - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase create -ToPhase rewrite -EnableDictionaryCheck`
 - Detailed runner guide:
   - `docs/RUNNER_USAGE.md`
 

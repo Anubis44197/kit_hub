@@ -57,6 +57,31 @@ Then run:
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase export -Mode command
 ```
 
+## 3.1) Optional Dictionary Check Layer
+
+You can enable an additional dictionary-verification pass for Turkish text quality.
+This runs automatically after `create`, `polish`, and `rewrite` phases.
+
+In `runtime/runner-config.json`:
+
+```json
+{
+  "quality_flags": {
+    "enable_dictionary_check": true,
+    "dictionary_check_command": "python scripts/ci/tdk_dict_check.py --project-root \"{project_root}\" --phase {phase} --run-id {run_id}"
+  }
+}
+```
+
+Output artifact:
+- `revision/_workspace/10_tdk-dictionary-check_<phase>.json`
+
+You can also force-enable from CLI:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase create -ToPhase rewrite -EnableDictionaryCheck
+```
+
 ## 4) Run Summary
 
 Each run writes:

@@ -37,6 +37,15 @@ If mode is missing, return an explicit error.
 7. Apostrophe usage in proper names, abbreviations, and number suffixes
 8. Dialogue punctuation consistency
 9. Script safety: detect and flag disallowed scripts (Hangul, Han, Hiragana, Katakana)
+10. Optional dictionary verification layer:
+   - Use project dictionary-check artifact when available:
+     `{WORK_DIR}/_workspace/10_tdk-dictionary-check_{phase}.json`
+   - Treat unknown words as `manual_review_required` unless typo certainty is high.
+   - Do not auto-fix proper nouns, dialect forms, or canon-specific vocabulary without evidence.
+   - Rule authority chain:
+     - `skills/polish/references/tdk-official-baseline.md`
+     - `skills/polish/references/tdk-exception-list.md`
+     - `skills/polish/references/tdk-source-assurance-chain.md`
 
 ## Book Mode Checks (Page/Layout Awareness)
 You do not perform final print composition, but you must enforce novel readability constraints:
@@ -72,6 +81,7 @@ Manual-review required:
 - `PARAGRAPH_READABILITY` when pacing/voice impact is high
 - `LINE_END_SPLIT` when syllable split certainty is low
 - `SCRIPT_SAFETY` (always critical + manual correction)
+- `DICTIONARY_VERIFICATION` (unless correction certainty is explicit)
 
 If a rule is uncertain, prefer manual-review and include explicit rationale.
 
@@ -111,6 +121,7 @@ The JSON file must include:
   - `paragraph_readability`
   - `line_end_split`
   - `script_safety`
+  - `dictionary_verification`
 
 ## Issue Type Enum (Required)
 Each issue item in the JSON output must use one of these `issue_type` values:
@@ -125,6 +136,7 @@ Each issue item in the JSON output must use one of these `issue_type` values:
 - `PARAGRAPH_READABILITY`
 - `LINE_END_SPLIT`
 - `SCRIPT_SAFETY`
+- `DICTIONARY_VERIFICATION`
 
 ## Issue Item Schema (Required)
 The JSON output must include an `issues` array.

@@ -3,3 +3,5 @@ _workspace/
 .DS_Store
 claudedocs/
 .omx/
+runtime/runner-config.json
+runtime/runs/
