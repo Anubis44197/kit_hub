@@ -36,41 +36,87 @@ function Validate-PhaseArtifacts {
 
   switch ($Phase) {
     "propose" {
-      Ensure-File (Join-Path $Root "novel-config.md")
+      Ensure-Any -Patterns @(
+        "_workspace/01_proposals.md",
+        "_workspace/01_proposals*.md",
+        "*_proposal.md"
+      ) -BasePath $Root
     }
     "design-big" {
+      Ensure-File (Join-Path $Root "novel-config.md")
       Ensure-Any -Patterns @(
-        "design/arc_master.md",
+        "design/*_bootstrap.md",
         "design/01_concept_bootstrap.md"
+      ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "design/*_character.md",
+        "design/02_character_core.md"
+      ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "design/*_plot-hook.md",
+        "design/03_macro_plot_hooks.md"
       ) -BasePath $Root
     }
     "design-small" {
       Ensure-Any -Patterns @(
-        "design/EP001-EP005_scene_plan.md",
-        "design/*scene_plan*.md"
+        "design/*_character-detail_*.md",
+        "design/*character*detail*.md",
+        "design/EP001-EP005_scene_plan.md"
       ) -BasePath $Root
       Ensure-Any -Patterns @(
-        "design/continuity_map_EP001-EP005.md",
-        "design/*continuity*map*.md"
+        "design/*_plot-detail_*.md",
+        "design/*plot*detail*.md",
+        "design/hook_table_EP001-EP005.md"
       ) -BasePath $Root
-      Ensure-Any -Patterns @(
-        "design/hook_table_EP001-EP005.md",
-        "design/*hook*table*.md"
-      ) -BasePath $Root
+      Ensure-File (Join-Path $Root "novel-config.md")
     }
     "create" {
-      Ensure-Any -Patterns @("episode/ep001.md","episode/ep001*.md") -BasePath $Root
-      Ensure-Any -Patterns @("revision/_workspace/quality-verifier_EP001.md","revision/_workspace/*quality*EP001*.md") -BasePath $Root
+      Ensure-Any -Patterns @("episode/ep*.md") -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_workspace/04_quality-verifier_verdict_EP*.md",
+        "revision/_workspace/*quality*verdict*EP*.md",
+        "revision/_workspace/quality-verifier_EP*.md"
+      ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_workspace/08_tdk-polisher_issues_EP*.json",
+        "revision/_workspace/*tdk-polisher*issues*EP*.json"
+      ) -BasePath $Root
     }
     "polish" {
-      Ensure-Any -Patterns @("revision/_workspace/revision-reviewer_EP001.md","revision/_workspace/*reviewer*EP001*.md") -BasePath $Root
-      Ensure-Any -Patterns @("episode/ep001.md","episode/ep001*.md") -BasePath $Root
+      Ensure-Any -Patterns @("episode/ep*.md") -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_workspace/revision-reviewer_EP*.md",
+        "revision/_workspace/*revision-reviewer*EP*.md",
+        "revision/_workspace/*reviewer*EP*.md"
+      ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_workspace/08_tdk-polisher_issues_EP*.json",
+        "revision/_workspace/*tdk-polisher*issues*EP*.json"
+      ) -BasePath $Root
     }
     "rewrite" {
-      Ensure-Any -Patterns @("revision/_workspace/*rewrite*report*.md","revision/_workspace/*quality*verdict*EP001*.md") -BasePath $Root
+      Ensure-Any -Patterns @("episode/ep*.md") -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_workspace/*rewrite*report*.md",
+        "revision/_workspace/04_quality-verifier_verdict_EP*.md",
+        "revision/_workspace/*quality*verdict*EP*.md"
+      ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_workspace/08_tdk-polisher_issues_EP*.json",
+        "revision/_workspace/*tdk-polisher*issues*EP*.json"
+      ) -BasePath $Root
     }
     "export" {
-      Ensure-Any -Patterns @("revision/_workspace/export-manifest*.json") -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_workspace/10_export-word_manifest_EP*.json",
+        "revision/_workspace/*export-word*manifest*.json",
+        "revision/_workspace/*export-manifest*.json"
+      ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_workspace/10_export-validator_verdict_EP*.json",
+        "revision/_workspace/*export-validator*verdict*.json",
+        "revision/_workspace/*export-validator*.md"
+      ) -BasePath $Root
       Ensure-Any -Patterns @("revision/export/*.docx") -BasePath $Root
     }
     default {
@@ -177,7 +223,7 @@ if ($EnableDictionaryCheck) {
   $dictionaryCheckEnabled = $true
 }
 
-$runId = "RUN-" + (Get-Date -Format "yyyyMMdd-HHmmss")
+$runId = "RUN-" + (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + (Get-Random -Minimum 1000 -Maximum 10000)
 $summaryPath = Join-Path $runtimeDir ("runs/" + $runId + "/run-summary.json")
 $summary = [ordered]@{
   run_id = $runId
@@ -195,7 +241,8 @@ Write-Host "[runner] dictionary_check: $dictionaryCheckEnabled"
 
 for ($i = $fromIdx; $i -le $toIdx; $i++) {
   $phase = $phases[$i]
-  $stepId = "step-" + ($i + 1).ToString("00")
+  $phaseOrdinal = ($i - $fromIdx + 1).ToString("00")
+  $stepId = "$phase-$phaseOrdinal"
   $step = [ordered]@{
     step_id = $stepId
     phase = $phase
