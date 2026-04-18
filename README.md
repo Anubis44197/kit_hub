@@ -19,6 +19,41 @@ Professional multi-agent pipeline for Turkish long-form fiction production.
 - Approval-gated DOCX export with structural validation
 - Local Word-style preview page (`index.html`) for quick visual checks before export
 
+## Long-Form Reliability Model (Three Walls)
+Long-form AI fiction usually fails on three recurring problem areas. This repository handles them with explicit contracts and agent gates.
+
+1. Character Depth Drift
+   - Risk: character voice and intent become generic over many episodes.
+   - Mitigation in this repo:
+     - `design-big` and `design-small` define character behavior constraints.
+     - `continuity-bridge`, `episode-creator`, `revision-reviewer` enforce continuity and voice consistency.
+
+2. Story Coherence Breakdown
+   - Risk: cause-effect chain weakens, foreshadowing and timeline drift.
+   - Mitigation in this repo:
+     - `novel-config.md` and episode range mapping define source-of-truth documents.
+     - `rule-checker`, `quality-verifier`, and rewrite flow gates block inconsistent outputs.
+
+3. Language and Mechanics Degradation
+   - Risk: punctuation, dialogue structure, readability, and formatting quality decay over time.
+   - Mitigation in this repo:
+     - `tdk-polisher` enforces Turkish spelling, punctuation, dialogue consistency, and readability rules.
+     - `tdk-layout-agent` enforces book/page-oriented paragraph and dialogue layout.
+     - canonical writeback is restricted to validated artifacts only.
+
+## Turkish Novel Quality Layer (TDK + Layout)
+- `tdk-polisher` responsibilities:
+  - spelling and punctuation corrections
+  - `de/da`, `ki`, and question particle usage
+  - dialogue consistency and paragraph readability
+  - minimal-edit policy to preserve literary voice
+- `tdk-layout-agent` responsibilities:
+  - page-readability shaping for book mode
+  - paragraph splitting and dialogue block clarity
+  - stable structure for downstream DOCX export
+- Quality gate order:
+  - `create -> tdk-polisher -> tdk-layout-agent -> quality-verifier -> canonical episode`
+
 ## Prerequisites
 - Git
 - PowerShell 7+ (recommended on Windows)
