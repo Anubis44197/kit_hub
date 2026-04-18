@@ -784,3 +784,85 @@ Her adimda hangi dosyanin neden degistirildigi yazilir.
   - Recorded Windows readiness task as `DONE` in plan.
 - Reason:
   - Keep docs, release process, and plan aligned with actual validation entrypoints.
+
+### Adim 77 - External Test Findings Log
+- Added file:
+  - `TEST_RUN_FINDINGS_2026-04-18.md`
+- Changes:
+  - Logged external IDE run issues and contract mismatches:
+    - wrong workspace path usage
+    - Turkish text mojibake
+    - non-compliant TDK/layout issues JSON schemas
+    - incomplete quality-verifier/report policy statements
+  - Added immediate remediation checklist.
+- Reason:
+  - Preserve discovered defects in a single durable file for follow-up fix/verification.
+
+### Adim 78 - External Findings Status Refresh
+- Modified file:
+  - `TEST_RUN_FINDINGS_2026-04-18.md`
+- Changes:
+  - Marked repaired items as resolved after external rerun:
+    - workspace path correction
+    - UTF-8/mojibake fix
+    - TDK/layout issue JSON contract repairs
+    - enum/mode/severity/span normalization
+  - Added open items for export gate scenario and richer verifier metadata follow-up.
+- Reason:
+  - Keep findings document synchronized with latest user-side test outputs.
+
+### Adim 79 - Export Gate Test Tracking
+- Modified file:
+  - `TEST_RUN_FINDINGS_2026-04-18.md`
+- Changes:
+  - Added EP001 export gate test result notes:
+    - Scenario-2 (`READY`/`EXPORTED`) marked as observed.
+    - Scenario-1 blocked-state evidence marked as partially missing in final bundle.
+  - Added residual verification gap for explicit `BLOCKED + E_EXPORT_APPROVAL` capture.
+- Reason:
+  - Preserve exact confidence level of export-gate verification and avoid false closure.
+
+### Adim 80 - Export Gate Evidence Closure
+- Modified file:
+  - `TEST_RUN_FINDINGS_2026-04-18.md`
+- Changes:
+  - Added raw Scenario-1 validator evidence (`BLOCKED`, `E_EXPORT_APPROVAL`).
+  - Marked Scenario-1 and Scenario-2 as verified.
+  - Marked EP001 export gate behavior as fully PASS.
+- Reason:
+  - Close the last open verification gap with explicit blocking evidence.
+
+### Adim 81 - DOCX Output Integrity Risk Logged
+- Modified file:
+  - `TEST_RUN_FINDINGS_2026-04-18.md`
+- Changes:
+  - Added critical finding: external run reported `EP001.docx` as `32 bytes`.
+  - Marked DOCX generation quality as failed despite export gate pass.
+  - Added closure criteria: ZIP header, archive readability, `word/document.xml` existence, realistic size.
+- Reason:
+  - Prevent false PASS on placeholder/truncated DOCX outputs.
+
+### Adim 82 - DOCX Integrity Closure Verified
+- Modified file:
+  - `TEST_RUN_FINDINGS_2026-04-18.md`
+- Changes:
+  - Logged strict integrity evidence for EP001 DOCX:
+    - realistic size (`14727` bytes)
+    - valid ZIP header (`50 4B 03 04 ...`)
+    - ZIP readability and `word/document.xml` existence
+    - manifest/compatibility report updated with PASS
+  - Marked external EP001 end-to-end validation as PASS.
+- Reason:
+  - Close the last critical export integrity risk with hard technical proof.
+
+### Adim 83 - Core Pipeline EP002 Validation Logged
+- Modified file:
+  - `TEST_RUN_FINDINGS_2026-04-18.md`
+- Changes:
+  - Added external EP002 core pipeline verification outcome:
+    - create -> tdk-polisher -> tdk-layout -> quality-verifier
+    - contract-compliant issue JSON outputs
+    - canonical writeback to `episode/ep002.md`
+  - Marked EP002 core pipeline as PASS.
+- Reason:
+  - Record post-export full-flow confidence on a second episode.
