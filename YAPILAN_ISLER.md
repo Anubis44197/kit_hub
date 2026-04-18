@@ -905,3 +905,12 @@ Her adimda hangi dosyanin neden degistirildigi yazilir.
   - Recorded corresponding tasks as DONE in plan.
 - Reason:
   - Standardize external validation and reduce manual test drift.
+
+### Adim 87 - External Smoke Script Path Reliability Fix
+- Modified file:
+  - `scripts/ci/external_smoke_test.ps1`
+- Changes:
+  - Switched internal script calls to use `$PSScriptRoot`-resolved absolute paths.
+  - Added explicit exit-code checks for nested PowerShell calls.
+- Reason:
+  - Ensure external smoke runs reliably even when target workspace does not yet contain newest helper scripts.

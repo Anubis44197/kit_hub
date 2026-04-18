@@ -5,6 +5,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$finalReadinessScript = Join-Path $scriptRoot "final_readiness_check.ps1"
+$docxIntegrityScript = Join-Path $scriptRoot "verify_docx_integrity.ps1"
 
 function Assert-File {
   param([string]$Path)
@@ -30,7 +33,7 @@ try {
   }
 
   Write-Host "[external-smoke] running final readiness..."
-  & powershell -ExecutionPolicy Bypass -File "scripts/ci/final_readiness_check.ps1"
+  & powershell -ExecutionPolicy Bypass -File $finalReadinessScript
   if ($LASTEXITCODE -ne 0) {
     throw "final_readiness_check.ps1 failed with exit code: $LASTEXITCODE"
   }
@@ -58,7 +61,7 @@ try {
     $docxPath = Join-Path $resolvedTestRun "revision\export\EP001.docx"
     Assert-File $docxPath
     Write-Host "[external-smoke] validating DOCX integrity..."
-    & powershell -ExecutionPolicy Bypass -File "scripts/ci/verify_docx_integrity.ps1" -DocxPath $docxPath
+    & powershell -ExecutionPolicy Bypass -File $docxIntegrityScript -DocxPath $docxPath
     if ($LASTEXITCODE -ne 0) {
       throw "verify_docx_integrity.ps1 failed with exit code: $LASTEXITCODE"
     }
