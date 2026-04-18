@@ -758,3 +758,29 @@ Her adimda hangi dosyanin neden degistirildigi yazilir.
   - Added suggested single commit title/body and release scope bullets.
 - Reason:
   - Provide a ready-to-use one-commit summary for release finalization.
+
+### Adim 75 - Windows Final Readiness Script
+- Added file:
+  - `scripts/ci/final_readiness_check.ps1`
+- Changes:
+  - Added a PowerShell-native final readiness validator covering:
+    - agent/skill frontmatter checks
+    - verdict vocabulary guard (`REVISE` ban)
+    - language policy and adapter reference checks
+    - fixture/config/range/pipeline contract checks
+    - regression/snapshot/golden placeholder checks
+    - open TODO guard for `YAPILACAKLAR_PLAN.md`
+- Reason:
+  - Remove Windows bash dependency and enable deterministic local validation on PowerShell.
+
+### Adim 76 - Documentation and Checklist Sync (Windows Validation)
+- Modified files:
+  - `README.md`
+  - `RELEASE_CHECKLIST.md`
+  - `YAPILACAKLAR_PLAN.md`
+- Changes:
+  - Added Windows command for final readiness script.
+  - Added release checklist item for PowerShell validation path.
+  - Recorded Windows readiness task as `DONE` in plan.
+- Reason:
+  - Keep docs, release process, and plan aligned with actual validation entrypoints.

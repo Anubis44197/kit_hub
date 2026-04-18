@@ -38,6 +38,10 @@ This repository contains a multi-agent writing pipeline for long-form Turkish no
 - `/rewrite`: structural rewrite flow
 - `/export-word`: approval-gated DOCX export
 
+## Local Validation
+- Linux/macOS: `bash scripts/ci/final_readiness_check.sh`
+- Windows (PowerShell): `powershell -ExecutionPolicy Bypass -File scripts/ci/final_readiness_check.ps1`
+
 ## Workflow Notes
 - `novel-config.md` is the central source of truth.
 - Episode-range mappings determine active design documents per episode.

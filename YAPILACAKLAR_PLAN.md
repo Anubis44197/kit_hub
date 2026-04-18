@@ -92,6 +92,7 @@ Yeni tespit edilen her is bu dosyaya eklenir.
 - [x] `DONE` `P1` `2026-04-18` PR kontrolu icin otomatik smoke test calistir (ornek fixture ile).
 - [x] `DONE` `P1` `2026-04-18` SemVer ve surum notu akisi tanimla (`CHANGELOG.md` + release checklist).
 - [x] `DONE` `P2` `2026-04-18` Golden-output drift kontrolu ekle (ajan degisikligi sonrasi fark analizi).
+- [x] `DONE` `P0` `2026-04-18` Windows ortami icin PowerShell final-readiness denetim scripti ekle.
 
 ### 9) Guvenlik, Gizlilik ve Telif
 - [x] `DONE` `P0` `2026-04-18` Prompt/rapor ciktilarinda PII redaksiyon kurali ekle.

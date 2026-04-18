@@ -25,5 +25,6 @@
 
 ## Final Review
 - [ ] Run `bash scripts/ci/final_readiness_check.sh`.
+- [ ] On Windows, run `powershell -ExecutionPolicy Bypass -File scripts/ci/final_readiness_check.ps1`.
 - [ ] Review `YAPILAN_ISLER.md` for release scope summary.
 - [ ] Tag release commit after final verification.
