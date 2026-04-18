@@ -41,4 +41,14 @@ test -f skills/polish/references/adapter-generic-ide-model.md
 test -f skills/polish/references/verdict-report-standard.md
 test -f skills/polish/references/multi-model-comparison-test-spec.md
 
+echo "[contract-lint] validating quality-verifier strict metadata contract..."
+grep -q "## Required Report Metadata (Strict)" agents/quality-verifier.md
+grep -q "run_id" agents/quality-verifier.md
+grep -q "step_id" agents/quality-verifier.md
+grep -q "## Minimal Markdown Verdict Template (Required)" agents/quality-verifier.md
+
+echo "[contract-lint] validating Windows validation scripts..."
+test -f scripts/ci/verify_docx_integrity.ps1
+test -f scripts/ci/external_smoke_test.ps1
+
 echo "[contract-lint] done"

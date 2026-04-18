@@ -866,3 +866,42 @@ Her adimda hangi dosyanin neden degistirildigi yazilir.
   - Marked EP002 core pipeline as PASS.
 - Reason:
   - Record post-export full-flow confidence on a second episode.
+
+### Adim 84 - Quality Verifier Metadata Contract Hardening
+- Modified files:
+  - `agents/quality-verifier.md`
+  - `scripts/ci/validate_contracts.sh`
+  - `scripts/ci/final_readiness_check.ps1`
+- Changes:
+  - Added strict runtime metadata requirements (`run_id`, `step_id`, `mode`, `agent_name`, model/verdict fields).
+  - Added required markdown verdict template headings.
+  - Added lint/readiness checks to enforce new contract sections.
+- Reason:
+  - Reduce ambiguous verifier outputs and improve deterministic report parsing.
+
+### Adim 85 - DOCX Integrity Automation
+- Added file:
+  - `scripts/ci/verify_docx_integrity.ps1`
+- Changes:
+  - Added hard DOCX checks:
+    - file existence
+    - minimum size threshold
+    - ZIP signature (`50 4B 03 04`)
+    - archive readability
+    - required entry `word/document.xml`
+- Reason:
+  - Prevent false-positive export success on placeholder/corrupt DOCX outputs.
+
+### Adim 86 - External IDE One-Command Smoke
+- Added file:
+  - `scripts/ci/external_smoke_test.ps1`
+- Modified files:
+  - `README.md`
+  - `RELEASE_CHECKLIST.md`
+  - `YAPILACAKLAR_PLAN.md`
+- Changes:
+  - Added one-command external smoke test for user-side IDE runs.
+  - Added README and release checklist commands for external smoke and DOCX integrity checks.
+  - Recorded corresponding tasks as DONE in plan.
+- Reason:
+  - Standardize external validation and reduce manual test drift.

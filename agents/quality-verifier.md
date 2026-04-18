@@ -64,3 +64,28 @@ No conditional or partial variants are allowed.
 - Include per-axis findings and concrete rewrite instructions when verdict is `REWRITE`.
 - Also emit JSON companion using:
   - `skills/polish/references/workflow-report-json-schema.md`
+
+## Required Report Metadata (Strict)
+Both markdown and JSON outputs must include:
+- `run_id`
+- `step_id` (`create-06` or `rewrite-06` based on flow)
+- `episode`
+- `mode` (`CREATE` | `REWRITE`)
+- `agent_name` (`quality-verifier`)
+- `prompt_version`
+- `effective_model`
+- `verdict` (`PASS` | `REWRITE`)
+
+If verdict is `REWRITE`, include:
+- `error_code` from `skills/polish/references/error-code-glossary.md`
+- actionable rewrite instructions with numbered items
+
+## Minimal Markdown Verdict Template (Required)
+The markdown verdict file must contain these headings:
+- `# Quality Gate Report - EP{NNN}`
+- `## Runtime Metadata`
+- `## Scorecard`
+- `## Issue Summary`
+- `## Decision`
+
+`## Runtime Metadata` must include run_id and step_id lines explicitly.

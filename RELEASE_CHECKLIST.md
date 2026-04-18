@@ -18,6 +18,7 @@
 - [ ] Validate `export-word` pipeline contracts.
 - [ ] Verify approval gate and validator gate are mandatory.
 - [ ] Verify compatibility test plan is up to date.
+- [ ] Run `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_docx_integrity.ps1 -DocxPath <docx-path>`.
 
 ## Runtime Observability
 - [ ] Verify `run-summary` and metrics contracts are unchanged or intentionally updated.
@@ -26,5 +27,6 @@
 ## Final Review
 - [ ] Run `bash scripts/ci/final_readiness_check.sh`.
 - [ ] On Windows, run `powershell -ExecutionPolicy Bypass -File scripts/ci/final_readiness_check.ps1`.
+- [ ] For external IDE sessions, run `powershell -ExecutionPolicy Bypass -File scripts/ci/external_smoke_test.ps1 -WorkspaceRoot <repo-path> -TestRunPath test-run`.
 - [ ] Review `YAPILAN_ISLER.md` for release scope summary.
 - [ ] Tag release commit after final verification.

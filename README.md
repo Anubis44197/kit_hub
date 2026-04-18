@@ -41,6 +41,8 @@ This repository contains a multi-agent writing pipeline for long-form Turkish no
 ## Local Validation
 - Linux/macOS: `bash scripts/ci/final_readiness_check.sh`
 - Windows (PowerShell): `powershell -ExecutionPolicy Bypass -File scripts/ci/final_readiness_check.ps1`
+- External IDE smoke (Windows): `powershell -ExecutionPolicy Bypass -File scripts/ci/external_smoke_test.ps1 -WorkspaceRoot <repo-path> -TestRunPath test-run`
+- DOCX structural integrity check: `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_docx_integrity.ps1 -DocxPath <absolute-path-to-docx>`
 
 ## Workflow Notes
 - `novel-config.md` is the central source of truth.

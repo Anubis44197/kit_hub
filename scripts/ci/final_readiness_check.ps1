@@ -73,6 +73,12 @@ Write-Host "[final-readiness-ps] validating mandatory export gate..."
 Assert-Contains -Path "skills/export-word/SKILL.md" -Pattern "export-approval-gate" -ErrorMessage "Missing export-approval-gate reference"
 Assert-Contains -Path "skills/export-word/SKILL.md" -Pattern "export-validator" -ErrorMessage "Missing export-validator reference"
 
+Write-Host "[final-readiness-ps] validating quality-verifier strict metadata contract..."
+Assert-Contains -Path "agents/quality-verifier.md" -Pattern "## Required Report Metadata \(Strict\)" -ErrorMessage "Missing strict metadata contract section in quality-verifier"
+Assert-Contains -Path "agents/quality-verifier.md" -Pattern "(?m)run_id" -ErrorMessage "Missing run_id requirement in quality-verifier"
+Assert-Contains -Path "agents/quality-verifier.md" -Pattern "(?m)step_id" -ErrorMessage "Missing step_id requirement in quality-verifier"
+Assert-Contains -Path "agents/quality-verifier.md" -Pattern "## Minimal Markdown Verdict Template \(Required\)" -ErrorMessage "Missing markdown verdict template section in quality-verifier"
+
 Write-Host "[final-readiness-ps] validating language policy blocks..."
 $policyPattern = [regex]::Escape("Disallowed scripts in story content: Hangul, Han, Hiragana, Katakana.")
 Assert-Contains -Path "skills/create/SKILL.md" -Pattern $policyPattern -ErrorMessage "Missing language policy in skills/create/SKILL.md"
@@ -194,6 +200,10 @@ Assert-File "tests/regression/layout/case-001/expected_issues.json"
 Write-Host "[final-readiness-ps] checking snapshot fixtures..."
 Assert-File "tests/snapshots/create/case-001/expected/verdict.md"
 Assert-File "tests/snapshots/create/case-001/expected/issues.json"
+
+Write-Host "[final-readiness-ps] checking Windows validation utilities..."
+Assert-File "scripts/ci/verify_docx_integrity.ps1"
+Assert-File "scripts/ci/external_smoke_test.ps1"
 
 Write-Host "[final-readiness-ps] checking agent golden placeholders..."
 foreach ($agent in $agentFiles) {
