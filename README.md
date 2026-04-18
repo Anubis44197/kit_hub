@@ -1,4 +1,4 @@
-# Novel Writing Engine
+ï»¿# Novel Writing Engine
 
 Professional multi-agent pipeline for Turkish long-form fiction production.
 
@@ -9,7 +9,7 @@ Professional multi-agent pipeline for Turkish long-form fiction production.
 
 ## What This Repository Is Not
 - Not a typical web app with `npm start` or `python app.py`
-- `index.html` is a local technical page, not the execution engine
+- `index.html` is a local technical utility page, not the agent runtime engine
 - Main execution happens through agent commands and runner scripts
 
 ## Core Capabilities
@@ -17,6 +17,7 @@ Professional multi-agent pipeline for Turkish long-form fiction production.
 - Turkish language quality gates via `tdk-polisher`
 - Book layout normalization via `tdk-layout-agent`
 - Approval-gated DOCX export with structural validation
+- Local Word-style preview page (`index.html`) for quick visual checks before export
 
 ## Prerequisites
 - Git
@@ -76,6 +77,14 @@ Professional multi-agent pipeline for Turkish long-form fiction production.
 - DOCX integrity:
   - `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_docx_integrity.ps1 -DocxPath <absolute-path-to-docx>`
 
+## Local Word Preview
+- Start a simple local server from repository root:
+  - `python -m http.server 3000`
+- Open:
+  - `http://localhost:3000/`
+- Purpose:
+  - Paste manuscript text and preview Word/book-like page layout before DOCX export
+
 ## Runner Automation
 - Initialize runtime config:
   - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
@@ -87,14 +96,14 @@ Professional multi-agent pipeline for Turkish long-form fiction production.
 ## Repository Structure
 ```text
 .
-+¦¦ agents/
-+¦¦ skills/
-+¦¦ scripts/
-+¦¦ tests/
-+¦¦ docs/
-+¦¦ runtime/
-+¦¦ .claude-plugin/
-L¦¦ index.html
+â”œâ”€â”€ agents/
+â”œâ”€â”€ skills/
+â”œâ”€â”€ scripts/
+â”œâ”€â”€ tests/
+â”œâ”€â”€ docs/
+â”œâ”€â”€ runtime/
+â”œâ”€â”€ .claude-plugin/
+â””â”€â”€ index.html
 ```
 
 ## Documentation

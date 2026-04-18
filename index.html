@@ -1,40 +1,332 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Novel Writing Engine</title>
+  <title>Word Preview Studio</title>
   <style>
-    :root { --bg:#0b1220; --panel:#111a2b; --text:#e8eefc; --muted:#a7b4d1; --line:#2a3856; }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
-    .wrap{max-width:920px;margin:0 auto;padding:28px}
-    .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px}
-    h1,h2{margin:0 0 10px}
-    p,li{color:var(--muted);line-height:1.5}
-    code{color:#d6e4ff}
+    :root {
+      --bg: #f1f4f8;
+      --panel: #ffffff;
+      --line: #d5dce6;
+      --ink: #1f2630;
+      --muted: #5e6a79;
+      --accent: #1f5cc6;
+      --paper-w: 13.5cm;
+      --paper-h: 21cm;
+      --paper-pad: 1.8cm;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top left, #ffffff 0%, var(--bg) 45%, #e8edf4 100%);
+      color: var(--ink);
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    .layout {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 20px;
+      min-height: 100vh;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(25, 45, 78, 0.08);
+    }
+
+    .controls { padding: 16px; }
+    .title {
+      margin: 0 0 8px;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+    .hint {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    label {
+      display: block;
+      margin: 10px 0 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #2f3a49;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 380px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      font: 15px/1.5 "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      outline: none;
+    }
+    textarea:focus { border-color: var(--accent); }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+    .actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: 1px solid var(--line);
+      background: #f7f9fc;
+      color: #233043;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button.primary {
+      border-color: #1a4ea9;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .meta {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .preview-wrap { padding: 16px; overflow: auto; }
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .pages {
+      display: grid;
+      gap: 16px;
+      justify-content: center;
+      padding-bottom: 30px;
+    }
+    .page {
+      width: var(--paper-w);
+      min-height: var(--paper-h);
+      background: #fff;
+      border: 1px solid #d9dfeb;
+      box-shadow: 0 12px 26px rgba(15, 28, 52, 0.12);
+      padding: var(--paper-pad);
+      position: relative;
+      color: #242b34;
+      font-family: "Palatino Linotype", Palatino, "Book Antiqua", serif;
+      line-height: 1.34;
+      font-size: 11pt;
+      overflow: hidden;
+    }
+    .page p {
+      margin: 0 0 0.8em;
+      text-align: justify;
+      text-indent: 1.2em;
+      white-space: pre-wrap;
+      word-break: normal;
+      overflow-wrap: break-word;
+    }
+    .page p.dialogue {
+      text-indent: 0;
+      margin-left: 0.4em;
+    }
+    .page p.heading {
+      text-indent: 0;
+      text-align: center;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin: 0.2em 0 1em;
+    }
+    .page-no {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0.8cm;
+      text-align: center;
+      color: #6a7481;
+      font-size: 10pt;
+    }
+
+    @media (max-width: 1080px) {
+      .layout { grid-template-columns: 1fr; }
+      .page { width: 100%; min-height: auto; }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="box">
-      <h1>Novel Writing Engine</h1>
-      <p>Local technical page. No ads, no external redirects.</p>
-    </div>
+  <div class="layout">
+    <section class="panel controls">
+      <h1 class="title">Word Preview Studio</h1>
+      <p class="hint">
+        Paste chapter text on the left. The right side renders a live, book-style page preview suitable for Word export checks.
+      </p>
 
-    <div class="box">
-      <h2>Components</h2>
-      <ul>
-        <li><code>agents/</code>: specialist agent definitions</li>
-        <li><code>skills/</code>: orchestration flows</li>
-        <li><code>.claude-plugin/</code>: plugin metadata</li>
-      </ul>
-    </div>
+      <label for="inputText">Manuscript Text</label>
+      <textarea id="inputText" spellcheck="false">BÖLÜM 1
 
-    <div class="box">
-      <h2>Main Flow</h2>
-      <p><code>/propose</code> → <code>/design-big</code> → <code>/design-small</code> → <code>/create</code> → <code>/polish</code> → <code>/rewrite</code></p>
-    </div>
+Göl sabahın erken saatlerinde neredeyse cam kadar sakindi. Kenan oltasını usulca suya bıraktı.
+
+"Bugün rüzgâr ters dönecek," dedi kendi kendine.
+
+Sözleri kıyıda yankılanıp kaybolurken, suyun yüzeyinde ince bir halka genişledi.</textarea>
+
+      <div class="row">
+        <div>
+          <label for="charsPerPage">Chars / Page</label>
+          <input id="charsPerPage" type="number" min="600" max="4500" step="100" value="1900" />
+        </div>
+        <div>
+          <label for="fontSize">Font Size (pt)</label>
+          <input id="fontSize" type="number" min="10" max="14" step="1" value="11" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="renderBtn">Render Preview</button>
+        <button id="clearBtn">Clear</button>
+        <button id="sampleBtn">Load Sample</button>
+      </div>
+
+      <div class="meta" id="metaInfo">
+        Characters: 0<br />
+        Words: 0<br />
+        Pages: 0
+      </div>
+    </section>
+
+    <section class="panel preview-wrap">
+      <div class="preview-header">
+        <strong>Book Page Preview</strong>
+        <span id="previewStatus">Ready</span>
+      </div>
+      <div id="pages" class="pages"></div>
+    </section>
   </div>
+
+  <script>
+    const inputText = document.getElementById("inputText");
+    const charsPerPage = document.getElementById("charsPerPage");
+    const fontSize = document.getElementById("fontSize");
+    const pagesEl = document.getElementById("pages");
+    const metaInfo = document.getElementById("metaInfo");
+    const previewStatus = document.getElementById("previewStatus");
+    const renderBtn = document.getElementById("renderBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const sampleBtn = document.getElementById("sampleBtn");
+
+    function paragraphKind(text) {
+      const t = text.trim();
+      if (!t) return "empty";
+      if (/^b[öo]l[üu]m\s+\d+/i.test(t) || /^chapter\s+\d+/i.test(t)) return "heading";
+      if (t.startsWith("\"") || t.startsWith("“") || t.startsWith("—") || t.startsWith("- ")) return "dialogue";
+      return "normal";
+    }
+
+    function splitPages(paragraphs, limit) {
+      const pages = [];
+      let current = [];
+      let currentLen = 0;
+
+      for (const p of paragraphs) {
+        const len = p.length + 1;
+        if (currentLen + len > limit && current.length > 0) {
+          pages.push(current);
+          current = [];
+          currentLen = 0;
+        }
+        current.push(p);
+        currentLen += len;
+      }
+      if (current.length > 0) pages.push(current);
+      return pages;
+    }
+
+    function updatePreview() {
+      const raw = inputText.value.replace(/\r\n/g, "\n");
+      const cleaned = raw.replace(/[ \t]+\n/g, "\n").trim();
+      const limit = Math.max(600, Math.min(4500, Number(charsPerPage.value) || 1900));
+      const pt = Math.max(10, Math.min(14, Number(fontSize.value) || 11));
+
+      document.documentElement.style.setProperty("--paper-font-size", pt + "pt");
+      const paragraphs = cleaned ? cleaned.split(/\n{2,}/).map(x => x.trim()).filter(Boolean) : [];
+      const pages = splitPages(paragraphs, limit);
+
+      pagesEl.innerHTML = "";
+      pages.forEach((content, idx) => {
+        const page = document.createElement("article");
+        page.className = "page";
+        page.style.fontSize = pt + "pt";
+
+        content.forEach((line) => {
+          const p = document.createElement("p");
+          const kind = paragraphKind(line);
+          if (kind === "dialogue") p.classList.add("dialogue");
+          if (kind === "heading") p.classList.add("heading");
+          p.textContent = line;
+          page.appendChild(p);
+        });
+
+        const no = document.createElement("div");
+        no.className = "page-no";
+        no.textContent = String(idx + 1);
+        page.appendChild(no);
+        pagesEl.appendChild(page);
+      });
+
+      const charCount = cleaned.length;
+      const wordCount = cleaned ? cleaned.split(/\s+/).filter(Boolean).length : 0;
+      metaInfo.innerHTML =
+        "Characters: " + charCount + "<br />" +
+        "Words: " + wordCount + "<br />" +
+        "Pages: " + pages.length;
+      previewStatus.textContent = pages.length ? ("Rendered " + pages.length + " page(s)") : "No content";
+    }
+
+    renderBtn.addEventListener("click", updatePreview);
+    inputText.addEventListener("input", updatePreview);
+    charsPerPage.addEventListener("change", updatePreview);
+    fontSize.addEventListener("change", updatePreview);
+
+    clearBtn.addEventListener("click", () => {
+      inputText.value = "";
+      updatePreview();
+    });
+
+    sampleBtn.addEventListener("click", () => {
+      inputText.value = "BÖLÜM 3\n\nKenan oltanın misinasını sessizce sararken gölün üstüne ince bir sis indi.\n\n\"Bugün balık yok,\" dedi yaşlı adam, \"ama su bize bir şey anlatıyor.\"\n\nKıyıya vuran dalgalar kısa aralıklarla taşlara çarpıyor, sanki uzak bir saate ritim tutuyordu.";
+      updatePreview();
+    });
+
+    updatePreview();
+  </script>
 </body>
 </html>
