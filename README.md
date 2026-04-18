@@ -142,7 +142,7 @@ Reference documents:
 | Final readiness (Linux/macOS) | `bash scripts/ci/final_readiness_check.sh` |
 | External IDE smoke test (Windows) | `powershell -ExecutionPolicy Bypass -File scripts/ci/external_smoke_test.ps1 -WorkspaceRoot <repo-path> -TestRunPath test-run` |
 | DOCX structural integrity | `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_docx_integrity.ps1 -DocxPath <absolute-path-to-docx>` |
-| Optional dictionary verification | `python scripts/ci/tdk_dict_check.py --project-root . --phase polish --run-id RUN-LOCAL` |
+| Optional dictionary verification | `powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot . -Phase polish -RunId RUN-LOCAL` |
 
 ## Local Word Preview
 1. Start a local server from repository root:

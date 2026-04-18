@@ -3,13 +3,13 @@
 Optional dictionary verification utility for Turkish episode text.
 
 Behavior:
-- Reads episode text files.
+- Reads episode markdown files.
 - Extracts candidate words.
-- If `tdk-py` is available, validates unknown words against TDK suggestions/index.
+- If `tdk-py` is available, validates words against TDK dictionary APIs.
 - Writes a JSON report under revision/_workspace.
 
-This script is designed to be fail-safe for CI/runner usage:
-- Missing provider (`tdk-py`) is reported as "skipped" unless --require-provider is set.
+Fail-safe mode:
+- Missing provider (`tdk-py`) is reported as "skipped" unless --require-provider is used.
 """
 
 from __future__ import annotations
@@ -24,7 +24,9 @@ from pathlib import Path
 from typing import Iterable
 
 
-WORD_RE = re.compile(r"[A-Za-zÇĞİÖŞÜçğıöşü]{3,}")
+TURKISH_WORD_RE = re.compile(
+    r"[A-Za-z\u00C7\u011E\u0130\u00D6\u015E\u00DC\u00E7\u011F\u0131\u00F6\u015F\u00FC]{3,}"
+)
 
 
 @dataclass
@@ -54,15 +56,36 @@ def collect_episode_files(project_root: Path) -> list[Path]:
 
 
 def tokenize(text: str) -> Iterable[str]:
-    for token in WORD_RE.findall(text):
+    for token in TURKISH_WORD_RE.findall(text):
         yield token.lower()
 
 
 def build_allowlist() -> set[str]:
     # Conservative baseline to avoid false positives on common function words.
     return {
-        "ve", "ile", "ama", "fakat", "gibi", "icin", "için", "kadar", "daha", "cok", "çok",
-        "bir", "bu", "su", "şu", "o", "da", "de", "ki", "mi", "mı", "mu", "mü",
+        "ve",
+        "ile",
+        "ama",
+        "fakat",
+        "gibi",
+        "icin",
+        "için",
+        "kadar",
+        "daha",
+        "cok",
+        "çok",
+        "bir",
+        "bu",
+        "su",
+        "şu",
+        "o",
+        "da",
+        "de",
+        "ki",
+        "mi",
+        "mı",
+        "mu",
+        "mü",
     }
 
 
@@ -128,7 +151,7 @@ def main() -> int:
             try:
                 results = tdk.search_gts_sync(word)
             except Exception:
-                # Provider error is non-fatal in optional mode.
+                # Provider runtime error is non-fatal in optional mode.
                 continue
 
             if results:

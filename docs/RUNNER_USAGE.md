@@ -68,7 +68,7 @@ In `runtime/runner-config.json`:
 {
   "quality_flags": {
     "enable_dictionary_check": true,
-    "dictionary_check_command": "python scripts/ci/tdk_dict_check.py --project-root \"{project_root}\" --phase {phase} --run-id {run_id}"
+    "dictionary_check_command": "powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot \"{project_root}\" -Phase {phase} -RunId {run_id}"
   }
 }
 ```

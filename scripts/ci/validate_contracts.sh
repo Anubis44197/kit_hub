@@ -52,5 +52,6 @@ echo "[contract-lint] validating Windows validation scripts..."
 test -f scripts/ci/verify_docx_integrity.ps1
 test -f scripts/ci/external_smoke_test.ps1
 test -f scripts/ci/tdk_dict_check.py
+test -f scripts/ci/tdk_dict_check.ps1
 
 echo "[contract-lint] done"

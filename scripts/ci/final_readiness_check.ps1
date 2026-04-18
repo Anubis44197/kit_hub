@@ -206,6 +206,7 @@ Write-Host "[final-readiness-ps] checking Windows validation utilities..."
 Assert-File "scripts/ci/verify_docx_integrity.ps1"
 Assert-File "scripts/ci/external_smoke_test.ps1"
 Assert-File "scripts/ci/tdk_dict_check.py"
+Assert-File "scripts/ci/tdk_dict_check.ps1"
 
 Write-Host "[final-readiness-ps] checking agent golden placeholders..."
 foreach ($agent in $agentFiles) {
