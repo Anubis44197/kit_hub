@@ -212,16 +212,4 @@ foreach ($agent in $agentFiles) {
   Assert-File "tests/golden/agents/$agentName/expected.md"
 }
 
-Write-Host "[final-readiness-ps] verifying plan has no open TODO tasks..."
-$planLines = Get-Content -LiteralPath "YAPILACAKLAR_PLAN.md"
-$openTodoCount = 0
-foreach ($line in $planLines) {
-  if ($line -match '- \[ \] `TODO`' -and $line -notmatch 'TODO\|IN_PROGRESS\|BLOCKED\|DONE') {
-    $openTodoCount++
-  }
-}
-if ($openTodoCount -ne 0) {
-  throw "Open TODO tasks found in YAPILACAKLAR_PLAN.md: $openTodoCount"
-}
-
 Write-Host "[final-readiness-ps] done"

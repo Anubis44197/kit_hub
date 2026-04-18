@@ -28,5 +28,5 @@
 - [ ] Run `bash scripts/ci/final_readiness_check.sh`.
 - [ ] On Windows, run `powershell -ExecutionPolicy Bypass -File scripts/ci/final_readiness_check.ps1`.
 - [ ] For external IDE sessions, run `powershell -ExecutionPolicy Bypass -File scripts/ci/external_smoke_test.ps1 -WorkspaceRoot <repo-path> -TestRunPath test-run`.
-- [ ] Review `YAPILAN_ISLER.md` for release scope summary.
+- [ ] Review `CHANGELOG.md` release notes and runner usage docs for scope consistency.
 - [ ] Tag release commit after final verification.

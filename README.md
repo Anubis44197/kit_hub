@@ -6,6 +6,8 @@ This repository contains a multi-agent writing pipeline for long-form Turkish no
 1. Copy this repository into your local plugin workspace.
 2. Ensure `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` are discoverable by your runtime.
 3. Restart the runtime session so updated skills/agents are reloaded.
+4. (Optional) Initialize runner config:
+   - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
 
 ## Quick Start
 1. Run `/propose` to generate project-level concept options.
@@ -43,6 +45,16 @@ This repository contains a multi-agent writing pipeline for long-form Turkish no
 - Windows (PowerShell): `powershell -ExecutionPolicy Bypass -File scripts/ci/final_readiness_check.ps1`
 - External IDE smoke (Windows): `powershell -ExecutionPolicy Bypass -File scripts/ci/external_smoke_test.ps1 -WorkspaceRoot <repo-path> -TestRunPath test-run`
 - DOCX structural integrity check: `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_docx_integrity.ps1 -DocxPath <absolute-path-to-docx>`
+
+## Orchestrator Runner
+- Bootstrap runtime config: `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
+- Run full pipeline (manual-gated): `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase export`
+- Run command-driven automation: set `runtime/runner-config.json` to `execution_mode=command` and fill phase commands.
+- Full guide: `docs/RUNNER_USAGE.md`
+
+## Repository Policy
+- Internal temporary tracking logs are not part of release artifacts.
+- Keep repository focused on agents, skills, scripts, and documentation required for runtime usage.
 
 ## Workflow Notes
 - `novel-config.md` is the central source of truth.
