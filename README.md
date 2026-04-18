@@ -8,6 +8,20 @@ This repository provides an agent + skill based writing system for end-to-end no
 Primary flow:
 `/propose -> /design-big -> /design-small -> /create -> /polish -> /rewrite -> /export-word`
 
+## Repository Positioning (Upstream vs This Repository)
+This project is based on the upstream architecture (`MJbae/awesome-novel-studio`) and extended for stricter Turkish publication workflow.
+
+| Criteria | Upstream (`awesome-novel-studio`) | This Repo (`kit_hub`) |
+|---|---|---|
+| Primary role | Novel production pipeline | Novel production pipeline |
+| Turkish quality layer | Limited | Extended (`tdk-polisher`, optional dictionary check, exception governance) |
+| Book layout gate | Present | Present + mandatory gate contract in create/polish/rewrite flows |
+| Export safety | Basic export flow | Approval gate + validator + DOCX integrity checks |
+| Runner/orchestration | Phase-oriented | Phase-oriented + artifact gates + optional dictionary check integration |
+| Local preview | Minimal technical page | Word-style preview page (`index.html`) |
+
+Summary: `kit_hub` is not only a content panel. It is an extended production engine with stronger quality controls.
+
 ## What This Repository Is
 - Contract-driven writing pipeline for long-form projects
 - Runtime-compatible plugin structure (`agents/`, `skills/`, `.claude-plugin/`)
@@ -168,8 +182,8 @@ Reference documents:
 | Metric | Value |
 |---|---|
 | Base architecture | 18 specialist agents |
-| Added for Turkish + layout quality | `tdk-polisher`, `tdk-layout-agent` |
-| Current total | 20 agents |
+| Added project-specific agents/layers | `tdk-polisher`, `tdk-layout-agent`, export approval/validator/exporter set, and related gates |
+| Current total | 23 agent definitions |
 
 For complete mapping see `docs/ARCHITECTURE_MAP.md`.
 
