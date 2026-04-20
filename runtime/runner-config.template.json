@@ -37,7 +37,7 @@
     },
     "forbidden_content_patterns": [
       "(?i)TL;DR",
-      "(?im)^\\s*Özet\\s*:",
+      "(?im)^\\s*Ozet\\s*:",
       "(?im)^\\s*Summary\\s*:",
       "\\[TODO\\]",
       "(?i)lorem ipsum"

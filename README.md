@@ -107,17 +107,19 @@ Reference documents:
    - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
 
 ## Quick Start
-1. `/propose`
-2. `/design-big`
-3. `/design-small`
-4. `/create`
-5. `/polish`
-6. `/rewrite` (only if needed)
-7. `/export-word` (requires explicit user approval)
+1. `/run` (single-command full pipeline)
+2. `/propose` (if you want phase-by-phase control)
+3. `/design-big`
+4. `/design-small`
+5. `/create`
+6. `/polish`
+7. `/rewrite` (only if needed)
+8. `/export-word` (requires explicit user approval)
 
 ## Command Reference
 | Command | Purpose | Output |
 |---|---|---|
+| `/run` | Launch full pipeline with hard gates | Runner summary + evidence |
 | `/propose` | Generate project proposals | Candidate concepts |
 | `/design` | Router for design phases | Big/small design selection |
 | `/design-big` | Macro architecture | Concept + character + plot framework |
@@ -175,6 +177,8 @@ Reference documents:
   - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
 - Run full pipeline:
   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase export`
+- One-time bootstrap + run:
+  - `/run`
 - Run with optional dictionary check enabled:
   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase create -ToPhase rewrite -EnableDictionaryCheck`
 - Runner writes a live pointer file:

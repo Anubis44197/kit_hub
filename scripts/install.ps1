@@ -13,6 +13,63 @@ $approvalsDir = Join-Path $runtimeDir "approvals"
 $templatePath = Join-Path $runtimeDir "runner-config.template.json"
 $configPath = Join-Path $runtimeDir "runner-config.json"
 
+function ConvertTo-HashtableDeep {
+  param([object]$Value)
+
+  if ($null -eq $Value) {
+    return $null
+  }
+
+  if ($Value -is [System.Collections.IDictionary]) {
+    $out = @{}
+    foreach ($k in $Value.Keys) {
+      $out[$k] = ConvertTo-HashtableDeep -Value $Value[$k]
+    }
+    return $out
+  }
+
+  if ($Value -is [System.Management.Automation.PSCustomObject]) {
+    $out = @{}
+    foreach ($p in $Value.PSObject.Properties) {
+      $out[$p.Name] = ConvertTo-HashtableDeep -Value $p.Value
+    }
+    return $out
+  }
+
+  if (($Value -is [System.Collections.IEnumerable]) -and -not ($Value -is [string])) {
+    $list = New-Object System.Collections.ArrayList
+    foreach ($item in $Value) {
+      [void]$list.Add((ConvertTo-HashtableDeep -Value $item))
+    }
+    return $list
+  }
+
+  return $Value
+}
+
+function Merge-ConfigDefaults {
+  param(
+    [hashtable]$BaseDefaults,
+    [hashtable]$CurrentConfig
+  )
+
+  $merged = @{}
+  foreach ($k in $BaseDefaults.Keys) {
+    $merged[$k] = ConvertTo-HashtableDeep -Value $BaseDefaults[$k]
+  }
+
+  foreach ($k in $CurrentConfig.Keys) {
+    if ($merged.ContainsKey($k) -and ($merged[$k] -is [hashtable]) -and ($CurrentConfig[$k] -is [hashtable])) {
+      $merged[$k] = Merge-ConfigDefaults -BaseDefaults $merged[$k] -CurrentConfig $CurrentConfig[$k]
+    }
+    else {
+      $merged[$k] = ConvertTo-HashtableDeep -Value $CurrentConfig[$k]
+    }
+  }
+
+  return $merged
+}
+
 if (-not (Test-Path -LiteralPath $runtimeDir -PathType Container)) {
   New-Item -ItemType Directory -Path $runtimeDir | Out-Null
 }
@@ -29,7 +86,7 @@ if (-not (Test-Path -LiteralPath $templateSource -PathType Leaf)) {
   throw "Missing template source: $templateSource"
 }
 
-if (-not (Test-Path -LiteralPath $templatePath -PathType Leaf)) {
+if ([System.IO.Path]::GetFullPath($templateSource) -ne [System.IO.Path]::GetFullPath($templatePath)) {
   Copy-Item -LiteralPath $templateSource -Destination $templatePath -Force
 }
 
@@ -38,7 +95,13 @@ if (-not (Test-Path -LiteralPath $configPath -PathType Leaf)) {
   Write-Host "[install] created $configPath"
 }
 else {
-  Write-Host "[install] config already exists: $configPath"
+  $templateObj = Get-Content -LiteralPath $templatePath -Raw | ConvertFrom-Json
+  $currentObj = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+  $templateHash = ConvertTo-HashtableDeep -Value $templateObj
+  $currentHash = ConvertTo-HashtableDeep -Value $currentObj
+  $mergedHash = Merge-ConfigDefaults -BaseDefaults $templateHash -CurrentConfig $currentHash
+  $mergedHash | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $configPath -Encoding UTF8
+  Write-Host "[install] config migrated with missing defaults: $configPath"
 }
 
 function Ensure-ApprovalFile {
