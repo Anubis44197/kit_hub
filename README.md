@@ -163,14 +163,16 @@ Reference documents:
 | Optional dictionary verification | `powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot . -Phase polish -RunId RUN-LOCAL` |
 
 ## Local Word Preview
-1. Start a local server from repository root:
-   - `python -m http.server 3000`
+1. Start app (bootstrap + readiness + local preview):
+   - `powershell -ExecutionPolicy Bypass -File scripts/start_app.ps1 -ProjectRoot . -Port 3000`
 2. Open:
    - `http://localhost:3000/`
 3. Use cases:
    - Paste manuscript text
    - Preview page rhythm, dialogue blocks, and paragraph density
    - Run visual checks before DOCX export
+4. Stop preview:
+   - `powershell -ExecutionPolicy Bypass -File scripts/stop_app.ps1 -ProjectRoot .`
 
 ## Runner Automation
 - Initialize runtime config:
@@ -197,6 +199,10 @@ Reference documents:
   - duplicate-line ratio limit
   - dialogue style consistency
   - psychological marker minimum for psychological genres
+- Runner blocks critical phases unless `execution_claim_mode=executed`:
+  - `create`, `polish`, `rewrite`, `export` cannot pass as simulated
+- Real-run proof check (no simulated/fake completion):
+  - `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_real_run.ps1 -ProjectRoot .`
 - Runner retention policy:
   - Keeps recent run traces under `runtime/runs/` (default `max_runs=20`)
   - Configurable in `runtime/runner-config.json` via `quality_flags.retention`

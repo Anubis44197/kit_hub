@@ -31,6 +31,7 @@
     "enforce_phase_contracts": true,
     "enable_negative_enforcement": true,
     "enable_text_quality_gates": true,
+    "require_executed_claims_for_critical_phases": true,
     "approval_files": {
       "create": "runtime/approvals/design-freeze.json",
       "rewrite": "runtime/approvals/rewrite-approval.json",
@@ -66,6 +67,7 @@
     "phase contracts are hard gates when enforce_phase_contracts=true.",
     "negative enforcement blocks forbidden content patterns in episode outputs.",
     "text quality gates block weak episodes (length, repetition, dialogue style, psychological markers, encoding).",
+    "critical phases (create/polish/rewrite/export) require execution_claim_mode=executed by default.",
     "retention.max_runs controls how many run directories are kept under runtime/runs/."
   ]
 }

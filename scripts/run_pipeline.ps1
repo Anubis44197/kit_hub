@@ -753,6 +753,13 @@ if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Na
   }
 }
 
+$requireExecutedClaimsForCriticalPhases = $true
+if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "require_executed_claims_for_critical_phases")) {
+  if ($cfg.quality_flags.require_executed_claims_for_critical_phases -eq $false) {
+    $requireExecutedClaimsForCriticalPhases = $false
+  }
+}
+
 $negativePatterns = @("(?i)TL;DR","(?im)^\\s*Ozet\\s*:","(?im)^\\s*Summary\\s*:","\\[TODO\\]","(?i)lorem ipsum")
 if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "forbidden_content_patterns")) {
   $customPatterns = @($cfg.quality_flags.forbidden_content_patterns)
@@ -786,6 +793,7 @@ Write-Host "[runner] require_user_approvals: $requireUserApprovals"
 Write-Host "[runner] enforce_phase_contracts: $enforcePhaseContracts"
 Write-Host "[runner] enable_negative_enforcement: $enableNegativeEnforcement"
 Write-Host "[runner] enable_text_quality_gates: $enableTextQualityGates"
+Write-Host "[runner] require_executed_claims_for_critical_phases: $requireExecutedClaimsForCriticalPhases"
 
 Save-RunSummary -Path $summaryPath -Summary $summary
 Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
@@ -870,6 +878,10 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     Ensure-UserApproval -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $requireUserApprovals
     Validate-PhaseArtifacts -Phase $phase -Root $ProjectRoot
     Invoke-DictionaryCheck -Phase $phase -Root $ProjectRoot -RunId $runId -Config $cfg -Enabled $dictionaryCheckEnabled
+
+    if ($requireExecutedClaimsForCriticalPhases -and $phase -in @("create","polish","rewrite","export") -and $phaseClaimMode -ne "executed") {
+      throw "Phase '$phase' requires execution_claim_mode=executed. Configure command mode and real phase commands."
+    }
 
     $artifacts = Get-PhaseOutputArtifacts -Phase $phase -Root $ProjectRoot
     Validate-PhaseContracts -Root $ProjectRoot -Phase $phase -Artifacts $artifacts -Enabled $enforcePhaseContracts
