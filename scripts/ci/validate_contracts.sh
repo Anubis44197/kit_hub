@@ -49,9 +49,12 @@ grep -q "Invoke-RunRetention" scripts/run_pipeline.ps1
 grep -q "Ensure-UserApproval" scripts/run_pipeline.ps1
 grep -q "Validate-PhaseContracts" scripts/run_pipeline.ps1
 grep -q "Assert-NoForbiddenPatterns" scripts/run_pipeline.ps1
+grep -q "Validate-EpisodeTextQuality" scripts/run_pipeline.ps1
 grep -q "require_user_approvals" runtime/runner-config.template.json
 grep -q "enforce_phase_contracts" runtime/runner-config.template.json
 grep -q "enable_negative_enforcement" runtime/runner-config.template.json
+grep -q "enable_text_quality_gates" runtime/runner-config.template.json
+grep -q "text_quality_gates" runtime/runner-config.template.json
 
 echo "[contract-lint] validating quality-verifier strict metadata contract..."
 grep -q "## Required Report Metadata (Strict)" agents/quality-verifier.md

@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$ProjectRoot = (Get-Location).Path,
   [ValidateSet("propose","design-big","design-small","create","polish","rewrite","export")]
   [string]$FromPhase = "propose",
@@ -29,6 +29,25 @@ function Ensure-Any {
     }
   }
   throw "Missing required artifacts. Expected one of: $($Patterns -join ', ')"
+}
+
+function Get-RelativePathSafe {
+  param(
+    [string]$BasePath,
+    [string]$TargetPath
+  )
+
+  try {
+    return [System.IO.Path]::GetRelativePath($BasePath, $TargetPath)
+  }
+  catch {
+    $base = [System.IO.Path]::GetFullPath($BasePath)
+    $target = [System.IO.Path]::GetFullPath($TargetPath)
+    if ($target.StartsWith($base, [System.StringComparison]::OrdinalIgnoreCase)) {
+      return $target.Substring($base.Length).TrimStart('\')
+    }
+    return $TargetPath
+  }
 }
 
 function Validate-PhaseArtifacts {
@@ -71,6 +90,12 @@ function Validate-PhaseArtifacts {
       Ensure-File (Join-Path $Root "novel-config.md")
     }
     "create" {
+      Ensure-Any -Patterns @(
+        "design/*scene_plan*.md",
+        "design/EP001-EP005_scene_plan.md",
+        "design/*_plot-detail_*.md",
+        "design/hook_table_EP001-EP005.md"
+      ) -BasePath $Root
       Ensure-Any -Patterns @("episode/ep*.md") -BasePath $Root
       Ensure-Any -Patterns @(
         "revision/_workspace/04_quality-verifier_verdict_EP*.md",
@@ -166,7 +191,7 @@ function Get-PhaseOutputArtifacts {
   $files = $files | Sort-Object -Unique
   $relative = @()
   foreach ($f in $files) {
-    $relative += [System.IO.Path]::GetRelativePath($Root, $f)
+    $relative += Get-RelativePathSafe -BasePath $Root -TargetPath $f
   }
   return $relative
 }
@@ -194,7 +219,7 @@ function Save-RunSummary {
 function Save-CurrentRunPointer {
   param(
     [string]$Path,
-    [ordered]$Pointer
+    [object]$Pointer
   )
   $dir = Split-Path -Parent $Path
   if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
@@ -277,7 +302,7 @@ function Expand-Template {
 function Save-PhaseEvidence {
   param(
     [string]$Path,
-    [ordered]$Evidence
+    [object]$Evidence
   )
   $dir = Split-Path -Parent $Path
   if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
@@ -495,6 +520,157 @@ function Assert-NoForbiddenPatterns {
   }
 }
 
+function Get-NovelConfigNumericValue {
+  param(
+    [string]$ConfigRaw,
+    [string]$Key,
+    [double]$Default
+  )
+
+  $m = [regex]::Match($ConfigRaw, "(?m)^\s*$([regex]::Escape($Key))\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*$")
+  if ($m.Success) {
+    return [double]::Parse($m.Groups[1].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+  }
+  return $Default
+}
+
+function Get-NovelConfigStringValue {
+  param(
+    [string]$ConfigRaw,
+    [string]$Key,
+    [string]$Default
+  )
+
+  $m = [regex]::Match($ConfigRaw, "(?m)^\s*$([regex]::Escape($Key))\s*:\s*""?([^""#\r\n]+)""?\s*$")
+  if ($m.Success) {
+    return $m.Groups[1].Value.Trim()
+  }
+  return $Default
+}
+
+function Validate-EpisodeTextQuality {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [object]$Config,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+  if ($Phase -notin @("create","polish","rewrite")) {
+    return
+  }
+
+  $episodeDir = Join-Path $Root "episode"
+  if (-not (Test-Path -LiteralPath $episodeDir -PathType Container)) {
+    throw "Text quality gate failed: episode directory missing."
+  }
+  $episodes = Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File -ErrorAction SilentlyContinue
+  if (-not $episodes -or $episodes.Count -lt 1) {
+    throw "Text quality gate failed: no episode files found."
+  }
+
+  $cfgPath = Join-Path $Root "novel-config.md"
+  Ensure-File $cfgPath
+  $cfgRaw = Get-Content -LiteralPath $cfgPath -Raw
+
+  $minCharacters = [int](Get-NovelConfigNumericValue -ConfigRaw $cfgRaw -Key "min_characters" -Default 6500)
+  $maxCharacters = [int](Get-NovelConfigNumericValue -ConfigRaw $cfgRaw -Key "max_characters" -Default 14000)
+  $dialogueRatioMin = [double](Get-NovelConfigNumericValue -ConfigRaw $cfgRaw -Key "dialogue_ratio_min" -Default 0.35)
+  $dialogueRatioMax = [double](Get-NovelConfigNumericValue -ConfigRaw $cfgRaw -Key "dialogue_ratio_max" -Default 0.65)
+  $targetGenre = Get-NovelConfigStringValue -ConfigRaw $cfgRaw -Key "target_genre" -Default ""
+  $isPsychological = $targetGenre -match "(?i)psych|psikolojik|gerilim"
+
+  $maxDuplicateLineRatio = 0.28
+  $tellSensoryRatioMax = 2.40
+  $requireDashDialogue = $true
+  $forbidMixedDialogue = $true
+  $minPsychologicalMarkers = 6
+
+  if ($Config -and $Config.quality_flags -and ($Config.quality_flags.PSObject.Properties.Name -contains "text_quality_gates")) {
+    $q = $Config.quality_flags.text_quality_gates
+    if ($q.PSObject.Properties.Name -contains "max_duplicate_line_ratio") { $maxDuplicateLineRatio = [double]$q.max_duplicate_line_ratio }
+    if ($q.PSObject.Properties.Name -contains "tell_sensory_ratio_max") { $tellSensoryRatioMax = [double]$q.tell_sensory_ratio_max }
+    if ($q.PSObject.Properties.Name -contains "require_dash_dialogue") { $requireDashDialogue = [bool]$q.require_dash_dialogue }
+    if ($q.PSObject.Properties.Name -contains "forbid_mixed_dialogue_styles") { $forbidMixedDialogue = [bool]$q.forbid_mixed_dialogue_styles }
+    if ($q.PSObject.Properties.Name -contains "min_psychological_markers") { $minPsychologicalMarkers = [int]$q.min_psychological_markers }
+  }
+
+  foreach ($ep in $episodes) {
+    $rawText = Get-Content -LiteralPath $ep.FullName -Raw
+
+    if ($rawText -match "[ÃÅÄ]") {
+      throw "Text quality gate failed in $($ep.Name): mojibake/encoding corruption detected."
+    }
+
+    $charCount = $rawText.Length
+    if ($charCount -lt $minCharacters) {
+      throw "Text quality gate failed in $($ep.Name): character_count=$charCount below min_characters=$minCharacters."
+    }
+    if ($charCount -gt $maxCharacters) {
+      throw "Text quality gate failed in $($ep.Name): character_count=$charCount above max_characters=$maxCharacters."
+    }
+
+    $lines = @($rawText -split "(\r?\n)+" | Where-Object { $_ -and $_.Trim() -ne "" })
+    if ($lines.Count -gt 0) {
+      $normalized = @($lines | ForEach-Object { $_.Trim().ToLowerInvariant() })
+      $uniqueCount = @($normalized | Sort-Object -Unique).Count
+      $duplicateRatio = 1.0 - ($uniqueCount / [double]$normalized.Count)
+      if ($duplicateRatio -gt $maxDuplicateLineRatio) {
+        throw "Text quality gate failed in $($ep.Name): duplicate_line_ratio=$([math]::Round($duplicateRatio,3)) exceeds limit=$maxDuplicateLineRatio."
+      }
+    }
+
+    $dashDialogueLines = [regex]::Matches($rawText, "(?m)^\s*(?:-|—)\s+").Count
+    $quoteDialogueHints = [regex]::Matches($rawText, '[""]').Count
+    if ($requireDashDialogue -and $dashDialogueLines -lt 1) {
+      throw "Text quality gate failed in $($ep.Name): required dash dialogue style not found."
+    }
+    if ($forbidMixedDialogue -and $dashDialogueLines -gt 0 -and $quoteDialogueHints -gt 0) {
+      throw "Text quality gate failed in $($ep.Name): mixed dialogue styles detected."
+    }
+
+    $dialogueLineCount = [regex]::Matches($rawText, "(?m)^\s*(?:-|—)\s+.*$").Count
+    $nonEmptyLineCount = [regex]::Matches($rawText, "(?m)^\s*\S+.*$").Count
+    if ($nonEmptyLineCount -gt 0) {
+      $dialogueRatio = $dialogueLineCount / [double]$nonEmptyLineCount
+      if ($dialogueRatio -lt $dialogueRatioMin -or $dialogueRatio -gt $dialogueRatioMax) {
+        throw "Text quality gate failed in $($ep.Name): dialogue_ratio=$([math]::Round($dialogueRatio,3)) outside [$dialogueRatioMin, $dialogueRatioMax]."
+      }
+    }
+
+    $tellWords = @("korkuyordu","hissediyordu","dusunuyordu","biliyordu","anladi","fark etti","uzgundu","sinirliydi","sasirdi","gerildi")
+    $sensoryWords = @("koku","ses","nefes","dokunus","soguk","sicak","islak","karanlik","isik","carpinti","ter","titreme")
+    $tellCount = 0
+    foreach ($w in $tellWords) { $tellCount += [regex]::Matches($rawText, [regex]::Escape($w), [System.Text.RegularExpressions.RegexOptions]::IgnoreCase).Count }
+    $sensoryCount = 0
+    foreach ($w in $sensoryWords) { $sensoryCount += [regex]::Matches($rawText, [regex]::Escape($w), [System.Text.RegularExpressions.RegexOptions]::IgnoreCase).Count }
+    if ($tellCount -gt 0) {
+      $ratio = $tellCount / [double]([math]::Max(1, $sensoryCount))
+      if ($ratio -gt $tellSensoryRatioMax) {
+        throw "Text quality gate failed in $($ep.Name): show-dont-tell ratio=$([math]::Round($ratio,3)) exceeds max=$tellSensoryRatioMax."
+      }
+    }
+
+    if ($isPsychological) {
+      $psychMarkers = @(
+        "paranoya","halusinasyon","gercek mi","sanri","sucluluk","vicdan","panik","cokus","cozul",
+        "suphe","kaygi","karabasan","takinti","derealizasyon","depersonalizasyon"
+      )
+      $hit = 0
+      foreach ($w in $psychMarkers) {
+        if ([regex]::IsMatch($rawText, [regex]::Escape($w), [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+          $hit++
+        }
+      }
+      if ($hit -lt $minPsychologicalMarkers) {
+        throw "Text quality gate failed in $($ep.Name): psychological marker coverage=$hit below minimum=$minPsychologicalMarkers."
+      }
+    }
+  }
+}
 $phases = @("propose","design-big","design-small","create","polish","rewrite","export")
 $fromIdx = [Array]::IndexOf($phases, $FromPhase)
 $toIdx = [Array]::IndexOf($phases, $ToPhase)
@@ -570,7 +746,14 @@ if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Na
   }
 }
 
-$negativePatterns = @("(?i)TL;DR","(?im)^\\s*Özet\\s*:","(?im)^\\s*Summary\\s*:","\\[TODO\\]","(?i)lorem ipsum")
+$enableTextQualityGates = $true
+if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "enable_text_quality_gates")) {
+  if ($cfg.quality_flags.enable_text_quality_gates -eq $false) {
+    $enableTextQualityGates = $false
+  }
+}
+
+$negativePatterns = @("(?i)TL;DR","(?im)^\\s*Ozet\\s*:","(?im)^\\s*Summary\\s*:","\\[TODO\\]","(?i)lorem ipsum")
 if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "forbidden_content_patterns")) {
   $customPatterns = @($cfg.quality_flags.forbidden_content_patterns)
   if ($customPatterns.Count -gt 0) {
@@ -602,6 +785,7 @@ Write-Host "[runner] retention.max_runs: $retentionMaxRuns"
 Write-Host "[runner] require_user_approvals: $requireUserApprovals"
 Write-Host "[runner] enforce_phase_contracts: $enforcePhaseContracts"
 Write-Host "[runner] enable_negative_enforcement: $enableNegativeEnforcement"
+Write-Host "[runner] enable_text_quality_gates: $enableTextQualityGates"
 
 Save-RunSummary -Path $summaryPath -Summary $summary
 Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
@@ -609,8 +793,8 @@ Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
   status = "in_progress"
   updated_at = (Get-Date).ToString("o")
   project_root = $ProjectRoot
-  summary_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $summaryPath)
-  evidence_dir = [System.IO.Path]::GetRelativePath($ProjectRoot, $evidenceDirPath)
+  summary_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $summaryPath
+  evidence_dir = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $evidenceDirPath
   last_step_id = $null
   last_evidence_path = $null
   message = "Run started."
@@ -690,6 +874,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     $artifacts = Get-PhaseOutputArtifacts -Phase $phase -Root $ProjectRoot
     Validate-PhaseContracts -Root $ProjectRoot -Phase $phase -Artifacts $artifacts -Enabled $enforcePhaseContracts
     Assert-NoForbiddenPatterns -Root $ProjectRoot -Phase $phase -Patterns $negativePatterns -Enabled $enableNegativeEnforcement
+    Validate-EpisodeTextQuality -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $enableTextQualityGates
     $evidencePath = Join-Path $runtimeDir ("runs/" + $runId + "/evidence/" + $stepId + ".json")
     $evidence = [ordered]@{
       run_id = $runId
@@ -750,10 +935,10 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       status = "failed"
       updated_at = (Get-Date).ToString("o")
       project_root = $ProjectRoot
-      summary_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $summaryPath)
-      evidence_dir = [System.IO.Path]::GetRelativePath($ProjectRoot, $evidenceDirPath)
+      summary_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $summaryPath
+      evidence_dir = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $evidenceDirPath
       last_step_id = $stepId
-      last_evidence_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $failedEvidencePath)
+      last_evidence_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $failedEvidencePath
       message = $step.message
       retention = [ordered]@{
         enabled = $retentionEnabled
@@ -773,10 +958,10 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     status = "in_progress"
     updated_at = (Get-Date).ToString("o")
     project_root = $ProjectRoot
-    summary_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $summaryPath)
-    evidence_dir = [System.IO.Path]::GetRelativePath($ProjectRoot, $evidenceDirPath)
+    summary_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $summaryPath
+    evidence_dir = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $evidenceDirPath
     last_step_id = $stepId
-    last_evidence_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $step.evidence_path)
+    last_evidence_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $step.evidence_path
     message = "Phase completed."
     retention = [ordered]@{
       enabled = $retentionEnabled
@@ -793,10 +978,10 @@ Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
   status = "completed"
   updated_at = (Get-Date).ToString("o")
   project_root = $ProjectRoot
-  summary_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $summaryPath)
-  evidence_dir = [System.IO.Path]::GetRelativePath($ProjectRoot, $evidenceDirPath)
+  summary_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $summaryPath
+  evidence_dir = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $evidenceDirPath
   last_step_id = $summary.steps[-1].step_id
-  last_evidence_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $summary.steps[-1].evidence_path)
+  last_evidence_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $summary.steps[-1].evidence_path
   message = "Run completed."
   retention = [ordered]@{
     enabled = $retentionEnabled
@@ -808,3 +993,4 @@ Invoke-RunRetention -RunsRoot $runsRoot -ActiveRunId $runId -MaxRuns $retentionM
 Write-Host ""
 Write-Host "[runner] completed: $runId"
 Write-Host "[runner] summary: $summaryPath"
+

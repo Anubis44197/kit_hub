@@ -20,6 +20,14 @@ If mode is missing, return an explicit error.
 
 No conditional or partial variants are allowed.
 
+## Hard Fail Rules (Non-Overridable)
+- Do not override measurable thresholds with commentary.
+- If `character_count < min_characters`, verdict must be `REWRITE`.
+- If `character_count > max_characters`, verdict must be `REWRITE`.
+- If required design phase artifacts are missing (including design-small outputs for create flow), verdict must be `REWRITE`.
+- If mojibake/encoding corruption is detected in episode text (examples: `Ã`, `Å`, `Ä`), verdict must be `REWRITE`.
+- Never use phrases like \"appropriate despite below minimum\" for metric gates.
+
 ## Core Validation Areas
 - Design/beat compliance
 - Timeline consistency

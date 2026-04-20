@@ -191,6 +191,12 @@ Reference documents:
   - issue JSON schema
   - verdict markdown token (`PASS|FAIL|BLOCKED`)
   - export manifest existence
+- Runner enforces hard text quality gates (default):
+  - min/max character limits
+  - mojibake detection
+  - duplicate-line ratio limit
+  - dialogue style consistency
+  - psychological marker minimum for psychological genres
 - Runner retention policy:
   - Keeps recent run traces under `runtime/runs/` (default `max_runs=20`)
   - Configurable in `runtime/runner-config.json` via `quality_flags.retention`

@@ -30,6 +30,7 @@
     "require_user_approvals": true,
     "enforce_phase_contracts": true,
     "enable_negative_enforcement": true,
+    "enable_text_quality_gates": true,
     "approval_files": {
       "create": "runtime/approvals/design-freeze.json",
       "rewrite": "runtime/approvals/rewrite-approval.json",
@@ -42,6 +43,13 @@
       "\\[TODO\\]",
       "(?i)lorem ipsum"
     ],
+    "text_quality_gates": {
+      "max_duplicate_line_ratio": 0.28,
+      "tell_sensory_ratio_max": 2.4,
+      "require_dash_dialogue": true,
+      "forbid_mixed_dialogue_styles": true,
+      "min_psychological_markers": 6
+    },
     "retention": {
       "enabled": true,
       "max_runs": 20
@@ -57,6 +65,7 @@
     "create/rewrite/export require explicit approval JSON files when require_user_approvals=true.",
     "phase contracts are hard gates when enforce_phase_contracts=true.",
     "negative enforcement blocks forbidden content patterns in episode outputs.",
+    "text quality gates block weak episodes (length, repetition, dialogue style, psychological markers, encoding).",
     "retention.max_runs controls how many run directories are kept under runtime/runs/."
   ]
 }
