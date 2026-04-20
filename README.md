@@ -175,8 +175,14 @@ Reference documents:
   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase export`
 - Run with optional dictionary check enabled:
   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase create -ToPhase rewrite -EnableDictionaryCheck`
+- Runner writes a live pointer file:
+  - `runtime/current-run.json`
+- Runner retention policy:
+  - Keeps recent run traces under `runtime/runs/` (default `max_runs=20`)
+  - Configurable in `runtime/runner-config.json` via `quality_flags.retention`
 - Detailed runner guide:
   - `docs/RUNNER_USAGE.md`
+  - `docs/WORKSPACE_RETENTION_POLICY.md`
 
 ## Agent Architecture
 | Metric | Value |

@@ -191,6 +191,75 @@ function Save-RunSummary {
   $Summary | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $Path -Encoding UTF8
 }
 
+function Save-CurrentRunPointer {
+  param(
+    [string]$Path,
+    [ordered]$Pointer
+  )
+  $dir = Split-Path -Parent $Path
+  if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
+    New-Item -ItemType Directory -Path $dir | Out-Null
+  }
+  $Pointer | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $Path -Encoding UTF8
+}
+
+function Invoke-RunRetention {
+  param(
+    [string]$RunsRoot,
+    [string]$ActiveRunId,
+    [int]$MaxRuns,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+  if ($MaxRuns -lt 1) {
+    return
+  }
+  if (-not (Test-Path -LiteralPath $RunsRoot -PathType Container)) {
+    return
+  }
+
+  $resolvedRoot = [System.IO.Path]::GetFullPath($RunsRoot)
+  $runDirs = Get-ChildItem -LiteralPath $RunsRoot -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -like "RUN-*" } |
+    Sort-Object Name -Descending
+
+  if (-not $runDirs -or $runDirs.Count -le $MaxRuns) {
+    return
+  }
+
+  $keep = @()
+  $count = 0
+  foreach ($dir in $runDirs) {
+    if ($count -lt $MaxRuns) {
+      $keep += $dir.Name
+      $count++
+    }
+  }
+  if ($ActiveRunId -and ($keep -notcontains $ActiveRunId)) {
+    $keep += $ActiveRunId
+  }
+
+  foreach ($dir in $runDirs) {
+    if ($keep -contains $dir.Name) {
+      continue
+    }
+    try {
+      $resolvedCandidate = [System.IO.Path]::GetFullPath($dir.FullName)
+      if (-not $resolvedCandidate.StartsWith($resolvedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to prune directory outside runs root: $resolvedCandidate"
+      }
+      Remove-Item -LiteralPath $dir.FullName -Recurse -Force
+      Write-Host "[runner] retention pruned: $($dir.Name)"
+    }
+    catch {
+      Write-Warning ("[runner] retention prune failed for {0}: {1}" -f $dir.Name, $_.Exception.Message)
+    }
+  }
+}
+
 function Expand-Template {
   param(
     [string]$Template,
@@ -322,8 +391,26 @@ if ($configuredClaimMode -notin @("executed","simulated")) {
   $configuredClaimMode = ""
 }
 
+$retentionEnabled = $true
+$retentionMaxRuns = 20
+if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "retention")) {
+  $retention = $cfg.quality_flags.retention
+  if ($retention -and ($retention.PSObject.Properties.Name -contains "enabled") -and $retention.enabled -eq $false) {
+    $retentionEnabled = $false
+  }
+  if ($retention -and ($retention.PSObject.Properties.Name -contains "max_runs")) {
+    $parsedMaxRuns = 0
+    if ([int]::TryParse([string]$retention.max_runs, [ref]$parsedMaxRuns) -and $parsedMaxRuns -ge 1) {
+      $retentionMaxRuns = $parsedMaxRuns
+    }
+  }
+}
+
 $runId = "RUN-" + (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + (Get-Random -Minimum 1000 -Maximum 10000)
+$runsRoot = Join-Path $runtimeDir "runs"
 $summaryPath = Join-Path $runtimeDir ("runs/" + $runId + "/run-summary.json")
+$evidenceDirPath = Join-Path $runtimeDir ("runs/" + $runId + "/evidence")
+$currentRunPointerPath = Join-Path $runtimeDir "current-run.json"
 $summary = [ordered]@{
   run_id = $runId
   started_at = (Get-Date).ToString("o")
@@ -338,6 +425,25 @@ Write-Host "[runner] phase range: $FromPhase -> $ToPhase"
 Write-Host "[runner] mode: $effectiveMode"
 Write-Host "[runner] dictionary_check: $dictionaryCheckEnabled"
 Write-Host "[runner] require_phase_evidence: $requirePhaseEvidence"
+Write-Host "[runner] retention.enabled: $retentionEnabled"
+Write-Host "[runner] retention.max_runs: $retentionMaxRuns"
+
+Save-RunSummary -Path $summaryPath -Summary $summary
+Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
+  run_id = $runId
+  status = "in_progress"
+  updated_at = (Get-Date).ToString("o")
+  project_root = $ProjectRoot
+  summary_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $summaryPath)
+  evidence_dir = [System.IO.Path]::GetRelativePath($ProjectRoot, $evidenceDirPath)
+  last_step_id = $null
+  last_evidence_path = $null
+  message = "Run started."
+  retention = [ordered]@{
+    enabled = $retentionEnabled
+    max_runs = $retentionMaxRuns
+  }
+})
 
 for ($i = $fromIdx; $i -le $toIdx; $i++) {
   $phase = $phases[$i]
@@ -461,6 +567,22 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     $summary.status = "failed"
     $summary.updated_at = (Get-Date).ToString("o")
     Save-RunSummary -Path $summaryPath -Summary $summary
+    Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
+      run_id = $runId
+      status = "failed"
+      updated_at = (Get-Date).ToString("o")
+      project_root = $ProjectRoot
+      summary_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $summaryPath)
+      evidence_dir = [System.IO.Path]::GetRelativePath($ProjectRoot, $evidenceDirPath)
+      last_step_id = $stepId
+      last_evidence_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $failedEvidencePath)
+      message = $step.message
+      retention = [ordered]@{
+        enabled = $retentionEnabled
+        max_runs = $retentionMaxRuns
+      }
+    })
+    Invoke-RunRetention -RunsRoot $runsRoot -ActiveRunId $runId -MaxRuns $retentionMaxRuns -Enabled $retentionEnabled
     throw
   }
 
@@ -468,11 +590,42 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
   $summary.steps += $step
   $summary.updated_at = (Get-Date).ToString("o")
   Save-RunSummary -Path $summaryPath -Summary $summary
+  Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
+    run_id = $runId
+    status = "in_progress"
+    updated_at = (Get-Date).ToString("o")
+    project_root = $ProjectRoot
+    summary_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $summaryPath)
+    evidence_dir = [System.IO.Path]::GetRelativePath($ProjectRoot, $evidenceDirPath)
+    last_step_id = $stepId
+    last_evidence_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $step.evidence_path)
+    message = "Phase completed."
+    retention = [ordered]@{
+      enabled = $retentionEnabled
+      max_runs = $retentionMaxRuns
+    }
+  })
 }
 
 $summary.status = "completed"
 $summary.finished_at = (Get-Date).ToString("o")
 Save-RunSummary -Path $summaryPath -Summary $summary
+Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
+  run_id = $runId
+  status = "completed"
+  updated_at = (Get-Date).ToString("o")
+  project_root = $ProjectRoot
+  summary_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $summaryPath)
+  evidence_dir = [System.IO.Path]::GetRelativePath($ProjectRoot, $evidenceDirPath)
+  last_step_id = $summary.steps[-1].step_id
+  last_evidence_path = [System.IO.Path]::GetRelativePath($ProjectRoot, $summary.steps[-1].evidence_path)
+  message = "Run completed."
+  retention = [ordered]@{
+    enabled = $retentionEnabled
+    max_runs = $retentionMaxRuns
+  }
+})
+Invoke-RunRetention -RunsRoot $runsRoot -ActiveRunId $runId -MaxRuns $retentionMaxRuns -Enabled $retentionEnabled
 
 Write-Host ""
 Write-Host "[runner] completed: $runId"

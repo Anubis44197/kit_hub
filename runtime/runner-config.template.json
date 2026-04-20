@@ -26,7 +26,11 @@
     "enable_dictionary_check": false,
     "dictionary_check_command": "powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot \"{project_root}\" -Phase {phase} -RunId {run_id}",
     "require_phase_evidence": true,
-    "execution_claim_mode": "simulated"
+    "execution_claim_mode": "simulated",
+    "retention": {
+      "enabled": true,
+      "max_runs": 20
+    }
   },
   "notes": [
     "Preferred: set execution_mode='command' and fill adapter.command_template once.",
@@ -34,6 +38,7 @@
     "Alternative: fill phase_commands.<phase> for explicit per-phase commands.",
     "Dictionary check is optional and only runs for create/polish/rewrite when enabled.",
     "Phase evidence is mandatory when require_phase_evidence=true.",
-    "execution_claim_mode should be 'executed' only when actual command-mode execution is used."
+    "execution_claim_mode should be 'executed' only when actual command-mode execution is used.",
+    "retention.max_runs controls how many run directories are kept under runtime/runs/."
   ]
 }

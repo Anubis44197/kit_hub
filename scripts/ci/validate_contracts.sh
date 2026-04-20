@@ -43,6 +43,9 @@ test -f skills/polish/references/multi-model-comparison-test-spec.md
 test -f skills/polish/references/tdk-source-assurance-chain.md
 test -f docs/STRICT_EXECUTION_POLICY.md
 test -f docs/PHASE_EVIDENCE_SCHEMA.md
+test -f docs/WORKSPACE_RETENTION_POLICY.md
+grep -q "current-run.json" scripts/run_pipeline.ps1
+grep -q "Invoke-RunRetention" scripts/run_pipeline.ps1
 
 echo "[contract-lint] validating quality-verifier strict metadata contract..."
 grep -q "## Required Report Metadata (Strict)" agents/quality-verifier.md

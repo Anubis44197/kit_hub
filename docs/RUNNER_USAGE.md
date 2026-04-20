@@ -92,8 +92,11 @@ powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot .
 Each run writes:
 - `runtime/runs/RUN-YYYYMMDD-HHMMSS/run-summary.json`
 - `runtime/runs/RUN-YYYYMMDD-HHMMSS/evidence/<phase>-<index>.json`
+- `runtime/current-run.json`
 
 This is the canonical runner execution log.
+
+`runtime/current-run.json` always points to the latest run state and latest evidence file.
 
 ## 4.1) Execution Claim Modes
 
@@ -102,6 +105,25 @@ Phase evidence includes:
 - `execution_claim_mode=simulated`: no command execution proof (manual mode or synthetic run)
 
 Do not report an executed run without `executed` evidence records.
+
+## 4.2) Retention
+
+Runner can prune old run folders automatically after run completion.
+
+In `runtime/runner-config.json`:
+
+```json
+{
+  "quality_flags": {
+    "retention": {
+      "enabled": true,
+      "max_runs": 20
+    }
+  }
+}
+```
+
+Pruning only affects `runtime/runs/RUN-*` directories.
 
 ## 5) Artifact Gates
 
@@ -112,3 +134,4 @@ If missing, the run fails immediately with a clear message.
 
 - `docs/STRICT_EXECUTION_POLICY.md`
 - `docs/PHASE_EVIDENCE_SCHEMA.md`
+- `docs/WORKSPACE_RETENTION_POLICY.md`

@@ -47,12 +47,12 @@
    - Files:
      - `docs/WORKSPACE_RETENTION_POLICY.md`
      - `scripts/run_pipeline.ps1` (pointer output)
-   - Status: TODO
+   - Status: DONE
 10. Add CI validation for run evidence schema references.
    - Files:
      - `scripts/ci/final_readiness_check.ps1`
      - `scripts/ci/validate_contracts.sh`
-   - Status: TODO
+   - Status: DONE
 
 ## Do Not Touch (Current Session)
 - User-generated test artifacts under `design/`, `episode/`, `revision/`, `novel-config.md`, `dag_evinde_bir_saat.md`.
@@ -62,3 +62,4 @@
 - [2026-04-20] Plan file created and locked for implementation tracking.
 - [2026-04-20] P0 completed: strict policy, phase evidence schema, runner evidence gate, readiness checks, runner docs updated.
 - [2026-04-20] P1 completed: create contract metrics, episode creator self-check hardening, quality verifier request-compliance axis.
+- [2026-04-20] P2 completed: workspace retention policy, current-run pointer contract, runner retention automation, CI enforcement updates.
