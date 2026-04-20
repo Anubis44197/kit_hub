@@ -41,6 +41,8 @@ test -f skills/polish/references/adapter-generic-ide-model.md
 test -f skills/polish/references/verdict-report-standard.md
 test -f skills/polish/references/multi-model-comparison-test-spec.md
 test -f skills/polish/references/tdk-source-assurance-chain.md
+test -f docs/STRICT_EXECUTION_POLICY.md
+test -f docs/PHASE_EVIDENCE_SCHEMA.md
 
 echo "[contract-lint] validating quality-verifier strict metadata contract..."
 grep -q "## Required Report Metadata (Strict)" agents/quality-verifier.md

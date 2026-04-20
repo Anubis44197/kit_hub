@@ -24,12 +24,16 @@
   },
   "quality_flags": {
     "enable_dictionary_check": false,
-    "dictionary_check_command": "powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot \"{project_root}\" -Phase {phase} -RunId {run_id}"
+    "dictionary_check_command": "powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot \"{project_root}\" -Phase {phase} -RunId {run_id}",
+    "require_phase_evidence": true,
+    "execution_claim_mode": "simulated"
   },
   "notes": [
     "Preferred: set execution_mode='command' and fill adapter.command_template once.",
     "Template placeholders: {phase}, {project_root}, {run_id}, {from_phase}, {to_phase}, {phase_prompt}",
     "Alternative: fill phase_commands.<phase> for explicit per-phase commands.",
-    "Dictionary check is optional and only runs for create/polish/rewrite when enabled."
+    "Dictionary check is optional and only runs for create/polish/rewrite when enabled.",
+    "Phase evidence is mandatory when require_phase_evidence=true.",
+    "execution_claim_mode should be 'executed' only when actual command-mode execution is used."
   ]
 }

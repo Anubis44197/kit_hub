@@ -94,6 +94,8 @@ Assert-File "skills/polish/references/adapter-generic-ide-model.md"
 Assert-File "skills/polish/references/verdict-report-standard.md"
 Assert-File "skills/polish/references/multi-model-comparison-test-spec.md"
 Assert-File "skills/polish/references/tdk-source-assurance-chain.md"
+Assert-File "docs/STRICT_EXECUTION_POLICY.md"
+Assert-File "docs/PHASE_EVIDENCE_SCHEMA.md"
 
 Write-Host "[final-readiness-ps] checking fixture presence..."
 Assert-File "tests/fixtures/sample-project/novel-config.md"

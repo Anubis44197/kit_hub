@@ -18,8 +18,43 @@ Write episodes with a multi-agent pipeline and strict validation.
 6. Validation (`quality-verifier`, CREATE mode)
 7. Retry loop on REWRITE verdict (bounded)
 
+## Upstream Parity Notes
+- This create contract intentionally follows stricter upstream-style guardrails:
+  - measurable target checks
+  - explicit request compliance
+  - bounded retry with fail-safe rewrite
+
 ## Config Source
 - `novel-config.md` is required.
+
+## Create Target Contract (Mandatory)
+If `novel-config.md` includes a `create_quality` block, the values below are mandatory gates:
+- `min_characters`
+- `max_characters`
+- `min_scene_blocks`
+- `dialogue_ratio_min`
+- `dialogue_ratio_max`
+
+If `create_quality` is not present, use defaults:
+- `min_characters=6500`
+- `max_characters=14000`
+- `min_scene_blocks=4`
+- `dialogue_ratio_min=0.35`
+- `dialogue_ratio_max=0.65`
+
+Create flow must fail to `REWRITE` when any mandatory target is outside range.
+
+## Request Compliance Contract (Mandatory)
+If `novel-config.md` includes `request_contract`, treat it as a hard user-constraint block.
+Example keys:
+- `content_objective`
+- `min_output_length`
+- `must_include`
+- `must_avoid`
+
+Rule:
+- if `request_contract` exists, `quality-verifier` must evaluate it as a dedicated axis (`REQUEST_COMPLIANCE`)
+- unresolved request mismatch => `REWRITE`
 
 ## Language Policy
 - Chapter/story content language must be Turkish.
@@ -72,6 +107,7 @@ Write episodes with a multi-agent pipeline and strict validation.
 ## Mandatory Artifact Gates
 - Do not run `quality-verifier` before `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` exist.
 - If `book_mode.enabled=true`, do not run `quality-verifier` before `09_tdk-layout_issues_EP{NNN}.json` and `09_tdk-layout_report_EP{NNN}.md` exist.
+- Do not accept `PASS` if create target contract metrics are missing in verifier report.
 - If any mandatory artifact is missing, stop with explicit artifact-missing error.
 
 ## Outputs
@@ -79,5 +115,6 @@ Write episodes with a multi-agent pipeline and strict validation.
 - workspace reports under `{work_dir}/_workspace/`
 - mandatory TDK polisher outputs (`08_tdk-polisher_*`)
 - mandatory layout outputs when book mode is enabled (`09_tdk-layout_*`)
+- verifier report with explicit target metrics and request compliance result
 - updated create progress plan
 

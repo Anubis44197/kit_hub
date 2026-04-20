@@ -125,6 +125,52 @@ function Validate-PhaseArtifacts {
   }
 }
 
+function Get-PhaseOutputArtifacts {
+  param([string]$Phase, [string]$Root)
+
+  $patterns = @()
+  switch ($Phase) {
+    "propose" {
+      $patterns = @("_workspace/01_proposals*.md","*_proposal.md")
+    }
+    "design-big" {
+      $patterns = @("novel-config.md","design/*_bootstrap.md","design/*_character.md","design/*_plot-hook.md")
+    }
+    "design-small" {
+      $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md")
+    }
+    "create" {
+      $patterns = @("episode/ep*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json")
+    }
+    "polish" {
+      $patterns = @("episode/ep*.md","revision/_workspace/*revision-reviewer*EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/10_tdk-dictionary-check_polish.json")
+    }
+    "rewrite" {
+      $patterns = @("episode/ep*.md","revision/_workspace/*rewrite*report*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/10_tdk-dictionary-check_rewrite.json")
+    }
+    "export" {
+      $patterns = @("revision/_workspace/*export*manifest*.json","revision/_workspace/*export-validator*verdict*.json","revision/export/*.docx")
+    }
+    default { $patterns = @() }
+  }
+
+  $files = @()
+  foreach ($pattern in $patterns) {
+    $resolved = Join-Path $Root $pattern
+    $hits = Get-ChildItem -Path $resolved -ErrorAction SilentlyContinue -File | Select-Object -ExpandProperty FullName
+    if ($hits) {
+      $files += $hits
+    }
+  }
+
+  $files = $files | Sort-Object -Unique
+  $relative = @()
+  foreach ($f in $files) {
+    $relative += [System.IO.Path]::GetRelativePath($Root, $f)
+  }
+  return $relative
+}
+
 function Load-RunnerConfig {
   param([string]$Path)
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
@@ -157,6 +203,46 @@ function Expand-Template {
     $out = $out.Replace($token, $val)
   }
   return $out
+}
+
+function Save-PhaseEvidence {
+  param(
+    [string]$Path,
+    [ordered]$Evidence
+  )
+  $dir = Split-Path -Parent $Path
+  if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
+    New-Item -ItemType Directory -Path $dir | Out-Null
+  }
+  $Evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $Path -Encoding UTF8
+}
+
+function Validate-PhaseEvidenceFile {
+  param([string]$Path)
+
+  Ensure-File $Path
+  $raw = Get-Content -LiteralPath $Path -Raw
+  $obj = $raw | ConvertFrom-Json
+
+  $required = @(
+    "run_id","step_id","phase","execution_claim_mode","artifact_gate_passed",
+    "dictionary_check_enabled","started_at","finished_at","status","output_artifacts","notes"
+  )
+  foreach ($k in $required) {
+    if (-not ($obj.PSObject.Properties.Name -contains $k)) {
+      throw "Phase evidence missing required field '$k': $Path"
+    }
+  }
+
+  if ($obj.execution_claim_mode -notin @("executed","simulated")) {
+    throw "Invalid execution_claim_mode in phase evidence: $Path"
+  }
+  if ($obj.status -eq "completed" -and (-not $obj.artifact_gate_passed)) {
+    throw "Completed phase evidence must have artifact_gate_passed=true: $Path"
+  }
+  if ($obj.status -eq "completed" -and $obj.output_artifacts.Count -lt 1) {
+    throw "Completed phase evidence must include output_artifacts: $Path"
+  }
 }
 
 function Invoke-DictionaryCheck {
@@ -223,6 +309,19 @@ if ($EnableDictionaryCheck) {
   $dictionaryCheckEnabled = $true
 }
 
+$requirePhaseEvidence = $true
+if ($cfg -and $cfg.quality_flags -and $cfg.quality_flags.require_phase_evidence -eq $false) {
+  $requirePhaseEvidence = $false
+}
+
+$configuredClaimMode = ""
+if ($cfg -and $cfg.quality_flags -and $cfg.quality_flags.execution_claim_mode) {
+  $configuredClaimMode = [string]$cfg.quality_flags.execution_claim_mode
+}
+if ($configuredClaimMode -notin @("executed","simulated")) {
+  $configuredClaimMode = ""
+}
+
 $runId = "RUN-" + (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + (Get-Random -Minimum 1000 -Maximum 10000)
 $summaryPath = Join-Path $runtimeDir ("runs/" + $runId + "/run-summary.json")
 $summary = [ordered]@{
@@ -238,6 +337,7 @@ Write-Host "[runner] run_id=$runId"
 Write-Host "[runner] phase range: $FromPhase -> $ToPhase"
 Write-Host "[runner] mode: $effectiveMode"
 Write-Host "[runner] dictionary_check: $dictionaryCheckEnabled"
+Write-Host "[runner] require_phase_evidence: $requirePhaseEvidence"
 
 for ($i = $fromIdx; $i -le $toIdx; $i++) {
   $phase = $phases[$i]
@@ -249,12 +349,19 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     status = "in_progress"
     started_at = (Get-Date).ToString("o")
     command = $null
+    evidence_path = $null
+    execution_claim_mode = $null
     message = $null
   }
 
   try {
     Write-Host ""
     Write-Host "=== PHASE: $phase ==="
+
+    $phaseClaimMode = "simulated"
+    if ($configuredClaimMode) {
+      $phaseClaimMode = $configuredClaimMode
+    }
 
     if ($effectiveMode -eq "command") {
       $cmd = $null
@@ -286,6 +393,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       if ($LASTEXITCODE -ne 0) {
         throw "Phase command failed (exit=$LASTEXITCODE): $cmd"
       }
+      $phaseClaimMode = "executed"
     }
     else {
       Write-Host "[runner] manual mode: run phase '$phase' in your IDE/agent."
@@ -296,13 +404,59 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
 
     Validate-PhaseArtifacts -Phase $phase -Root $ProjectRoot
     Invoke-DictionaryCheck -Phase $phase -Root $ProjectRoot -RunId $runId -Config $cfg -Enabled $dictionaryCheckEnabled
+
+    $artifacts = Get-PhaseOutputArtifacts -Phase $phase -Root $ProjectRoot
+    $evidencePath = Join-Path $runtimeDir ("runs/" + $runId + "/evidence/" + $stepId + ".json")
+    $evidence = [ordered]@{
+      run_id = $runId
+      step_id = $stepId
+      phase = $phase
+      execution_claim_mode = $phaseClaimMode
+      artifact_gate_passed = $true
+      dictionary_check_enabled = $dictionaryCheckEnabled
+      started_at = $step.started_at
+      finished_at = (Get-Date).ToString("o")
+      status = "completed"
+      executed_command = $step.command
+      output_artifacts = $artifacts
+      notes = @("artifact gate passed")
+    }
+    Save-PhaseEvidence -Path $evidencePath -Evidence $evidence
+    if ($requirePhaseEvidence) {
+      Validate-PhaseEvidenceFile -Path $evidencePath
+    }
+
+    $step.evidence_path = $evidencePath
+    $step.execution_claim_mode = $phaseClaimMode
     $step.status = "completed"
     $step.message = "Artifact validation passed."
   }
   catch {
+    $failedFinishedAt = (Get-Date).ToString("o")
+    $failedEvidencePath = Join-Path $runtimeDir ("runs/" + $runId + "/evidence/" + $stepId + ".json")
+    $failedEvidence = [ordered]@{
+      run_id = $runId
+      step_id = $stepId
+      phase = $phase
+      execution_claim_mode = "simulated"
+      artifact_gate_passed = $false
+      dictionary_check_enabled = $dictionaryCheckEnabled
+      started_at = $step.started_at
+      finished_at = $failedFinishedAt
+      status = "failed"
+      executed_command = $step.command
+      output_artifacts = @()
+      notes = @($_.Exception.Message)
+    }
+    Save-PhaseEvidence -Path $failedEvidencePath -Evidence $failedEvidence
+    if ($requirePhaseEvidence) {
+      Validate-PhaseEvidenceFile -Path $failedEvidencePath
+    }
+    $step.evidence_path = $failedEvidencePath
+    $step.execution_claim_mode = "simulated"
     $step.status = "failed"
     $step.message = $_.Exception.Message
-    $step.finished_at = (Get-Date).ToString("o")
+    $step.finished_at = $failedFinishedAt
     $summary.steps += $step
     $summary.status = "failed"
     $summary.updated_at = (Get-Date).ToString("o")

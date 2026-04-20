@@ -49,3 +49,19 @@ If present, each item range must match:
 - `EPNNN-EPNNN`
 
 Ranges must be non-overlapping.
+
+## Optional `create_quality` Block (Recommended)
+If present, these keys are used as hard verifier gates:
+- `min_characters` (int)
+- `max_characters` (int)
+- `min_scene_blocks` (int)
+- `dialogue_ratio_min` (0.0-1.0)
+- `dialogue_ratio_max` (0.0-1.0)
+
+## Optional `request_contract` Block (Recommended)
+If present, verifier must enforce it as a dedicated compliance axis.
+Suggested keys:
+- `content_objective`
+- `min_output_length`
+- `must_include` (list)
+- `must_avoid` (list)

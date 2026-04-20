@@ -6,6 +6,11 @@ It executes the full phase chain with artifact-gate validation:
 
 `propose -> design-big -> design-small -> create -> polish -> rewrite -> export`
 
+Important:
+- Runner validates phase artifacts and emits run/evidence logs.
+- Runner execution is not equal to literary quality acceptance by itself.
+- Phase completion claims are proof-bound by evidence files.
+
 ## 1) Install Bootstrap
 
 ```powershell
@@ -86,10 +91,24 @@ powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot .
 
 Each run writes:
 - `runtime/runs/RUN-YYYYMMDD-HHMMSS/run-summary.json`
+- `runtime/runs/RUN-YYYYMMDD-HHMMSS/evidence/<phase>-<index>.json`
 
 This is the canonical runner execution log.
+
+## 4.1) Execution Claim Modes
+
+Phase evidence includes:
+- `execution_claim_mode=executed`: phase command ran through command mode
+- `execution_claim_mode=simulated`: no command execution proof (manual mode or synthetic run)
+
+Do not report an executed run without `executed` evidence records.
 
 ## 5) Artifact Gates
 
 The runner validates required artifacts per phase before moving forward.
 If missing, the run fails immediately with a clear message.
+
+## 6) Policy Documents
+
+- `docs/STRICT_EXECUTION_POLICY.md`
+- `docs/PHASE_EVIDENCE_SCHEMA.md`

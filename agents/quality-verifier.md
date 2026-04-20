@@ -31,6 +31,8 @@ No conditional or partial variants are allowed.
 - TDK and book-mode polish compliance (must consume `tdk-polisher` outputs)
 - Dictionary verification compliance when dictionary-check artifact exists
 - Layout compliance when `book_mode.enabled=true` (must consume `tdk-layout-agent` outputs)
+- Request compliance against `request_contract` when present in `novel-config.md`
+- Create target metric compliance (`min/max characters`, `scene blocks`, `dialogue ratio`)
 
 ## Deterministic Scoring Policy
 - Use thresholds from `skills/polish/references/deterministic-thresholds.md`.
@@ -44,6 +46,13 @@ No conditional or partial variants are allowed.
 - Read `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` before verdict.
 - If available, read `{WORK_DIR}/_workspace/10_tdk-dictionary-check_{phase}.json` before verdict.
 - If `book_mode.enabled=true`, also read `09_tdk-layout_issues_EP{NNN}.json` and `09_tdk-layout_report_EP{NNN}.md`.
+- Resolve `create_quality` defaults if config block is missing:
+  - `min_characters=6500`
+  - `max_characters=14000`
+  - `min_scene_blocks=4`
+  - `dialogue_ratio_min=0.35`
+  - `dialogue_ratio_max=0.65`
+- Compute and report these metrics from final episode text before verdict.
 
 ## CREATE Pass Criteria (Minimum)
 - No critical timeline/number violations
@@ -53,6 +62,10 @@ No conditional or partial variants are allowed.
 - No unresolved `critical` issue from `tdk-polisher`
 - No unresolved `critical` dictionary issue if dictionary-check artifact reports `status=review_required` with high-confidence misspellings
 - No unresolved `critical` layout issue when `book_mode.enabled=true`
+- Character count within configured range
+- Scene-block count >= configured minimum
+- Dialogue ratio within configured range
+- If `request_contract` exists: all mandatory constraints satisfied
 
 ## REWRITE Pass Criteria (Minimum)
 - Original failure points resolved
@@ -62,12 +75,21 @@ No conditional or partial variants are allowed.
 - No unresolved `critical` issue from `tdk-polisher`
 - No unresolved `critical` dictionary issue if dictionary-check artifact reports `status=review_required` with high-confidence misspellings
 - No unresolved `critical` layout issue when `book_mode.enabled=true`
+- Character count within configured range
+- Scene-block count >= configured minimum
+- Dialogue ratio within configured range
+- If `request_contract` exists: all mandatory constraints satisfied
 
 ## Required Output
 - `{WORK_DIR}/_workspace/04_quality-verifier_verdict_EP{NNN}.md`
 - Include per-axis findings and concrete rewrite instructions when verdict is `REWRITE`.
 - Also emit JSON companion using:
   - `skills/polish/references/workflow-report-json-schema.md`
+- Include a metrics subsection with:
+  - `character_count`
+  - `scene_block_count`
+  - `dialogue_ratio`
+  - `request_compliance` (`PASS`/`REWRITE` + missing items)
 
 ## Required Report Metadata (Strict)
 Both markdown and JSON outputs must include:
