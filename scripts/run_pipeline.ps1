@@ -352,6 +352,149 @@ function Invoke-DictionaryCheck {
   }
 }
 
+function Ensure-UserApproval {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [object]$Config,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+
+  $approvalMap = @{
+    "create" = "runtime/approvals/design-freeze.json"
+    "rewrite" = "runtime/approvals/rewrite-approval.json"
+    "export" = "runtime/approvals/export-approval.json"
+  }
+
+  if ($Config -and $Config.quality_flags -and $Config.quality_flags.approval_files) {
+    $custom = $Config.quality_flags.approval_files
+    foreach ($k in @("create","rewrite","export")) {
+      if ($custom.PSObject.Properties.Name -contains $k -and $custom.$k) {
+        $approvalMap[$k] = [string]$custom.$k
+      }
+    }
+  }
+
+  if (-not $approvalMap.ContainsKey($Phase)) {
+    return
+  }
+
+  $rel = $approvalMap[$Phase]
+  $path = Join-Path $Root $rel
+  Ensure-File $path
+
+  $obj = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+  if (-not ($obj.PSObject.Properties.Name -contains "approved")) {
+    throw "Approval gate missing 'approved' field: $rel"
+  }
+  if ($obj.approved -ne $true) {
+    throw "Phase '$Phase' is BLOCKED by approval gate: $rel"
+  }
+}
+
+function Validate-JsonIssueContract {
+  param([string]$Path)
+
+  Ensure-File $Path
+  $obj = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+  if (-not ($obj.PSObject.Properties.Name -contains "issues")) {
+    throw "Issue contract missing 'issues': $Path"
+  }
+  foreach ($it in $obj.issues) {
+    foreach ($req in @("id","severity","auto_fixable")) {
+      if (-not ($it.PSObject.Properties.Name -contains $req)) {
+        throw "Issue contract missing '$req' in $Path"
+      }
+    }
+    if ($it.severity -notin @("critical","major","minor")) {
+      throw "Invalid severity enum '$($it.severity)' in $Path"
+    }
+  }
+}
+
+function Validate-MarkdownVerdictContract {
+  param([string]$Path)
+
+  Ensure-File $Path
+  $raw = Get-Content -LiteralPath $Path -Raw
+  if ($raw -notmatch "(?i)\bVERDICT\b.*\b(PASS|FAIL|BLOCKED)\b") {
+    throw "Verdict contract missing PASS/FAIL/BLOCKED token: $Path"
+  }
+}
+
+function Validate-PhaseContracts {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [string[]]$Artifacts,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+
+  if ($Phase -in @("create","polish","rewrite")) {
+    $issueArtifacts = $Artifacts | Where-Object { $_ -match "tdk-polisher.*issues.*\.json$" -or $_ -match "layout.*issues.*\.json$" }
+    if (-not $issueArtifacts -or $issueArtifacts.Count -lt 1) {
+      throw "Phase '$Phase' missing mandatory issue JSON artifacts."
+    }
+    foreach ($rel in $issueArtifacts) {
+      Validate-JsonIssueContract -Path (Join-Path $Root $rel)
+    }
+
+    $verdictArtifacts = $Artifacts | Where-Object { $_ -match "quality-verifier.*\.md$" -or $_ -match "revision-reviewer.*\.md$" }
+    if (-not $verdictArtifacts -or $verdictArtifacts.Count -lt 1) {
+      throw "Phase '$Phase' missing mandatory verdict markdown artifact."
+    }
+    foreach ($rel in $verdictArtifacts) {
+      Validate-MarkdownVerdictContract -Path (Join-Path $Root $rel)
+    }
+  }
+
+  if ($Phase -eq "export") {
+    $manifestArtifacts = $Artifacts | Where-Object { $_ -match "manifest.*\.json$" }
+    if (-not $manifestArtifacts -or $manifestArtifacts.Count -lt 1) {
+      throw "Export phase missing manifest JSON artifact."
+    }
+  }
+}
+
+function Assert-NoForbiddenPatterns {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [string[]]$Patterns,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+  if ($Phase -notin @("create","polish","rewrite")) {
+    return
+  }
+
+  $episodeDir = Join-Path $Root "episode"
+  if (-not (Test-Path -LiteralPath $episodeDir -PathType Container)) {
+    return
+  }
+
+  $episodes = Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File -ErrorAction SilentlyContinue
+  foreach ($ep in $episodes) {
+    $raw = Get-Content -LiteralPath $ep.FullName -Raw
+    foreach ($p in $Patterns) {
+      if ($raw -match $p) {
+        throw "Negative enforcement BLOCKED in $($ep.Name): pattern '$p'"
+      }
+    }
+  }
+}
+
 $phases = @("propose","design-big","design-small","create","polish","rewrite","export")
 $fromIdx = [Array]::IndexOf($phases, $FromPhase)
 $toIdx = [Array]::IndexOf($phases, $ToPhase)
@@ -406,6 +549,35 @@ if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Na
   }
 }
 
+$requireUserApprovals = $true
+if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "require_user_approvals")) {
+  if ($cfg.quality_flags.require_user_approvals -eq $false) {
+    $requireUserApprovals = $false
+  }
+}
+
+$enforcePhaseContracts = $true
+if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "enforce_phase_contracts")) {
+  if ($cfg.quality_flags.enforce_phase_contracts -eq $false) {
+    $enforcePhaseContracts = $false
+  }
+}
+
+$enableNegativeEnforcement = $true
+if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "enable_negative_enforcement")) {
+  if ($cfg.quality_flags.enable_negative_enforcement -eq $false) {
+    $enableNegativeEnforcement = $false
+  }
+}
+
+$negativePatterns = @("(?i)TL;DR","(?im)^\\s*Özet\\s*:","(?im)^\\s*Summary\\s*:","\\[TODO\\]","(?i)lorem ipsum")
+if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "forbidden_content_patterns")) {
+  $customPatterns = @($cfg.quality_flags.forbidden_content_patterns)
+  if ($customPatterns.Count -gt 0) {
+    $negativePatterns = $customPatterns
+  }
+}
+
 $runId = "RUN-" + (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + (Get-Random -Minimum 1000 -Maximum 10000)
 $runsRoot = Join-Path $runtimeDir "runs"
 $summaryPath = Join-Path $runtimeDir ("runs/" + $runId + "/run-summary.json")
@@ -427,6 +599,9 @@ Write-Host "[runner] dictionary_check: $dictionaryCheckEnabled"
 Write-Host "[runner] require_phase_evidence: $requirePhaseEvidence"
 Write-Host "[runner] retention.enabled: $retentionEnabled"
 Write-Host "[runner] retention.max_runs: $retentionMaxRuns"
+Write-Host "[runner] require_user_approvals: $requireUserApprovals"
+Write-Host "[runner] enforce_phase_contracts: $enforcePhaseContracts"
+Write-Host "[runner] enable_negative_enforcement: $enableNegativeEnforcement"
 
 Save-RunSummary -Path $summaryPath -Summary $summary
 Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
@@ -508,10 +683,13 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       }
     }
 
+    Ensure-UserApproval -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $requireUserApprovals
     Validate-PhaseArtifacts -Phase $phase -Root $ProjectRoot
     Invoke-DictionaryCheck -Phase $phase -Root $ProjectRoot -RunId $runId -Config $cfg -Enabled $dictionaryCheckEnabled
 
     $artifacts = Get-PhaseOutputArtifacts -Phase $phase -Root $ProjectRoot
+    Validate-PhaseContracts -Root $ProjectRoot -Phase $phase -Artifacts $artifacts -Enabled $enforcePhaseContracts
+    Assert-NoForbiddenPatterns -Root $ProjectRoot -Phase $phase -Patterns $negativePatterns -Enabled $enableNegativeEnforcement
     $evidencePath = Join-Path $runtimeDir ("runs/" + $runId + "/evidence/" + $stepId + ".json")
     $evidence = [ordered]@{
       run_id = $runId

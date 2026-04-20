@@ -27,6 +27,21 @@
     "dictionary_check_command": "powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot \"{project_root}\" -Phase {phase} -RunId {run_id}",
     "require_phase_evidence": true,
     "execution_claim_mode": "simulated",
+    "require_user_approvals": true,
+    "enforce_phase_contracts": true,
+    "enable_negative_enforcement": true,
+    "approval_files": {
+      "create": "runtime/approvals/design-freeze.json",
+      "rewrite": "runtime/approvals/rewrite-approval.json",
+      "export": "runtime/approvals/export-approval.json"
+    },
+    "forbidden_content_patterns": [
+      "(?i)TL;DR",
+      "(?im)^\\s*Özet\\s*:",
+      "(?im)^\\s*Summary\\s*:",
+      "\\[TODO\\]",
+      "(?i)lorem ipsum"
+    ],
     "retention": {
       "enabled": true,
       "max_runs": 20
@@ -39,6 +54,9 @@
     "Dictionary check is optional and only runs for create/polish/rewrite when enabled.",
     "Phase evidence is mandatory when require_phase_evidence=true.",
     "execution_claim_mode should be 'executed' only when actual command-mode execution is used.",
+    "create/rewrite/export require explicit approval JSON files when require_user_approvals=true.",
+    "phase contracts are hard gates when enforce_phase_contracts=true.",
+    "negative enforcement blocks forbidden content patterns in episode outputs.",
     "retention.max_runs controls how many run directories are kept under runtime/runs/."
   ]
 }

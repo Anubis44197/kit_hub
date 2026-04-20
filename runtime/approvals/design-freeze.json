@@ -1,0 +1,7 @@
+﻿{
+    "approved":  false,
+    "title":  "Design Freeze Approval",
+    "approved_by":  "",
+    "approved_at":  "",
+    "note":  "Set approved=true only after explicit user confirmation."
+}

@@ -20,6 +20,9 @@ powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 This creates:
 - `runtime/runner-config.json` (if missing)
 - `runtime/runs/`
+- `runtime/approvals/design-freeze.json`
+- `runtime/approvals/rewrite-approval.json`
+- `runtime/approvals/export-approval.json`
 
 ## 2) Manual Mode (Default)
 
@@ -129,6 +132,32 @@ Pruning only affects `runtime/runs/RUN-*` directories.
 
 The runner validates required artifacts per phase before moving forward.
 If missing, the run fails immediately with a clear message.
+
+## 5.1) Approval Gates (Hard)
+
+When `quality_flags.require_user_approvals=true` (default), these gates are mandatory:
+- `create` requires `runtime/approvals/design-freeze.json` with `approved=true`
+- `rewrite` requires `runtime/approvals/rewrite-approval.json` with `approved=true`
+- `export` requires `runtime/approvals/export-approval.json` with `approved=true`
+
+Without approval, phase is blocked.
+
+## 5.2) Phase Contracts (Hard)
+
+When `quality_flags.enforce_phase_contracts=true` (default):
+- issue JSON artifacts are schema-validated (required fields + severity enum)
+- verdict markdown must include `VERDICT: PASS|FAIL|BLOCKED`
+- export requires manifest JSON artifact
+
+Schema mismatch fails the phase.
+
+## 5.3) Negative Enforcement
+
+When `quality_flags.enable_negative_enforcement=true` (default),
+runner scans episode outputs and blocks forbidden patterns.
+
+Default patterns are configurable under:
+- `quality_flags.forbidden_content_patterns`
 
 ## 6) Policy Documents
 

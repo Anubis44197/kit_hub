@@ -46,6 +46,12 @@ test -f docs/PHASE_EVIDENCE_SCHEMA.md
 test -f docs/WORKSPACE_RETENTION_POLICY.md
 grep -q "current-run.json" scripts/run_pipeline.ps1
 grep -q "Invoke-RunRetention" scripts/run_pipeline.ps1
+grep -q "Ensure-UserApproval" scripts/run_pipeline.ps1
+grep -q "Validate-PhaseContracts" scripts/run_pipeline.ps1
+grep -q "Assert-NoForbiddenPatterns" scripts/run_pipeline.ps1
+grep -q "require_user_approvals" runtime/runner-config.template.json
+grep -q "enforce_phase_contracts" runtime/runner-config.template.json
+grep -q "enable_negative_enforcement" runtime/runner-config.template.json
 
 echo "[contract-lint] validating quality-verifier strict metadata contract..."
 grep -q "## Required Report Metadata (Strict)" agents/quality-verifier.md

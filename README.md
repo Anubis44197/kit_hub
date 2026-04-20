@@ -145,7 +145,9 @@ Reference documents:
 ## Export and Approval Model
 | Stage | Result |
 |---|---|
-| Approval missing (`approval=false`) | Export blocked with `E_EXPORT_APPROVAL` |
+| Design freeze approval missing | `create` blocked |
+| Rewrite approval missing | `rewrite` blocked |
+| Export approval missing (`approval=false`) | Export blocked with `E_EXPORT_APPROVAL` |
 | Approval granted (`approval=true`) | Export proceeds through validator/manifests |
 | DOCX integrity check | Must pass structural verification (`verify_docx_integrity.ps1`) |
 
@@ -177,6 +179,14 @@ Reference documents:
   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase create -ToPhase rewrite -EnableDictionaryCheck`
 - Runner writes a live pointer file:
   - `runtime/current-run.json`
+- Runner requires hard approval files (default):
+  - `runtime/approvals/design-freeze.json`
+  - `runtime/approvals/rewrite-approval.json`
+  - `runtime/approvals/export-approval.json`
+- Runner enforces hard phase contracts (default):
+  - issue JSON schema
+  - verdict markdown token (`PASS|FAIL|BLOCKED`)
+  - export manifest existence
 - Runner retention policy:
   - Keeps recent run traces under `runtime/runs/` (default `max_runs=20`)
   - Configurable in `runtime/runner-config.json` via `quality_flags.retention`
