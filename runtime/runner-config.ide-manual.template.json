@@ -1,0 +1,74 @@
+{
+  "execution_mode": "manual",
+  "adapter": {
+    "strategy": "manual_ide_agent",
+    "command_template": ""
+  },
+  "phase_commands": {
+    "propose": "",
+    "design-big": "",
+    "design-small": "",
+    "create": "",
+    "polish": "",
+    "rewrite": "",
+    "export": ""
+  },
+  "phase_prompts": {
+    "propose": "Use agents/proposal-generator.md and write _workspace/01_proposals.md plus a *_proposal.md file.",
+    "design-big": "Use concept/character/plot/book structure agents. Write novel-config.md, design/01_concept_bootstrap.md, design/02_character_core.md, design/03_macro_plot_hooks.md, and revision/_state/*.json.",
+    "design-small": "Write design/EP001-EP00N_scene_plan.md, character detail, and plot detail files for the selected chapter range.",
+    "create": "Write episode/epNNN.md files and required quality/TDK/layout artifacts under revision/_workspace/.",
+    "polish": "Run editorial agents, TDK/layout checks, and write revision reviewer plus editor reports.",
+    "rewrite": "Rewrite only when required, preserve state ledgers, and write rewrite plus quality-verifier artifacts.",
+    "export": "Build front matter, cover brief, publication-compliance artifacts, export manifest, and DOCX."
+  },
+  "quality_flags": {
+    "enable_dictionary_check": false,
+    "dictionary_check_command": "powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot \"{project_root}\" -Phase {phase} -RunId {run_id} {require_provider_arg}",
+    "require_dictionary_provider": false,
+    "require_phase_evidence": true,
+    "execution_claim_mode": "simulated",
+    "require_user_approvals": true,
+    "enforce_phase_contracts": true,
+    "enable_negative_enforcement": true,
+    "enable_text_quality_gates": true,
+    "require_executed_claims_for_critical_phases": false,
+    "approval_files": {
+      "create": "runtime/approvals/design-freeze.json",
+      "rewrite": "runtime/approvals/rewrite-approval.json",
+      "export": "runtime/approvals/export-approval.json"
+    },
+    "forbidden_content_patterns": [
+      "(?i)TL;DR",
+      "(?im)^\\s*Ozet\\s*:",
+      "(?im)^\\s*Summary\\s*:",
+      "\\[TODO\\]",
+      "(?i)lorem ipsum"
+    ],
+    "text_quality_gates": {
+      "max_duplicate_line_ratio": 0.28,
+      "max_repeated_paragraph_prefix": 1,
+      "paragraph_prefix_length": 95,
+      "tell_sensory_ratio_max": 2.4,
+      "require_dash_dialogue": true,
+      "forbid_mixed_dialogue_styles": true,
+      "min_psychological_markers": 6
+    },
+    "cross_chapter_gates": {
+      "max_chapter_similarity": 0.72,
+      "max_opening_prefix_repeat": 1,
+      "min_event_markers_per_chapter": 4
+    },
+    "retention": {
+      "enabled": true,
+      "max_runs": 20
+    }
+  },
+  "notes": [
+    "Use this profile when a human-operated IDE agent such as Cursor, Windsurf, Continue, Claude Code, or Codex writes files directly.",
+    "The runner waits after each phase, then validates the artifacts produced by the IDE agent.",
+    "No external API key is required by this repository in manual IDE mode.",
+    "Because the IDE agent is external to this runner, execution_claim_mode remains simulated, but artifact gates still run.",
+    "For machine-verifiable executed evidence, use runtime/runner-config.json command mode instead."
+  ]
+}

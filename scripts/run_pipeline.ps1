@@ -75,6 +75,14 @@ function Validate-PhaseArtifacts {
         "design/*_plot-hook.md",
         "design/03_macro_plot_hooks.md"
       ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_state/longform-plan.json",
+        "revision/_state/style-profile.json",
+        "revision/_state/writing-type-profile.json",
+        "revision/_state/genre-structure-template.json",
+        "revision/_state/editorial-quality-scorecard.json",
+        "revision/_state/llm-adapter-contract.json"
+      ) -BasePath $Root
     }
     "design-small" {
       Ensure-Any -Patterns @(
@@ -106,6 +114,14 @@ function Validate-PhaseArtifacts {
         "revision/_workspace/08_tdk-polisher_issues_EP*.json",
         "revision/_workspace/*tdk-polisher*issues*EP*.json"
       ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_state/character-state.json",
+        "revision/_state/plot-ledger.json",
+        "revision/_state/chapter-summaries.json",
+        "revision/_state/continuity-ledger.json",
+        "revision/_state/style-profile.json",
+        "revision/_state/longform-plan.json"
+      ) -BasePath $Root
     }
     "polish" {
       Ensure-Any -Patterns @("episode/ep*.md") -BasePath $Root
@@ -118,6 +134,7 @@ function Validate-PhaseArtifacts {
         "revision/_workspace/08_tdk-polisher_issues_EP*.json",
         "revision/_workspace/*tdk-polisher*issues*EP*.json"
       ) -BasePath $Root
+      Ensure-Any -Patterns @("revision/_state/*.json") -BasePath $Root
     }
     "rewrite" {
       Ensure-Any -Patterns @("episode/ep*.md") -BasePath $Root
@@ -130,6 +147,7 @@ function Validate-PhaseArtifacts {
         "revision/_workspace/08_tdk-polisher_issues_EP*.json",
         "revision/_workspace/*tdk-polisher*issues*EP*.json"
       ) -BasePath $Root
+      Ensure-Any -Patterns @("revision/_state/*.json") -BasePath $Root
     }
     "export" {
       Ensure-Any -Patterns @(
@@ -141,6 +159,27 @@ function Validate-PhaseArtifacts {
         "revision/_workspace/10_export-validator_verdict_EP*.json",
         "revision/_workspace/*export-validator*verdict*.json",
         "revision/_workspace/*export-validator*.md"
+      ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_workspace/11_front-matter_report.md",
+        "revision/_workspace/11_front-matter_*.md",
+        "revision/_workspace/11_front-matter_toc.json"
+      ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_workspace/12_cover-design_manifest.json",
+        "revision/_workspace/12_cover-design_brief.md"
+      ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_workspace/14_publication-compliance_verdict_EP*.json",
+        "revision/_workspace/14_publication-compliance_report_EP*.md"
+      ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_state/character-state.json",
+        "revision/_state/plot-ledger.json",
+        "revision/_state/chapter-summaries.json",
+        "revision/_state/continuity-ledger.json",
+        "revision/_state/style-profile.json",
+        "revision/_state/longform-plan.json"
       ) -BasePath $Root
       Ensure-Any -Patterns @("revision/export/*.docx") -BasePath $Root
     }
@@ -159,22 +198,37 @@ function Get-PhaseOutputArtifacts {
       $patterns = @("_workspace/01_proposals*.md","*_proposal.md")
     }
     "design-big" {
-      $patterns = @("novel-config.md","design/*_bootstrap.md","design/*_character.md","design/*_plot-hook.md")
+      $patterns = @("novel-config.md","design/*_bootstrap.md","design/*_character.md","design/*_plot-hook.md","revision/_state/*.json")
     }
     "design-small" {
       $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md")
     }
     "create" {
-      $patterns = @("episode/ep*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json")
+      $patterns = @("episode/ep*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_state/*.json")
     }
     "polish" {
-      $patterns = @("episode/ep*.md","revision/_workspace/*revision-reviewer*EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/10_tdk-dictionary-check_polish.json")
+      $patterns = @("episode/ep*.md","revision/_workspace/*revision-reviewer*EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/10_tdk-dictionary-check_polish.json","revision/_state/*.json")
     }
     "rewrite" {
-      $patterns = @("episode/ep*.md","revision/_workspace/*rewrite*report*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/10_tdk-dictionary-check_rewrite.json")
+      $patterns = @(
+        "episode/ep*.md",
+        "revision/_workspace/*rewrite*report*.md",
+        "revision/_workspace/04_quality-verifier_verdict_EP*.md",
+        "revision/_workspace/08_tdk-polisher_issues_EP*.json",
+        "revision/_workspace/10_tdk-dictionary-check_rewrite.json",
+        "revision/_state/*.json"
+      )
     }
     "export" {
-      $patterns = @("revision/_workspace/*export*manifest*.json","revision/_workspace/*export-validator*verdict*.json","revision/export/*.docx")
+      $patterns = @(
+        "revision/_workspace/*export*manifest*.json",
+        "revision/_workspace/*export-validator*verdict*.json",
+        "revision/_workspace/11_front-matter*",
+        "revision/_workspace/12_cover-design*",
+        "revision/_workspace/14_publication-compliance*",
+        "revision/_state/*.json",
+        "revision/export/*.docx"
+      )
     }
     default { $patterns = @() }
   }
@@ -199,7 +253,18 @@ function Get-PhaseOutputArtifacts {
 function Load-RunnerConfig {
   param([string]$Path)
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-    throw "Runner config not found: $Path"
+    $dir = Split-Path -Parent $Path
+    $templatePath = Join-Path $dir "runner-config.template.json"
+    if (Test-Path -LiteralPath $templatePath -PathType Leaf) {
+      if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
+        New-Item -ItemType Directory -Path $dir | Out-Null
+      }
+      Copy-Item -LiteralPath $templatePath -Destination $Path -Force
+      Write-Host "[runner] created missing config from template: $Path"
+    }
+    else {
+      throw "Runner config not found: $Path"
+    }
   }
   return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
 }
@@ -356,18 +421,38 @@ function Invoke-DictionaryCheck {
     return
   }
 
+  $requireProvider = $false
+  if ($Config -and $Config.quality_flags -and ($Config.quality_flags.PSObject.Properties.Name -contains "require_dictionary_provider")) {
+    $requireProvider = [bool]$Config.quality_flags.require_dictionary_provider
+  }
+
   $template = ""
   if ($Config -and $Config.quality_flags -and $Config.quality_flags.dictionary_check_command) {
     $template = [string]$Config.quality_flags.dictionary_check_command
   }
   if (-not $template) {
-    $template = "python scripts/ci/tdk_dict_check.py --project-root ""{project_root}"" --phase {phase} --run-id {run_id}"
+    $template = "powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot ""{project_root}"" -Phase {phase} -RunId {run_id} {require_provider_arg}"
+  }
+
+  if ($template -match "tdk_dict_check\.ps1") {
+    $scriptPath = Join-Path $Root "scripts/ci/tdk_dict_check.ps1"
+    $argsList = @("-ExecutionPolicy", "Bypass", "-File", $scriptPath, "-ProjectRoot", $Root, "-Phase", $Phase, "-RunId", $RunId)
+    if ($requireProvider) {
+      $argsList += "-RequireProvider"
+    }
+    Write-Host "[runner] dictionary-check: powershell $($argsList -join ' ')"
+    & powershell @argsList
+    if ($LASTEXITCODE -ne 0) {
+      throw "Dictionary check failed (exit=$LASTEXITCODE): $scriptPath"
+    }
+    return
   }
 
   $cmd = Expand-Template -Template $template -Values @{
     phase = $Phase
     project_root = $Root
     run_id = $RunId
+    require_provider_arg = $(if ($requireProvider) { "-RequireProvider" } else { "" })
   }
 
   Write-Host "[runner] dictionary-check: $cmd"
@@ -486,6 +571,180 @@ function Validate-PhaseContracts {
     if (-not $manifestArtifacts -or $manifestArtifacts.Count -lt 1) {
       throw "Export phase missing manifest JSON artifact."
     }
+    $publicationArtifacts = $Artifacts | Where-Object { $_ -match "publication-compliance.*\.(json|md)$" }
+    if (-not $publicationArtifacts -or $publicationArtifacts.Count -lt 1) {
+      throw "Export phase missing publication compliance artifacts."
+    }
+  }
+}
+
+function Validate-AgentCompliance {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+
+  $path = Join-Path $Root ("runtime/agent-compliance/{0}.json" -f $Phase)
+  Ensure-File $path
+  $obj = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+  foreach ($field in @("run_id","phase","required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","contract_status","missing_items")) {
+    if (-not ($obj.PSObject.Properties.Name -contains $field)) {
+      throw "Agent compliance manifest missing '$field': $path"
+    }
+  }
+  if ([string]$obj.phase -ne $Phase) {
+    throw "Agent compliance phase mismatch. Expected '$Phase', found '$($obj.phase)': $path"
+  }
+  if ($obj.contract_status -ne "PASS") {
+    throw "Agent compliance failed for phase '$Phase': status=$($obj.contract_status)"
+  }
+  if (@($obj.required_agents).Count -lt 1) {
+    throw "Agent compliance required_agents is empty for phase '$Phase'."
+  }
+  $executed = @($obj.agents_executed)
+  foreach ($agent in @($obj.required_agents)) {
+    if ($executed -notcontains $agent) {
+      throw "Agent compliance missing executed agent '$agent' for phase '$Phase'."
+    }
+  }
+  if (@($obj.missing_items).Count -gt 0) {
+    throw "Agent compliance has missing_items for phase '$Phase': $($obj.missing_items -join ', ')"
+  }
+}
+
+function Validate-PublicationCompliance {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled -or $Phase -ne "export") {
+    return
+  }
+
+  $verdicts = Get-ChildItem -Path (Join-Path $Root "revision/_workspace/14_publication-compliance_verdict_EP*.json") -File -ErrorAction SilentlyContinue
+  if (-not $verdicts -or $verdicts.Count -lt 1) {
+    throw "Publication compliance verdict is missing."
+  }
+
+  foreach ($file in $verdicts) {
+    $obj = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-Json
+    foreach ($field in @("run_id","step_id","verdict","print_ready","metadata_placeholders","isbn_status","barcode_status","kunye_status","bandrol_external","block_reasons")) {
+      if (-not ($obj.PSObject.Properties.Name -contains $field)) {
+        throw "Publication compliance verdict missing '$field': $($file.FullName)"
+      }
+    }
+    if ($obj.verdict -notin @("READY","REVIEW_REQUIRED","BLOCKED")) {
+      throw "Invalid publication compliance verdict '$($obj.verdict)': $($file.FullName)"
+    }
+    if ($obj.print_ready -eq $true -and $obj.verdict -ne "READY") {
+      throw "Publication compliance cannot set print_ready=true unless verdict=READY: $($file.FullName)"
+    }
+  }
+}
+
+function Validate-LongformState {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+  if ($Phase -notin @("design-big","create","polish","rewrite","export")) {
+    return
+  }
+
+  $stateDir = Join-Path $Root "revision/_state"
+  $required = @(
+    "longform-plan.json",
+    "character-state.json",
+    "plot-ledger.json",
+    "chapter-summaries.json",
+    "continuity-ledger.json",
+    "style-profile.json",
+    "writing-type-profile.json",
+    "genre-structure-template.json",
+    "editorial-quality-scorecard.json",
+    "llm-adapter-contract.json"
+  )
+  foreach ($name in $required) {
+    Ensure-File (Join-Path $stateDir $name)
+  }
+
+  $plan = Get-Content -LiteralPath (Join-Path $stateDir "longform-plan.json") -Raw | ConvertFrom-Json
+  foreach ($field in @("target_pages","target_words","target_chapters","chapters","required_state_files")) {
+    if (-not ($plan.PSObject.Properties.Name -contains $field)) {
+      throw "Longform plan missing '$field'."
+    }
+  }
+  if ([int]$plan.target_pages -lt 200) {
+    throw "Longform plan target_pages must support long books; found $($plan.target_pages)."
+  }
+  if ([int]$plan.target_chapters -lt 20) {
+    throw "Longform plan target_chapters too low for longform mode; found $($plan.target_chapters)."
+  }
+
+  $character = Get-Content -LiteralPath (Join-Path $stateDir "character-state.json") -Raw | ConvertFrom-Json
+  if (-not ($character.PSObject.Properties.Name -contains "characters")) {
+    throw "character-state.json missing characters."
+  }
+
+  $plot = Get-Content -LiteralPath (Join-Path $stateDir "plot-ledger.json") -Raw | ConvertFrom-Json
+  foreach ($field in @("main_question","open_threads","final_promises")) {
+    if (-not ($plot.PSObject.Properties.Name -contains $field)) {
+      throw "plot-ledger.json missing '$field'."
+    }
+  }
+
+  $style = Get-Content -LiteralPath (Join-Path $stateDir "style-profile.json") -Raw | ConvertFrom-Json
+  foreach ($field in @("profile","narration","dialogue_policy","print_format")) {
+    if (-not ($style.PSObject.Properties.Name -contains $field)) {
+      throw "style-profile.json missing '$field'."
+    }
+  }
+
+  $writingProfile = Get-Content -LiteralPath (Join-Path $stateDir "writing-type-profile.json") -Raw | ConvertFrom-Json
+  foreach ($field in @("writing_type","target_reader","structure_model","voice_model","evidence_policy","continuity_policy","completion_criteria")) {
+    if (-not ($writingProfile.PSObject.Properties.Name -contains $field)) {
+      throw "writing-type-profile.json missing '$field'."
+    }
+  }
+
+  $structureTemplate = Get-Content -LiteralPath (Join-Path $stateDir "genre-structure-template.json") -Raw | ConvertFrom-Json
+  foreach ($field in @("template_id","acts","chapter_rules","mandatory_ledgers")) {
+    if (-not ($structureTemplate.PSObject.Properties.Name -contains $field)) {
+      throw "genre-structure-template.json missing '$field'."
+    }
+  }
+
+  $scorecard = Get-Content -LiteralPath (Join-Path $stateDir "editorial-quality-scorecard.json") -Raw | ConvertFrom-Json
+  foreach ($field in @("threshold_pass","axes","export_blockers")) {
+    if (-not ($scorecard.PSObject.Properties.Name -contains $field)) {
+      throw "editorial-quality-scorecard.json missing '$field'."
+    }
+  }
+
+  $adapterContract = Get-Content -LiteralPath (Join-Path $stateDir "llm-adapter-contract.json") -Raw | ConvertFrom-Json
+  foreach ($field in @("adapter_contract","max_chapters_per_batch","required_input_state","required_output_state")) {
+    if (-not ($adapterContract.PSObject.Properties.Name -contains $field)) {
+      throw "llm-adapter-contract.json missing '$field'."
+    }
+  }
+
+  if ($Phase -in @("create","polish","rewrite","export")) {
+    $summaries = Get-Content -LiteralPath (Join-Path $stateDir "chapter-summaries.json") -Raw | ConvertFrom-Json
+    if (-not ($summaries.PSObject.Properties.Name -contains "chapters") -or @($summaries.chapters).Count -lt 1) {
+      throw "chapter-summaries.json must include at least one generated chapter summary after create."
+    }
   }
 }
 
@@ -548,6 +807,149 @@ function Get-NovelConfigStringValue {
   return $Default
 }
 
+function Get-TokenSet {
+  param([string]$Text)
+  $tokens = [regex]::Matches($Text.ToLowerInvariant(), "[a-z0-9ğüşöçı]+") | ForEach-Object { $_.Value } | Where-Object { $_.Length -gt 3 }
+  return @($tokens | Sort-Object -Unique)
+}
+
+function Get-JaccardSimilarity {
+  param([string]$A, [string]$B)
+  $setA = @(Get-TokenSet -Text $A)
+  $setB = @(Get-TokenSet -Text $B)
+  if ($setA.Count -eq 0 -or $setB.Count -eq 0) {
+    return 0.0
+  }
+  $hashA = @{}
+  foreach ($t in $setA) { $hashA[$t] = $true }
+  $intersection = 0
+  foreach ($t in $setB) {
+    if ($hashA.ContainsKey($t)) { $intersection++ }
+  }
+  $union = ($setA + $setB | Sort-Object -Unique).Count
+  return ($intersection / [double]$union)
+}
+
+function Validate-CrossChapterProgression {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [object]$Config,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+  if ($Phase -notin @("create","polish","rewrite")) {
+    return
+  }
+
+  $episodeDir = Join-Path $Root "episode"
+  if (-not (Test-Path -LiteralPath $episodeDir -PathType Container)) {
+    return
+  }
+  $episodes = @(Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File -ErrorAction SilentlyContinue | Sort-Object Name)
+  if ($episodes.Count -lt 2) {
+    return
+  }
+
+  $maxChapterSimilarity = 0.72
+  $maxOpeningPrefixRepeat = 1
+  $minEventMarkersPerChapter = 4
+  if ($Config -and $Config.quality_flags -and ($Config.quality_flags.PSObject.Properties.Name -contains "cross_chapter_gates")) {
+    $q = $Config.quality_flags.cross_chapter_gates
+    if ($q.PSObject.Properties.Name -contains "max_chapter_similarity") { $maxChapterSimilarity = [double]$q.max_chapter_similarity }
+    if ($q.PSObject.Properties.Name -contains "max_opening_prefix_repeat") { $maxOpeningPrefixRepeat = [int]$q.max_opening_prefix_repeat }
+    if ($q.PSObject.Properties.Name -contains "min_event_markers_per_chapter") { $minEventMarkersPerChapter = [int]$q.min_event_markers_per_chapter }
+  }
+
+  $texts = @{}
+  foreach ($ep in $episodes) {
+    $texts[$ep.Name] = Get-Content -LiteralPath $ep.FullName -Raw
+  }
+
+  for ($i = 0; $i -lt $episodes.Count; $i++) {
+    for ($j = $i + 1; $j -lt $episodes.Count; $j++) {
+      $a = $episodes[$i].Name
+      $b = $episodes[$j].Name
+      $sim = Get-JaccardSimilarity -A $texts[$a] -B $texts[$b]
+      if ($sim -gt $maxChapterSimilarity) {
+        throw "Cross-chapter progression gate failed: $a and $b are too similar (similarity=$([math]::Round($sim,3)), max=$maxChapterSimilarity)."
+      }
+    }
+  }
+
+  $prefixCounts = @{}
+  foreach ($ep in $episodes) {
+    $lines = @($texts[$ep.Name] -split "\r?\n" | Where-Object { $_.Trim() -ne "" })
+    if ($lines.Count -lt 2) { continue }
+    $firstBody = $lines | Where-Object { $_ -notmatch "^\s*BÖLÜM\s+\d+\b" } | Select-Object -First 1
+    if (-not $firstBody) { continue }
+    $m = [regex]::Match($firstBody.Trim(), "^(.{0,90})")
+    $prefix = $m.Groups[1].Value
+    if (-not $prefixCounts.ContainsKey($prefix)) { $prefixCounts[$prefix] = 0 }
+    $prefixCounts[$prefix]++
+  }
+  foreach ($key in $prefixCounts.Keys) {
+    if ($prefixCounts[$key] -gt $maxOpeningPrefixRepeat) {
+      throw "Cross-chapter progression gate failed: repeated chapter opening pattern detected ($($prefixCounts[$key]) times): $key"
+    }
+  }
+
+  $eventMarkers = @(
+    "öğren", "ogrend", "sordu", "söyledi", "soyledi", "verdi", "aldı", "aldi",
+    "açıklad", "aciklad", "itiraf", "karar", "durdur", "değiş", "degis",
+    "gitti", "geldi", "çıktı", "cikti", "başladı", "basladi", "kapandı", "kapandi"
+  )
+  foreach ($ep in $episodes) {
+    $markerHits = 0
+    foreach ($marker in $eventMarkers) {
+      if ([regex]::IsMatch($texts[$ep.Name], [regex]::Escape($marker), [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+        $markerHits++
+      }
+    }
+    if ($markerHits -lt $minEventMarkersPerChapter) {
+      throw "Cross-chapter progression gate failed in $($ep.Name): narrative event marker coverage=$markerHits below minimum=$minEventMarkersPerChapter."
+    }
+  }
+
+  $summaryPath = Join-Path $Root "revision/_state/chapter-summaries.json"
+  if (Test-Path -LiteralPath $summaryPath -PathType Leaf) {
+    $summary = Get-Content -LiteralPath $summaryPath -Raw | ConvertFrom-Json
+    $chapters = @($summary.chapters)
+    if ($chapters.Count -ge 2) {
+      $uniqueSummaries = @($chapters | ForEach-Object { [string]$_.summary } | Sort-Object -Unique)
+      if ($uniqueSummaries.Count -lt $chapters.Count) {
+        throw "Cross-chapter progression gate failed: chapter summaries are duplicated."
+      }
+      $uniqueChanges = @($chapters | ForEach-Object { [string]$_.irreversible_change } | Where-Object { $_.Trim() -ne "" } | Sort-Object -Unique)
+      if ($uniqueChanges.Count -lt $chapters.Count) {
+        throw "Cross-chapter progression gate failed: every chapter must record a unique irreversible_change."
+      }
+      foreach ($chapter in $chapters) {
+        $newInfo = @($chapter.new_information)
+        if ($newInfo.Count -lt 1) {
+          throw "Cross-chapter progression gate failed: $($chapter.id) missing new_information in chapter-summaries.json."
+        }
+      }
+    }
+  }
+
+  $plotPath = Join-Path $Root "revision/_state/plot-ledger.json"
+  if (Test-Path -LiteralPath $plotPath -PathType Leaf) {
+    $plot = Get-Content -LiteralPath $plotPath -Raw | ConvertFrom-Json
+    $chain = @($plot.cause_effect_chain)
+    if ($chain.Count -lt $episodes.Count) {
+      throw "Cross-chapter progression gate failed: plot-ledger cause_effect_chain has $($chain.Count) entries for $($episodes.Count) chapters."
+    }
+    $uniqueEffects = @($chain | ForEach-Object { [string]$_.effect } | Where-Object { $_.Trim() -ne "" } | Sort-Object -Unique)
+    if ($uniqueEffects.Count -lt $chain.Count) {
+      throw "Cross-chapter progression gate failed: plot-ledger cause_effect_chain effects are duplicated."
+    }
+  }
+}
+
 function Validate-EpisodeTextQuality {
   param(
     [string]$Root,
@@ -584,6 +986,8 @@ function Validate-EpisodeTextQuality {
   $isPsychological = $targetGenre -match "(?i)psych|psikolojik|gerilim"
 
   $maxDuplicateLineRatio = 0.28
+  $maxRepeatedParagraphPrefix = 1
+  $paragraphPrefixLength = 95
   $tellSensoryRatioMax = 2.40
   $requireDashDialogue = $true
   $forbidMixedDialogue = $true
@@ -592,6 +996,8 @@ function Validate-EpisodeTextQuality {
   if ($Config -and $Config.quality_flags -and ($Config.quality_flags.PSObject.Properties.Name -contains "text_quality_gates")) {
     $q = $Config.quality_flags.text_quality_gates
     if ($q.PSObject.Properties.Name -contains "max_duplicate_line_ratio") { $maxDuplicateLineRatio = [double]$q.max_duplicate_line_ratio }
+    if ($q.PSObject.Properties.Name -contains "max_repeated_paragraph_prefix") { $maxRepeatedParagraphPrefix = [int]$q.max_repeated_paragraph_prefix }
+    if ($q.PSObject.Properties.Name -contains "paragraph_prefix_length") { $paragraphPrefixLength = [int]$q.paragraph_prefix_length }
     if ($q.PSObject.Properties.Name -contains "tell_sensory_ratio_max") { $tellSensoryRatioMax = [double]$q.tell_sensory_ratio_max }
     if ($q.PSObject.Properties.Name -contains "require_dash_dialogue") { $requireDashDialogue = [bool]$q.require_dash_dialogue }
     if ($q.PSObject.Properties.Name -contains "forbid_mixed_dialogue_styles") { $forbidMixedDialogue = [bool]$q.forbid_mixed_dialogue_styles }
@@ -603,6 +1009,12 @@ function Validate-EpisodeTextQuality {
 
     if ($rawText -match "[ÃÅÄ]") {
       throw "Text quality gate failed in $($ep.Name): mojibake/encoding corruption detected."
+    }
+    if ($rawText -match "(?m)^\s*(EP\d{3}|Sahne\s+\d+\.|Ara\s+kırılma\s+\d+\.|Ara\s+kirilma\s+\d+\.|Scene\s+\d+\.|Beat\s+\d+\.|TODO|FIXME)\b") {
+      throw "Text quality gate failed in $($ep.Name): reader-facing technical labels detected."
+    }
+    if ($rawText -match "\b(ep\d{3}\.md|EP\d{3}-EP\d{3})\b") {
+      throw "Text quality gate failed in $($ep.Name): internal episode/file label leaked into reader-facing text."
     }
 
     $charCount = $rawText.Length
@@ -620,6 +1032,20 @@ function Validate-EpisodeTextQuality {
       $duplicateRatio = 1.0 - ($uniqueCount / [double]$normalized.Count)
       if ($duplicateRatio -gt $maxDuplicateLineRatio) {
         throw "Text quality gate failed in $($ep.Name): duplicate_line_ratio=$([math]::Round($duplicateRatio,3)) exceeds limit=$maxDuplicateLineRatio."
+      }
+
+      $paragraphPrefixes = @{}
+      foreach ($line in $normalized) {
+        if ($line.Length -lt $paragraphPrefixLength) { continue }
+        if ($line -match "^\s*(?:-|—)\s+") { continue }
+        $prefix = $line.Substring(0, [math]::Min($paragraphPrefixLength, $line.Length))
+        if (-not $paragraphPrefixes.ContainsKey($prefix)) { $paragraphPrefixes[$prefix] = 0 }
+        $paragraphPrefixes[$prefix]++
+      }
+      foreach ($prefix in $paragraphPrefixes.Keys) {
+        if ($paragraphPrefixes[$prefix] -gt $maxRepeatedParagraphPrefix) {
+          throw "Text quality gate failed in $($ep.Name): repeated paragraph opening pattern detected ($($paragraphPrefixes[$prefix]) times): $prefix"
+        }
       }
     }
 
@@ -641,8 +1067,14 @@ function Validate-EpisodeTextQuality {
       }
     }
 
-    $tellWords = @("korkuyordu","hissediyordu","dusunuyordu","biliyordu","anladi","fark etti","uzgundu","sinirliydi","sasirdi","gerildi")
-    $sensoryWords = @("koku","ses","nefes","dokunus","soguk","sicak","islak","karanlik","isik","carpinti","ter","titreme")
+    $tellWords = @(
+      "korkuyordu","hissediyordu","düşünüyordu","dusunuyordu","biliyordu","anladı","anladi",
+      "fark etti","üzgündü","uzgundu","sinirliydi","şaşırdı","sasirdi","gerildi"
+    )
+    $sensoryWords = @(
+      "koku","ses","nefes","dokunuş","dokunus","soğuk","soguk","sıcak","sicak","ıslak","islak",
+      "karanlık","karanlik","ışık","isik","çarpıntı","carpinti","ter","titreme"
+    )
     $tellCount = 0
     foreach ($w in $tellWords) { $tellCount += [regex]::Matches($rawText, [regex]::Escape($w), [System.Text.RegularExpressions.RegexOptions]::IgnoreCase).Count }
     $sensoryCount = 0
@@ -656,8 +1088,10 @@ function Validate-EpisodeTextQuality {
 
     if ($isPsychological) {
       $psychMarkers = @(
-        "paranoya","halusinasyon","gercek mi","sanri","sucluluk","vicdan","panik","cokus","cozul",
-        "suphe","kaygi","karabasan","takinti","derealizasyon","depersonalizasyon"
+        "paranoya","halüsinasyon","halusinasyon","gerçek mi","gercek mi","sanrı","sanri",
+        "suçluluk","sucluluk","vicdan","panik","çöküş","cokus","çözül","cozul",
+        "şüphe","suphe","kaygı","kaygi","karabasan","takıntı","takinti",
+        "derealizasyon","depersonalizasyon"
       )
       $hit = 0
       foreach ($w in $psychMarkers) {
@@ -885,8 +1319,12 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
 
     $artifacts = Get-PhaseOutputArtifacts -Phase $phase -Root $ProjectRoot
     Validate-PhaseContracts -Root $ProjectRoot -Phase $phase -Artifacts $artifacts -Enabled $enforcePhaseContracts
+    Validate-AgentCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
+    Validate-LongformState -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
+    Validate-PublicationCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Assert-NoForbiddenPatterns -Root $ProjectRoot -Phase $phase -Patterns $negativePatterns -Enabled $enableNegativeEnforcement
     Validate-EpisodeTextQuality -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $enableTextQualityGates
+    Validate-CrossChapterProgression -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $enableTextQualityGates
     $evidencePath = Join-Path $runtimeDir ("runs/" + $runId + "/evidence/" + $stepId + ".json")
     $evidence = [ordered]@{
       run_id = $runId
@@ -1005,4 +1443,3 @@ Invoke-RunRetention -RunsRoot $runsRoot -ActiveRunId $runId -MaxRuns $retentionM
 Write-Host ""
 Write-Host "[runner] completed: $runId"
 Write-Host "[runner] summary: $summaryPath"
-
