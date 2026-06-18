@@ -65,13 +65,13 @@ This repository ships with a local command adapter for scaffolding and contract 
 powershell -ExecutionPolicy Bypass -File scripts/local_phase.ps1 -ProjectRoot "." -Phase propose -RunId "RUN-LOCAL"
 ```
 
-For a simple user topic, write the topic into:
+For a simple user topic, create this file yourself and write the topic into:
 
 ```text
 runtime/book-request.md
 ```
 
-If that file is missing or still contains the `Konu Bekleniyor` placeholder, the local adapter must fail before generation. The repository must not silently write a default novel topic.
+If that file is missing or empty, the local adapter must fail before generation. The repository must not ship or silently write a default novel topic.
 
 The local adapter does not write manuscript chapters, prefaces, or cover copy. It proposes directions, prepares gated scaffolding, and exports only artifacts that already exist. If required creative files are missing, it fails instead of inventing placeholder book content. Replace it with a real model command when production AI generation is wired.
 

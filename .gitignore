@@ -6,6 +6,8 @@ claudedocs/
 
 # Generated book/project outputs. Keep source control clean so agents do not
 # mistake stale smoke-test artifacts for the current manuscript.
+novel-config.md
+runtime/book-request.md
 design/
 episode/
 revision/

@@ -126,8 +126,7 @@ You do not need to give this repository an API key. If your IDE already has an a
    - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
 2. Create IDE manual config:
    - `Copy-Item runtime/runner-config.ide-manual.template.json runtime/runner-config.ide-manual.json -Force`
-3. Write your book request:
-   - `runtime/book-request.md`
+3. Create `runtime/book-request.md` yourself and write only the user's actual book request into it. The repository does not ship a default topic file.
 4. Start the gated pipeline:
    - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase propose -ToPhase export`
 5. After `propose`, choose one story direction in `runtime/approvals/story-choice.json` by setting `selected_option` and `approved=true`.

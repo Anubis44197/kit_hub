@@ -102,7 +102,7 @@ function Get-CleanTitleFromText {
   if (-not $line) { $line = $Text }
   $line = ($line -replace "(?i)^\s*\d+\s*(bölüm|bolum|chapter|chapters)\s*[:\-]?\s*", "").Trim()
   $words = @($line -split "\s+" | Where-Object { $_.Trim() } | Select-Object -First 5)
-  if ($words.Count -lt 1) { return "Konu Bekleniyor" }
+  if ($words.Count -lt 1) { return "Adsiz Kitap" }
   $title = ($words -join " ").Trim(" .,:;")
   if ($title.Length -gt 70) { $title = $title.Substring(0, 70).Trim() }
   return $title
@@ -115,7 +115,7 @@ function Get-ProjectName {
     $m = [regex]::Match($raw, '(?m)^\s*name:\s*"?([^"#\r\n]+)"?')
     if ($m.Success) {
       $name = $m.Groups[1].Value.Trim()
-      if ($name -and $name -ne "Konu Bekleniyor") { return $name }
+      if ($name) { return $name }
     }
   }
   return (Get-CleanTitleFromText -Text (Get-BookSeed))
