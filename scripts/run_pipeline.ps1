@@ -114,46 +114,46 @@ function Validate-PhaseArtifacts {
     }
     "design-big" {
       Ensure-File (Join-Path $Root "novel-config.md")
-      Ensure-Any -Patterns @(
-        "design/*_bootstrap.md",
-        "design/01_concept_bootstrap.md"
-      ) -BasePath $Root
-      Ensure-Any -Patterns @(
-        "design/*_character.md",
-        "design/02_character_core.md"
-      ) -BasePath $Root
-      Ensure-Any -Patterns @(
-        "design/*_plot-hook.md",
-        "design/03_macro_plot_hooks.md"
-      ) -BasePath $Root
-      Ensure-Any -Patterns @(
+      foreach ($requiredDesign in @(
+        "design/01_concept_bootstrap.md",
+        "design/02_character_core.md",
+        "design/03_macro_plot_hooks.md",
+        "design/04_book_plan.md",
+        "design/05_chapter_plan.md",
+        "design/06_layout_plan.md",
+        "revision/_state/book-plan.json",
+        "revision/_state/chapter-plan.json",
+        "revision/_state/layout-plan.json",
         "revision/_state/longform-plan.json",
+        "revision/_state/character-state.json",
+        "revision/_state/plot-ledger.json",
+        "revision/_state/chapter-summaries.json",
+        "revision/_state/continuity-ledger.json",
         "revision/_state/style-profile.json",
         "revision/_state/writing-type-profile.json",
         "revision/_state/genre-structure-template.json",
         "revision/_state/editorial-quality-scorecard.json",
         "revision/_state/llm-adapter-contract.json"
-      ) -BasePath $Root
+      )) {
+        Ensure-File (Join-Path $Root $requiredDesign)
+      }
     }
     "design-small" {
       Ensure-Any -Patterns @(
-        "design/*_character-detail_*.md",
-        "design/*character*detail*.md",
-        "design/EP001-EP005_scene_plan.md"
+        "design/*_character-detail_*.md"
       ) -BasePath $Root
       Ensure-Any -Patterns @(
-        "design/*_plot-detail_*.md",
-        "design/*plot*detail*.md",
-        "design/hook_table_EP001-EP005.md"
+        "design/*_plot-detail_*.md"
+      ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "design/*scene_plan*.md"
       ) -BasePath $Root
       Ensure-File (Join-Path $Root "novel-config.md")
     }
     "create" {
       Ensure-Any -Patterns @(
         "design/*scene_plan*.md",
-        "design/EP001-EP005_scene_plan.md",
-        "design/*_plot-detail_*.md",
-        "design/hook_table_EP001-EP005.md"
+        "design/*_plot-detail_*.md"
       ) -BasePath $Root
       Ensure-Any -Patterns @("episode/ep*.md") -BasePath $Root
       Ensure-Any -Patterns @(
@@ -171,7 +171,10 @@ function Validate-PhaseArtifacts {
         "revision/_state/chapter-summaries.json",
         "revision/_state/continuity-ledger.json",
         "revision/_state/style-profile.json",
-        "revision/_state/longform-plan.json"
+        "revision/_state/longform-plan.json",
+        "revision/_state/book-plan.json",
+        "revision/_state/chapter-plan.json",
+        "revision/_state/layout-plan.json"
       ) -BasePath $Root
     }
     "polish" {

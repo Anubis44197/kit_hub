@@ -50,18 +50,32 @@ Kontrol:
 `Sectigimiz proje icin buyuk tasarim asamasini tamamla: dunya kurallari, karakter cekirdekleri ve olay orgusu kancalari net olsun.`
 
 Kontrol:
-- `design/*_bootstrap.md`
-- `design/*_character.md`
-- `design/*_plot_hook.md`
+- `design/01_concept_bootstrap.md`
+- `design/02_character_core.md`
+- `design/03_macro_plot_hooks.md`
+- `design/04_book_plan.md`
+- `design/05_chapter_plan.md`
+- `design/06_layout_plan.md`
 - `novel-config.md`
+- `revision/_state/book-plan.json`
+- `revision/_state/chapter-plan.json`
+- `revision/_state/layout-plan.json`
+- `revision/_state/longform-plan.json`
+- `revision/_state/character-state.json`
+- `revision/_state/plot-ledger.json`
+- `revision/_state/continuity-ledger.json`
 
 ### Prompt C - Design Small (Atlama Yasak)
 `Ayni proje icin design-small asamasini eksiksiz tamamla. Sahne plani, karakter detaylari ve plot detaylari dosya olarak olussun. Atlama yapma.`
 
 Kontrol:
-- `design/*scene_plan*.md` veya `design/EP001-EP005_scene_plan.md`
-- `design/*character-detail*.md`
-- `design/*plot-detail*.md` veya `design/*hook*table*.md`
+- `runtime/approvals/book-plan-approval.json` onayli olmali
+- `revision/_state/book-plan.json`
+- `revision/_state/chapter-plan.json`
+- `revision/_state/layout-plan.json`
+- `design/*scene_plan*.md`
+- `design/*_character-detail_*.md`
+- `design/*_plot-detail_*.md`
 
 ### Prompt D - Create
 `Romanin ilk bolumunu guclu bir psikolojik gerilim olarak yaz. Tekrarli cumlelerden kac, duygusal derinlik ve sahneleme guclu olsun.`
@@ -70,6 +84,9 @@ Kontrol:
 - `episode/ep001.md`
 - `revision/*tdk-polisher*issues*.json`
 - `revision/*quality-verifier*.md`
+- `revision/_state/book-plan.json`
+- `revision/_state/chapter-plan.json`
+- `revision/_state/layout-plan.json`
 - `character_count` alt limitin altindaysa PASS verilmemeli.
 
 ### Prompt E - Polish

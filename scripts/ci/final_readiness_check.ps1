@@ -175,6 +175,20 @@ Assert-Contains -Path "scripts/ide_phase_prompt.ps1" -Pattern "revision/_state/b
 Assert-Contains -Path "scripts/ide_phase_prompt.ps1" -Pattern "runtime/approvals/book-plan-approval.json" -ErrorMessage "IDE phase prompt missing book-plan approval gate"
 Assert-Contains -Path "skills/design-big/SKILL.md" -Pattern "revision/_state/book-plan.json" -ErrorMessage "design-big skill missing book plan output contract"
 Assert-Contains -Path "skills/design-small/SKILL.md" -Pattern "book-plan-approval.json" -ErrorMessage "design-small skill missing book plan approval prerequisite"
+$staleContractFiles = @(
+  "scripts/run_pipeline.ps1",
+  "docs/REAL_E2E_TEST_RUNBOOK_TR.md",
+  "docs/IDE_AGENT_WORKFLOW.md",
+  "scripts/ide_phase_prompt.ps1",
+  "skills/design-big/SKILL.md",
+  "skills/design-small/SKILL.md"
+)
+foreach ($staleFile in $staleContractFiles) {
+  $staleRaw = Read-Utf8 -Path $staleFile
+  if ($staleRaw -match "EP001-EP005|hook_table_EP001-EP005|design/\*_plot_hook\.md") {
+    throw "Stale output contract remains in $staleFile"
+  }
+}
 
 Write-Host "[final-readiness-ps] checking fixture presence..."
 Assert-File "tests/fixtures/sample-project/novel-config.md"

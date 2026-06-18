@@ -121,7 +121,15 @@ The IDE agent must write the compliance manifest last:
   "required_agents": ["episode-creator", "tdk-polisher", "tdk-layout-agent", "quality-verifier"],
   "agents_executed": ["episode-creator", "tdk-polisher", "tdk-layout-agent", "quality-verifier"],
   "required_references": ["skills/create/SKILL.md"],
-  "loaded_state_files": ["revision/_state/longform-plan.json"],
+  "loaded_state_files": [
+    "revision/_state/book-plan.json",
+    "revision/_state/chapter-plan.json",
+    "revision/_state/layout-plan.json",
+    "revision/_state/longform-plan.json",
+    "revision/_state/character-state.json",
+    "revision/_state/plot-ledger.json",
+    "revision/_state/continuity-ledger.json"
+  ],
   "output_artifacts": ["episode/ep001.md"],
   "artifact_hashes": [
     {
@@ -139,7 +147,7 @@ The IDE agent must write the compliance manifest last:
 Recommended helper:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/ci/write_agent_compliance.ps1 -ProjectRoot . -Phase create -RunId RUN-... -RequiredAgents episode-creator,tdk-polisher,tdk-layout-agent,quality-verifier -RequiredReferences skills/create/SKILL.md -LoadedStateFiles revision/_state/longform-plan.json -OutputArtifacts episode/ep001.md -PhaseAuthority manual_ide_agent
+powershell -ExecutionPolicy Bypass -File scripts/ci/write_agent_compliance.ps1 -ProjectRoot . -Phase create -RunId RUN-... -RequiredAgents episode-creator,tdk-polisher,tdk-layout-agent,quality-verifier -RequiredReferences skills/create/SKILL.md -LoadedStateFiles revision/_state/book-plan.json,revision/_state/chapter-plan.json,revision/_state/layout-plan.json,revision/_state/longform-plan.json,revision/_state/character-state.json,revision/_state/plot-ledger.json,revision/_state/continuity-ledger.json -OutputArtifacts episode/ep001.md -PhaseAuthority manual_ide_agent
 ```
 
 ## Output
