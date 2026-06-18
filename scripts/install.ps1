@@ -144,6 +144,7 @@ function Ensure-ApprovalFile {
 
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "design-freeze.json") -Title "Design Freeze Approval"
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "story-choice.json") -Title "Story Choice Approval" -ExtraFields @{ selected_option = ""; note = "Set approved=true and selected_option to 1, 2, or 3 only after the user chooses the story direction." }
+Ensure-ApprovalFile -Path (Join-Path $approvalsDir "book-plan-approval.json") -Title "Book Plan Approval" -ExtraFields @{ approved_plan_id = ""; note = "Set approved=true only after the user reviews design/04_book_plan.md, design/05_chapter_plan.md, design/06_layout_plan.md and the matching revision/_state plan JSON files." }
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "rewrite-approval.json") -Title "Rewrite Approval"
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "export-approval.json") -Title "Export Approval"
 

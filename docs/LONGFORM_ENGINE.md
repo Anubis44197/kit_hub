@@ -8,6 +8,9 @@ Long books are produced as a controlled sequence of chapters with persistent sta
 
 All longform runs must keep these files under `revision/_state/`:
 
+- `book-plan.json`: user prompt, selected direction, working title, writing type, genre, theme, premise, point of view, tense, characters, plot arc, and approval requirement.
+- `chapter-plan.json`: one reader-facing plan entry per chapter, including title, purpose, events, character focus, continuity promises, and target words.
+- `layout-plan.json`: trim size, font, line spacing, indentation, words-per-page estimate, page target, word target, chapter target, and chapter start policy.
 - `longform-plan.json`: target pages, target words, target chapters, act map, chapter purposes.
 - `character-state.json`: stable traits, current knowledge, secrets, relationships, and arc position.
 - `plot-ledger.json`: main dramatic question, open/closed threads, cause-effect chain, final promises.
@@ -17,6 +20,7 @@ All longform runs must keep these files under `revision/_state/`:
 
 ## Generation Policy
 
+- Writing cannot start immediately after a simple prompt. `design-big` first produces the book, chapter, and layout plans, then `design-small` is blocked until `runtime/approvals/book-plan-approval.json` is approved by the user.
 - Generate in small batches, preferably 1-3 chapters at a time.
 - Before each chapter, load the longform state files and the current chapter plan.
 - After each chapter, update character state, plot ledger, chapter summary, and continuity ledger.
@@ -39,6 +43,7 @@ Actual printed page count depends on trim size, font, margins, line spacing, and
 The runner validates the existence and basic schema of all longform state files for:
 
 - `design-big`
+- `design-small`
 - `create`
 - `polish`
 - `rewrite`

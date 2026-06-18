@@ -249,7 +249,7 @@ function Get-PhaseOutputArtifacts {
       $patterns = @("_workspace/01_proposals*.md","*_proposal.md","runtime/approvals/story-choice.json")
     }
     "design-big" {
-      $patterns = @("novel-config.md","design/*_bootstrap.md","design/02_character_core.md","design/*_character*.md","design/03_macro_plot_hooks.md","design/*plot*hook*.md","revision/_state/*.json")
+      $patterns = @("novel-config.md","design/*_bootstrap.md","design/02_character_core.md","design/*_character*.md","design/03_macro_plot_hooks.md","design/*plot*hook*.md","design/04_book_plan.md","design/05_chapter_plan.md","design/06_layout_plan.md","revision/_state/*.json")
     }
     "design-small" {
       $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md")
@@ -556,6 +556,7 @@ function Ensure-UserApproval {
 
   $approvalMap = @{
     "design-big" = "runtime/approvals/story-choice.json"
+    "design-small" = "runtime/approvals/book-plan-approval.json"
     "create" = "runtime/approvals/design-freeze.json"
     "rewrite" = "runtime/approvals/rewrite-approval.json"
     "export" = "runtime/approvals/export-approval.json"
@@ -563,7 +564,7 @@ function Ensure-UserApproval {
 
   if ($Config -and $Config.quality_flags -and $Config.quality_flags.approval_files) {
     $custom = $Config.quality_flags.approval_files
-    foreach ($k in @("design-big","create","rewrite","export")) {
+    foreach ($k in @("design-big","design-small","create","rewrite","export")) {
       if ($custom.PSObject.Properties.Name -contains $k -and $custom.$k) {
         $approvalMap[$k] = [string]$custom.$k
       }
@@ -983,12 +984,15 @@ function Validate-LongformState {
   if (-not $Enabled) {
     return
   }
-  if ($Phase -notin @("design-big","create","polish","rewrite","export")) {
+  if ($Phase -notin @("design-big","design-small","create","polish","rewrite","export")) {
     return
   }
 
   $stateDir = Join-Path $Root "revision/_state"
   $required = @(
+    "book-plan.json",
+    "chapter-plan.json",
+    "layout-plan.json",
     "longform-plan.json",
     "character-state.json",
     "plot-ledger.json",
@@ -1015,6 +1019,84 @@ function Validate-LongformState {
   }
   if ([int]$plan.target_chapters -lt 1) {
     throw "Longform plan target_chapters must be positive after a topic is provided; found $($plan.target_chapters)."
+  }
+  if (-not ($plan.PSObject.Properties.Name -contains "required_state_files") -or @($plan.required_state_files).Count -lt 3) {
+    throw "Longform plan must declare required_state_files for continuity and planning gates."
+  }
+
+  $bookPlan = Read-Utf8 -Path (Join-Path $stateDir "book-plan.json") | ConvertFrom-Json
+  foreach ($field in @("schema_version","run_id","plan_id","source_prompt","approved_story_option","title_working","writing_type","genre","theme","premise","narrative_pov","tense","characters","plot_arc","chapter_count","approval_required")) {
+    if (-not ($bookPlan.PSObject.Properties.Name -contains $field)) {
+      throw "book-plan.json missing '$field'."
+    }
+  }
+  if ($bookPlan.approval_required -ne $true) {
+    throw "book-plan.json must set approval_required=true before writing can start."
+  }
+  if ([int]$bookPlan.chapter_count -ne [int]$plan.target_chapters) {
+    throw "book-plan.json chapter_count must match longform-plan target_chapters."
+  }
+  if (@($bookPlan.characters).Count -lt 1) {
+    throw "book-plan.json must include at least one planned character before writing starts."
+  }
+
+  $chapterPlan = Read-Utf8 -Path (Join-Path $stateDir "chapter-plan.json") | ConvertFrom-Json
+  foreach ($field in @("schema_version","run_id","chapters")) {
+    if (-not ($chapterPlan.PSObject.Properties.Name -contains $field)) {
+      throw "chapter-plan.json missing '$field'."
+    }
+  }
+  $chapterEntries = @($chapterPlan.chapters)
+  if ($chapterEntries.Count -ne [int]$plan.target_chapters) {
+    throw "chapter-plan.json chapter count ($($chapterEntries.Count)) must match target_chapters ($($plan.target_chapters))."
+  }
+  foreach ($chapter in $chapterEntries) {
+    foreach ($field in @("id","reader_title","purpose","events","character_focus","continuity_promises","target_words")) {
+      if (-not ($chapter.PSObject.Properties.Name -contains $field)) {
+        throw "chapter-plan.json chapter entry missing '$field'."
+      }
+    }
+    if ([string]$chapter.reader_title -match "(?i)\b(ep|episode|scene|sahne)\s*[-_#]?\d+") {
+      throw "chapter-plan.json uses technical reader_title '$($chapter.reader_title)'. Use reader-facing chapter titles only."
+    }
+    if (@($chapter.events).Count -lt 1) {
+      throw "chapter-plan.json chapter $($chapter.id) must include planned events."
+    }
+    if ([int]$chapter.target_words -lt 300) {
+      throw "chapter-plan.json chapter $($chapter.id) target_words is too low for a book chapter."
+    }
+  }
+
+  $layoutPlan = Read-Utf8 -Path (Join-Path $stateDir "layout-plan.json") | ConvertFrom-Json
+  foreach ($field in @("schema_version","run_id","trim_size","font_family","font_size_pt","line_spacing","paragraph_first_line_indent_cm","words_per_page_estimate","target_pages","target_words","target_chapters","front_matter_pages_estimate","back_matter_pages_estimate","chapter_start_policy")) {
+    if (-not ($layoutPlan.PSObject.Properties.Name -contains $field)) {
+      throw "layout-plan.json missing '$field'."
+    }
+  }
+  if ([int]$layoutPlan.target_pages -ne [int]$plan.target_pages -or [int]$layoutPlan.target_words -ne [int]$plan.target_words -or [int]$layoutPlan.target_chapters -ne [int]$plan.target_chapters) {
+    throw "layout-plan.json targets must match longform-plan targets."
+  }
+  if ([int]$layoutPlan.words_per_page_estimate -lt 250 -or [int]$layoutPlan.words_per_page_estimate -gt 550) {
+    throw "layout-plan.json words_per_page_estimate must be a realistic print estimate."
+  }
+  $estimatedWordsFromPages = [double]$layoutPlan.target_pages * [double]$layoutPlan.words_per_page_estimate
+  $delta = [Math]::Abs($estimatedWordsFromPages - [double]$layoutPlan.target_words)
+  $allowed = [Math]::Max(1000.0, [double]$layoutPlan.target_words * 0.18)
+  if ($delta -gt $allowed) {
+    throw "layout-plan.json page/word targets are inconsistent; adjust target_pages, target_words, or words_per_page_estimate."
+  }
+
+  if ($Phase -in @("design-small","create","polish","rewrite","export")) {
+    $approvalRel = "runtime/approvals/book-plan-approval.json"
+    $approvalPath = Join-Path $Root $approvalRel
+    Ensure-File $approvalPath
+    $approval = Read-Utf8 -Path $approvalPath | ConvertFrom-Json
+    if (-not ($approval.PSObject.Properties.Name -contains "approved") -or $approval.approved -ne $true) {
+      throw "Book plan approval gate failed: $approvalRel must be approved before $Phase."
+    }
+    if (($approval.PSObject.Properties.Name -contains "approved_plan_id") -and $approval.approved_plan_id -and $approval.approved_plan_id -ne $bookPlan.plan_id) {
+      throw "Book plan approval gate failed: approved_plan_id does not match book-plan.json plan_id."
+    }
   }
 
   $character = Read-Utf8 -Path (Join-Path $stateDir "character-state.json") | ConvertFrom-Json

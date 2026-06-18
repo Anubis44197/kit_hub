@@ -101,6 +101,7 @@ The runner does not accept vague completion. Each phase must write real files:
 
 - proposals under `_workspace/`
 - design files under `design/`
+- approved book/chapter/layout plans under `design/04_book_plan.md`, `design/05_chapter_plan.md`, `design/06_layout_plan.md`
 - chapters under `episode/`
 - state ledgers under `revision/_state/`
 - quality/editorial reports under `revision/_workspace/`
@@ -108,6 +109,8 @@ The runner does not accept vague completion. Each phase must write real files:
 - agent compliance manifest under `runtime/agent-compliance/{phase}.json`
 
 If files are missing, malformed, too short/long, repetitive, mojibake-corrupted, publication metadata is falsely claimed, or the exported DOCX does not contain the current episode text, the runner fails the phase.
+
+Before any chapter writing, `design-big` must produce `revision/_state/book-plan.json`, `revision/_state/chapter-plan.json`, and `revision/_state/layout-plan.json`. `design-small` is blocked until the user approves `runtime/approvals/book-plan-approval.json`; do not write around this gate by manually creating chapter files early.
 
 The IDE agent must write the compliance manifest last:
 

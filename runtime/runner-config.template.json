@@ -35,6 +35,7 @@
     "require_executed_claims_for_critical_phases": true,
     "approval_files": {
       "design-big": "runtime/approvals/story-choice.json",
+      "design-small": "runtime/approvals/book-plan-approval.json",
       "create": "runtime/approvals/design-freeze.json",
       "rewrite": "runtime/approvals/rewrite-approval.json",
       "export": "runtime/approvals/export-approval.json"
@@ -76,7 +77,8 @@
     "When dictionary check is enabled, require_dictionary_provider=true makes missing Python/tdk-py fail instead of silently skipping.",
     "Phase evidence is mandatory when require_phase_evidence=true.",
     "execution_claim_mode should be 'executed' only when actual command-mode execution is used.",
-    "design-big/create/rewrite/export require explicit approval JSON files when require_user_approvals=true.",
+    "design-big/design-small/create/rewrite/export require explicit approval JSON files when require_user_approvals=true.",
+    "design-big must produce book-plan, chapter-plan, and layout-plan artifacts; design-small is blocked until book-plan-approval.json is approved by the user.",
     "phase contracts are hard gates when enforce_phase_contracts=true.",
     "Agent compliance manifests must include concrete output_artifacts plus matching artifact_hashes.",
     "Exported DOCX text must match the current episode source files.",

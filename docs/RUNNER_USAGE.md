@@ -206,11 +206,22 @@ Relevant config keys:
 
 When `quality_flags.require_user_approvals=true` (default), these gates are mandatory:
 - `design-big` requires `runtime/approvals/story-choice.json` with `approved=true` and a chosen `selected_option`
+- `design-small` requires `runtime/approvals/book-plan-approval.json` with `approved=true` after the user reviews the generated book, chapter, and layout plans
 - `create` requires `runtime/approvals/design-freeze.json` with `approved=true`
 - `rewrite` requires `runtime/approvals/rewrite-approval.json` with `approved=true`
 - `export` requires `runtime/approvals/export-approval.json` with `approved=true`
 
 Without approval, phase is blocked.
+
+`design-big` must produce:
+- `design/04_book_plan.md`
+- `design/05_chapter_plan.md`
+- `design/06_layout_plan.md`
+- `revision/_state/book-plan.json`
+- `revision/_state/chapter-plan.json`
+- `revision/_state/layout-plan.json`
+
+The runner rejects empty or inconsistent plans, including chapter-count mismatches and unrealistic page/word layout targets.
 
 ## 5.2) Phase Contracts (Hard)
 
