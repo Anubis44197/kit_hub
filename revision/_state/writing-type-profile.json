@@ -1,0 +1,29 @@
+﻿{
+    "schema_version":  "1.0.0",
+    "run_id":  "RUN-20260618-065322-5481",
+    "writing_type":  "novel",
+    "supported_secondary_types":  [
+                                      "story",
+                                      "novella",
+                                      "essay",
+                                      "memoir",
+                                      "biography",
+                                      "research_book",
+                                      "self_help",
+                                      "business_book",
+                                      "academic"
+                                  ],
+    "target_reader":  "Turkish adult commercial fiction reader",
+    "structure_model":  "four_act_longform_novel",
+    "voice_model":  "clear literary-commercial Turkish prose",
+    "evidence_policy":  "fictional content may be invented; factual claims must be flagged as placeholders unless sourced",
+    "continuity_policy":  "state-ledger-first; no character may use unknown information",
+    "completion_criteria":  [
+                                "main question answered",
+                                "primary character arc completed",
+                                "open plot promises closed or intentionally resolved",
+                                "front matter complete",
+                                "cover brief complete",
+                                "DOCX package generated"
+                            ]
+}

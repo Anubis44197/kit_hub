@@ -18,9 +18,9 @@ docx_style_profile:
     paragraph_first_line_indent_cm: 0.6
     paragraph_spacing_after_pt: 4
   headings:
-    chapter_prefix: "BOLUM"
+    chapter_prefix: "BÖLÜM"
     chapter_title_style: "Heading1"
-    chapter_segmentation: "by_episode"   # by_episode | by_arc
+    chapter_segmentation: "by_chapter"   # by_chapter | by_part
     scene_break_marker: "***"
   dialogue:
     style: "quote"        # quote | dash
@@ -28,8 +28,10 @@ docx_style_profile:
   page_end:
     behavior: "chapter_new_page"  # auto | chapter_new_page
   output:
-    include_toc: false
+    include_toc: true
     keep_unicode: true
+    include_front_matter: true
+    require_cover_brief_manifest: true
 ```
 
 Notes:

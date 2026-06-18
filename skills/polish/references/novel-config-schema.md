@@ -16,18 +16,14 @@ This schema defines mandatory fields for `novel-config.md` YAML blocks.
 - `design_dir`
 
 ## Canonical `target_platform` Values
-- `NOVELPIA`
-- `MUNPIA`
-- `KAKAO_PAGE`
-- `NAVER_SERIES`
-- `RIDI`
 - `GENERIC_BOOK`
+- `PRINT_BOOK`
+- `EBOOK`
 
 ## `language_profile` Required Fields
 - `locale`
 - `content_language`
 - `interface_language`
-- `disallowed_scripts`
 
 Rules:
 - `locale` must be `tr-TR`.
@@ -40,11 +36,23 @@ Rules:
 - `dialogue_style`
 
 Canonical profiles:
-- `web_novel`
 - `print_preview`
 - `ebook`
 
-## Optional `ep_range_table`
+## Optional `book_package` Block (Recommended)
+Use this block when the project must become a complete book package.
+Suggested keys:
+- `front_matter.title_page`
+- `front_matter.copyright_page`
+- `front_matter.preface`
+- `front_matter.table_of_contents`
+- `cover.brief_required`
+- `cover.front_cover_prompt_required`
+- `cover.back_cover_copy_required`
+- `print_readiness.trim_size`
+- `print_readiness.docx_required`
+
+## Optional `chapter_range_table`
 If present, each item range must match:
 - `EPNNN-EPNNN`
 

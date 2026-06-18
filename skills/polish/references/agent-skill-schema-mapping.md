@@ -13,12 +13,18 @@ This mapping binds current flows to the shared task schema.
 ## Polish Flow
 - `rule-checker` -> `polish.rule_diagnose`
 - `story-analyst` -> `polish.story_diagnose`
-- `platform-optimizer` -> `polish.platform_diagnose`
+- `book-structure-optimizer` -> `polish.book_structure_diagnose`
+- `developmental-editor` -> `polish.developmental_edit`
+- `continuity-editor` -> `polish.continuity_edit`
+- `research-citation-auditor` -> `polish.research_citation_audit`
 - `alive-enhancer` -> `polish.alive_diagnose`
 - `revision-executor` -> `polish.revision_apply`
+- `line-editor` -> `polish.line_edit`
+- `copy-editor` -> `polish.copy_edit`
 - `tdk-polisher` -> `validate.tdk_polish`
 - `tdk-layout-agent` -> `validate.layout_polish`
 - `revision-reviewer` -> `validate.revision_gate`
+- `final-proofreader` -> `validate.final_proof_gate`
 
 ## Rewrite Flow
 - `revision-analyst` -> `rewrite.drift_analyze`
@@ -31,4 +37,7 @@ This mapping binds current flows to the shared task schema.
 ## Export Flow
 - `export-approval-gate` -> `export.approval_gate`
 - `export-validator` -> `export.readiness_validate`
+- `front-matter-editor` -> `export.front_matter_build`
+- `cover-designer` -> `export.cover_brief_build`
+- `publication-compliance-checker` -> `export.publication_compliance_validate`
 - `book-exporter` -> `export.word_docx`

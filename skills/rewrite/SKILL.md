@@ -24,7 +24,7 @@ Apply structural rewrites after design changes.
 ## Language Policy
 - Chapter/story content language must be Turkish.
 - Skill/agent contracts and tooling instructions remain English.
-- Disallowed scripts in story content: Hangul, Han, Hiragana, Katakana.
+- Preserve valid UTF-8 Turkish characters; mojibake or unexplained non-Turkish script usage must be reported as a quality issue.
 
 ## Security and Privacy Policy
 - Apply PII redaction policy to reports/logs: `references/pii-redaction-policy.md`.
@@ -81,4 +81,3 @@ Apply structural rewrites after design changes.
 - rewrite reports/logs/plans
 - unified rewrite report schema:
   - `skills/rewrite/references/rewrite-report-unified-schema.md`
-

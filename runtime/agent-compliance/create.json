@@ -1,0 +1,38 @@
+﻿{
+    "run_id":  "RUN-20260618-065322-5481",
+    "phase":  "create",
+    "required_agents":  [
+                            "episode-creator",
+                            "tdk-polisher",
+                            "tdk-layout-agent",
+                            "quality-verifier"
+                        ],
+    "agents_executed":  [
+                            "episode-creator",
+                            "tdk-polisher",
+                            "tdk-layout-agent",
+                            "quality-verifier"
+                        ],
+    "required_references":  [
+                                "skills/create/SKILL.md",
+                                "skills/polish/references/llm-agent-compliance-policy.md",
+                                "skills/polish/references/tdk-official-writing-rules.md"
+                            ],
+    "loaded_state_files":  [
+                               "revision/_state/longform-plan.json",
+                               "revision/_state/character-state.json",
+                               "revision/_state/plot-ledger.json",
+                               "revision/_state/chapter-summaries.json",
+                               "revision/_state/continuity-ledger.json",
+                               "revision/_state/style-profile.json"
+                           ],
+    "output_artifacts":  [
+                             "episode/ep*.md",
+                             "revision/_workspace/04_quality-verifier_verdict_EP*.md",
+                             "revision/_workspace/08_tdk-polisher_issues_EP*.json"
+                         ],
+    "contract_status":  "PASS",
+    "missing_items":  [
+
+                      ]
+}

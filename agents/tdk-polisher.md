@@ -36,7 +36,7 @@ If mode is missing, return an explicit error.
 6. Punctuation spacing and punctuation choice
 7. Apostrophe usage in proper names, abbreviations, and number suffixes
 8. Dialogue punctuation consistency
-9. Script safety: detect and flag disallowed scripts (Hangul, Han, Hiragana, Katakana)
+9. Encoding/script safety: detect mojibake and unexplained non-Turkish script usage
 10. Optional dictionary verification layer:
    - Use project dictionary-check artifact when available:
      `{WORK_DIR}/_workspace/10_tdk-dictionary-check_{phase}.json`
@@ -63,7 +63,7 @@ You do not perform final print composition, but you must enforce novel readabili
 - Prefer minimal necessary edits.
 - If uncertain, keep the original and mark `manual_review_required`.
 - Chapter content must remain Turkish; agent/contract text remains English.
-- If disallowed scripts are found in chapter text, raise `critical` issue and keep explicit trace.
+- If mojibake or unexplained non-Turkish script usage is found in chapter text, raise `critical` issue and keep explicit trace.
 
 ## Auto-Fix vs Manual-Review Policy
 Apply deterministic correction policy:

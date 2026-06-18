@@ -1,0 +1,51 @@
+﻿{
+    "project_name":  "Boğazda Bir Akşam",
+    "episode_range":  "EP001-EP003",
+    "source_mode":  "book_mode",
+    "source_files":  [
+                         "episode/ep001.md",
+                         "episode/ep002.md",
+                         "episode/ep003.md"
+                     ],
+    "style_profile":  "novel-book-default",
+    "approval_artifact":  "runtime/approvals/export-approval.json",
+    "front_matter_files":  [
+                               "revision/_workspace/11_front-matter_title-page.md",
+                               "revision/_workspace/11_front-matter_copyright-page.md",
+                               "revision/_workspace/11_front-matter_preface.md",
+                               "revision/_workspace/11_front-matter_toc.json"
+                           ],
+    "cover_design_manifest":  "revision/_workspace/12_cover-design_manifest.json",
+    "publication_compliance_verdict":  "revision/_workspace/14_publication-compliance_verdict_EP001-EP003.json",
+    "longform_state_files":  [
+                                 "revision/_state/longform-plan.json",
+                                 "revision/_state/character-state.json",
+                                 "revision/_state/plot-ledger.json",
+                                 "revision/_state/chapter-summaries.json",
+                                 "revision/_state/continuity-ledger.json",
+                                 "revision/_state/style-profile.json",
+                                 "revision/_state/writing-type-profile.json",
+                                 "revision/_state/genre-structure-template.json",
+                                 "revision/_state/editorial-quality-scorecard.json",
+                                 "revision/_state/llm-adapter-contract.json"
+                             ],
+    "professional_editor_reports":  [
+                                        "revision/_workspace/07_developmental-editor_report_EP001.md",
+                                        "revision/_workspace/07_continuity-editor_report_EP001.md",
+                                        "revision/_workspace/08_line-editor_report_EP001.md",
+                                        "revision/_workspace/08_copy-editor_report_EP001.md",
+                                        "revision/_workspace/13_final-proofreader_report_EP001-EP003.md"
+                                    ],
+    "official_rule_references":  [
+                                     "skills/polish/references/tdk-official-writing-rules.md",
+                                     "skills/polish/references/tdk-print-submission-rules.md",
+                                     "skills/polish/references/source-citation-style-tdk.md",
+                                     "skills/polish/references/publication-metadata-checklist.md",
+                                     "skills/polish/references/isbn-kunye-bandrol-checklist.md"
+                                 ],
+    "blocked":  false,
+    "block_reasons":  [
+
+                      ],
+    "output_docx_path":  "revision/export/Boğazda Bir Akşam_EP001-EP003.docx"
+}

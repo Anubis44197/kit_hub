@@ -1,0 +1,25 @@
+﻿{
+    "schema_version":  "1.0.0",
+    "run_id":  "RUN-20260618-065322-5481",
+    "adapter_contract":  "provider_command_must_emit_same_artifacts",
+    "max_chapters_per_batch":  3,
+    "required_input_state":  [
+                                 "writing-type-profile.json",
+                                 "genre-structure-template.json",
+                                 "longform-plan.json",
+                                 "character-state.json",
+                                 "plot-ledger.json",
+                                 "chapter-summaries.json",
+                                 "continuity-ledger.json",
+                                 "style-profile.json"
+                             ],
+    "required_output_state":  [
+                                  "chapter-summaries.json",
+                                  "character-state.json",
+                                  "plot-ledger.json",
+                                  "continuity-ledger.json",
+                                  "style-profile.json",
+                                  "editorial-quality-scorecard.json"
+                              ],
+    "real_ai_note":  "Replace runtime runner adapter command with a provider-backed command; keep this artifact contract."
+}

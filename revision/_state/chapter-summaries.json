@@ -1,0 +1,73 @@
+﻿{
+    "schema_version":  "1.0.0",
+    "run_id":  "RUN-20260618-065322-5481",
+    "chapters":  [
+                     {
+                         "id":  "EP001",
+                         "reader_label":  "Bölüm 1",
+                         "word_estimate":  888,
+                         "summary":  "Kemal Boğaz kıyısındaki lokantada Derya\u0027yı bekler; Leyla\u0027nın saklı mektubu ve aile evinin satışı ilk kez aynı masada görünür olur.",
+                         "character_changes":  [
+                                                   "Kemal sakladığı mektubun artık ertelenemeyeceğini fark eder.",
+                                                   "Derya sahneye gelmeden çatışmanın hedefi olarak kurulur."
+                                               ],
+                         "opened_threads":  [
+                                                "T001",
+                                                "T002"
+                                            ],
+                         "closed_threads":  {
+
+                                            },
+                         "new_information":  [
+                                                 "Mektup Kemal\u0027in cebindedir.",
+                                                 "Aile evi satış baskısı altındadır."
+                                             ],
+                         "irreversible_change":  "Derya\u0027nın gelişi kaçışı imkânsız kılar.",
+                         "next_context":  "Sonraki bölüm Derya\u0027yı sahneye sokup mektup meselesini açık çatışmaya çevirmeli."
+                     },
+                     {
+                         "id":  "EP002",
+                         "reader_label":  "Bölüm 2",
+                         "word_estimate":  869,
+                         "summary":  "Derya gelir, annesinin mektubunu sorar ve Kemal\u0027in yıllardır sakladığı gerçeği inkârla açıklık arasında sıkıştırır.",
+                         "character_changes":  [
+                                                   "Kemal inkârdan itirafa yaklaşır.",
+                                                   "Derya bekleyen çocuk konumundan hesap soran yetişkine geçer."
+                                               ],
+                         "opened_threads":  "T003",
+                         "closed_threads":  {
+
+                                            },
+                         "new_information":  [
+                                                 "Derya mektubun varlığını bilmektedir.",
+                                                 "Murat yıllar önceki mektup bırakma anına tanıktır."
+                                             ],
+                         "irreversible_change":  "Derya açık hesap sorar; Kemal artık bilmiyormuş gibi davranamaz.",
+                         "next_context":  "Sonraki bölüm mektubu teslim ettirip aile evi konusunda somut karar aldırmalı."
+                     },
+                     {
+                         "id":  "EP003",
+                         "reader_label":  "Bölüm 3",
+                         "word_estimate":  953,
+                         "summary":  "Kemal mektubu verir, ev satışını durdurmaya karar verir ve Derya ile ilişkisini kesin barış değil dürüst bir başlangıç noktasına taşır.",
+                         "character_changes":  [
+                                                   "Kemal mektubu teslim ederek aktif seçim yapar.",
+                                                   "Derya bağışlamadan önce dürüstlüğü koşul olarak koyar."
+                                               ],
+                         "opened_threads":  {
+
+                                            },
+                         "closed_threads":  [
+                                                "T001",
+                                                "T002",
+                                                "T003"
+                                            ],
+                         "new_information":  [
+                                                 "Mektup Derya\u0027ya verilir.",
+                                                 "Kemal satışı durdurmayı seçer."
+                                             ],
+                         "irreversible_change":  "Mektup el değiştirir ve ev satışı durdurulur.",
+                         "next_context":  "Bu üç bölümlük testte ana dramatik hareket kapanmıştır."
+                     }
+                 ]
+}

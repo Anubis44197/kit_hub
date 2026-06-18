@@ -26,7 +26,6 @@ need_key "language_profile"
 need_key "locale"
 need_key "content_language"
 need_key "interface_language"
-need_key "disallowed_scripts"
 
 need_key "book_mode"
 need_key "enabled"
@@ -34,7 +33,7 @@ need_key "profile"
 
 platform="$(grep -E "^[[:space:]]*target_platform:[[:space:]]*" "$CFG" | head -n1 | sed -E 's/.*:[[:space:]]*\"?([^\"#]+)\"?.*/\1/' | tr -d ' ')"
 case "$platform" in
-  NOVELPIA|MUNPIA|KAKAO_PAGE|NAVER_SERIES|RIDI|GENERIC_BOOK) ;;
+  GENERIC_BOOK|PRINT_BOOK|EBOOK) ;;
   *)
     echo "Invalid target_platform: $platform"
     exit 1
@@ -49,7 +48,7 @@ content_lang="$(grep -E "^[[:space:]]*content_language:[[:space:]]*" "$CFG" | he
 
 profile="$(grep -E "^[[:space:]]*profile:[[:space:]]*" "$CFG" | head -n1 | sed -E 's/.*:[[:space:]]*\"?([^\"#]+)\"?.*/\1/' | tr -d ' ')"
 case "$profile" in
-  web_novel|print_preview|ebook) ;;
+  print_preview|ebook) ;;
   *)
     echo "Invalid book_mode.profile: $profile"
     exit 1

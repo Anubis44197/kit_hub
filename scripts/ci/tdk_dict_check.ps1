@@ -40,11 +40,13 @@ function New-SkippedReport {
 }
 
 $pythonExe = $null
+$pythonPrefixArgs = @()
 if (Get-Command python -ErrorAction SilentlyContinue) {
   $pythonExe = "python"
 }
 elseif (Get-Command py -ErrorAction SilentlyContinue) {
-  $pythonExe = "py -3"
+  $pythonExe = "py"
+  $pythonPrefixArgs = @("-3")
 }
 
 if (-not $pythonExe) {
@@ -55,13 +57,21 @@ if (-not $pythonExe) {
   exit 0
 }
 
-$cmd = "$pythonExe scripts/ci/tdk_dict_check.py --project-root ""$ProjectRoot"" --phase $Phase --run-id $RunId"
+$scriptPath = Join-Path (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)) "ci/tdk_dict_check.py"
+$argsList = @()
+$argsList += $pythonPrefixArgs
+$argsList += @(
+  $scriptPath,
+  "--project-root", $ProjectRoot,
+  "--phase", $Phase,
+  "--run-id", $RunId
+)
 if ($RequireProvider) {
-  $cmd += " --require-provider"
+  $argsList += "--require-provider"
 }
 
-Write-Host "[tdk-dict-check] exec: $cmd"
-Invoke-Expression $cmd
+Write-Host "[tdk-dict-check] exec: $pythonExe $($argsList -join ' ')"
+& $pythonExe @argsList
 if ($LASTEXITCODE -ne 0) {
   if ($RequireProvider) {
     throw "Dictionary check failed (exit=$LASTEXITCODE)."
@@ -71,4 +81,3 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 exit 0
-

@@ -6,17 +6,14 @@ This policy applies to story content, export inputs, and generated DOCX outputs.
 ## Rules
 - Story/chapter content language: Turkish.
 - Skill/agent contract language: English.
-- Disallowed scripts in story content:
-  - Hangul
-  - Han
-  - Hiragana
-  - Katakana
+- Preserve valid UTF-8 Turkish characters.
+- Mojibake or unexplained non-Turkish script usage must be treated as a quality/export risk.
 
 ## Enforcement Points
-- `tdk-polisher`: script safety check in issue report.
-- `export-validator`: block export when disallowed scripts are detected.
+- `tdk-polisher`: Turkish character and encoding safety check in issue report.
+- `export-validator`: block print-ready export when encoding/script anomalies are detected.
 - `book-exporter`: never normalize or substitute Turkish letters.
 
 ## Failure Handling
-- If disallowed scripts are found, raise `critical` issue and set export status to `BLOCKED`.
+- If encoding/script anomalies are found, raise `critical` issue and set export status to `BLOCKED`.
 - Require manual correction before retry.

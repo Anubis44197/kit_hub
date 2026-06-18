@@ -1,16 +1,16 @@
 ﻿---
 name: create
-description: "Create episode manuscripts sequentially using mapped design docs, guard rails, and automated quality gates."
+description: "Create book chapters sequentially using mapped design docs, guard rails, continuity tracking, and automated quality gates."
 prompt_version: "1.0.0"
 ---
 
 # Create Skill
 
 ## Purpose
-Write episodes with a multi-agent pipeline and strict validation.
+Write book chapters with a multi-agent pipeline and strict validation. Legacy file ids still use `episode/epNNN.md`; reader-facing output must treat them as chapters.
 
 ## Pipeline
-1. Episode blueprint (`episode-architect`)
+1. Chapter blueprint (`episode-architect`)
 2. Continuity report (`continuity-bridge`)
 3. Draft writing (`episode-creator`)
 4. Turkish language and book-mode polish (`tdk-polisher`, CREATE mode) [mandatory]
@@ -59,7 +59,7 @@ Rule:
 ## Language Policy
 - Chapter/story content language must be Turkish.
 - Skill/agent contracts and tooling instructions remain English.
-- Disallowed scripts in story content: Hangul, Han, Hiragana, Katakana.
+- Preserve valid UTF-8 Turkish characters; mojibake or unexplained non-Turkish script usage must be reported as a quality issue.
 
 ## Security and Privacy Policy
 - Apply PII redaction policy to reports/logs: `references/pii-redaction-policy.md`.
@@ -111,10 +111,9 @@ Rule:
 - If any mandatory artifact is missing, stop with explicit artifact-missing error.
 
 ## Outputs
-- `episode/epNNN.md`
+- `episode/epNNN.md` (legacy storage path for chapter NNN)
 - workspace reports under `{work_dir}/_workspace/`
 - mandatory TDK polisher outputs (`08_tdk-polisher_*`)
 - mandatory layout outputs when book mode is enabled (`09_tdk-layout_*`)
 - verifier report with explicit target metrics and request compliance result
 - updated create progress plan
-

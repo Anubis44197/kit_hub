@@ -28,10 +28,10 @@ grep -q "export-approval-gate" skills/export-word/SKILL.md
 grep -q "export-validator" skills/export-word/SKILL.md
 
 echo "[contract-lint] validating language policy blocks..."
-grep -q "Disallowed scripts in story content: Hangul, Han, Hiragana, Katakana." skills/create/SKILL.md
-grep -q "Disallowed scripts in story content: Hangul, Han, Hiragana, Katakana." skills/polish/SKILL.md
-grep -q "Disallowed scripts in story content: Hangul, Han, Hiragana, Katakana." skills/rewrite/SKILL.md
-grep -q "Disallowed scripts in story content: Hangul, Han, Hiragana, Katakana." skills/export-word/SKILL.md
+grep -q "Chapter/story content language must be Turkish." skills/create/SKILL.md
+grep -q "Chapter/story content language must be Turkish." skills/polish/SKILL.md
+grep -q "Chapter/story content language must be Turkish." skills/rewrite/SKILL.md
+grep -q "Chapter/story content language must be Turkish." skills/export-word/SKILL.md
 
 echo "[contract-lint] validating model adapter references..."
 test -f skills/polish/references/shared-task-schema.md

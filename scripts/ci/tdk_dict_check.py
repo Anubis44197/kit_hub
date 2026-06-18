@@ -70,13 +70,16 @@ def build_allowlist() -> set[str]:
         "gibi",
         "icin",
         "için",
+        "için",
         "kadar",
         "daha",
         "cok",
         "çok",
+        "çok",
         "bir",
         "bu",
         "su",
+        "şu",
         "şu",
         "o",
         "da",
@@ -84,7 +87,9 @@ def build_allowlist() -> set[str]:
         "ki",
         "mi",
         "mı",
+        "mı",
         "mu",
+        "mü",
         "mü",
     }
 
@@ -191,4 +196,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

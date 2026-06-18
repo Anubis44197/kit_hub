@@ -1,26 +1,33 @@
 ﻿---
 name: polish
-description: "Polish episodes through parallel diagnostics and sequential correction-review loops."
+description: "Polish chapters through book-structure diagnostics, editorial correction, TDK checks, and layout review."
 prompt_version: "1.0.0"
 ---
 
 # Polish Skill
 
 ## Purpose
-Run systematic editorial correction over existing episodes.
+Run systematic editorial correction over existing chapters.
 
 ## Pipeline
 1. Parallel diagnostics:
    - rule-checker
    - story-analyst
-   - platform-optimizer
+   - book-structure-optimizer
+   - developmental-editor
+   - continuity-editor
+   - research-citation-auditor when writing type is nonfiction or fact-bearing
    - alive-enhancer
 2. Correction execution (`revision-executor`)
-3. Turkish language and book-mode polish (`tdk-polisher`, POLISH mode) [mandatory]
+3. Line and copy editing:
+   - line-editor
+   - copy-editor
+4. Turkish language and book-mode polish (`tdk-polisher`, POLISH mode) [mandatory]
    - Optional dictionary verification layer (`tdk_dict_check`) can run after this step
-4. Book layout normalization (`tdk-layout-agent`) [mandatory when `book_mode.enabled=true`]
-5. Correction review (`revision-reviewer`)
-6. Self-loop until episode batch is complete
+5. Book layout normalization (`tdk-layout-agent`) [mandatory when `book_mode.enabled=true`]
+6. Correction review (`revision-reviewer`)
+7. Final proof package review (`final-proofreader`) before export
+8. Self-loop until chapter batch is complete
 
 ## Config Source
 - `novel-config.md`
@@ -28,7 +35,7 @@ Run systematic editorial correction over existing episodes.
 ## Language Policy
 - Chapter/story content language must be Turkish.
 - Skill/agent contracts and tooling instructions remain English.
-- Disallowed scripts in story content: Hangul, Han, Hiragana, Katakana.
+- Preserve valid UTF-8 Turkish characters; mojibake or unexplained non-Turkish script usage must be reported as a quality issue.
 
 ## Security and Privacy Policy
 - Apply PII redaction policy to reports/logs: `references/pii-redaction-policy.md`.
@@ -64,6 +71,12 @@ Run systematic editorial correction over existing episodes.
   - `skills/polish/references/workflow-report-json-schema.md`
 - Inter-agent handoff payload must follow:
   - `skills/polish/references/handoff-contract.md`
+- Professional writing behavior must follow:
+  - `skills/polish/references/writing-type-profiles.md`
+  - `skills/polish/references/genre-structure-templates.md`
+  - `skills/polish/references/editorial-quality-scorecard.md`
+  - `skills/polish/references/llm-adapter-contract.md`
+  - `skills/polish/references/docx-professional-style-contract.md`
 
 ## Final Episode Writeback Rule (Mandatory)
 - If `book_mode.enabled=true`, canonical final text source is:
@@ -76,6 +89,7 @@ Run systematic editorial correction over existing episodes.
 ## Mandatory Artifact Gates
 - Do not run `revision-reviewer` before `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` exist.
 - If `book_mode.enabled=true`, do not run `revision-reviewer` before `09_tdk-layout_issues_EP{NNN}.json` and `09_tdk-layout_report_EP{NNN}.md` exist.
+- Do not run export before `revision/_state/writing-type-profile.json`, `revision/_state/genre-structure-template.json`, `revision/_state/editorial-quality-scorecard.json`, and `revision/_state/llm-adapter-contract.json` exist.
 - If any mandatory artifact is missing, stop with explicit artifact-missing error.
 
 ## Outputs
@@ -84,5 +98,6 @@ Run systematic editorial correction over existing episodes.
 - mandatory TDK polisher outputs (`08_tdk-polisher_*`)
 - optional dictionary verification report (`10_tdk-dictionary-check_<phase>.json`)
 - mandatory layout outputs when book mode is enabled (`09_tdk-layout_*`)
+- professional editorial reports from developmental, continuity, line, copy, research/citation, and final proof stages
+- professional writing state files in `revision/_state/`
 - updated fix plan and trackers
-

@@ -1,19 +1,19 @@
 ﻿---
 name: design-small
-description: "Produce detailed 25-episode arc design using big-design outputs as prerequisites."
+description: "Produce detailed chapter-range design using big-design outputs as prerequisites."
 prompt_version: "1.0.0"
 ---
 
 # Design Small Skill
 
 ## Purpose
-Generate detailed arc planning for a bounded episode range.
+Generate detailed chapter planning for a bounded range.
 
 ## Prerequisite
 Big-design outputs must already exist.
 
 ## Flow
-1. Validate target episode range.
+1. Validate target chapter range.
 2. Run focused domain research for this range.
 3. Orchestrate:
    - character-architect (detail mode)

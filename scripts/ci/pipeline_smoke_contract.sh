@@ -12,7 +12,7 @@ grep -q "quality-verifier" skills/create/SKILL.md
 echo "[pipeline-smoke] validating polish flow contract..."
 grep -q "rule-checker" skills/polish/SKILL.md
 grep -q "story-analyst" skills/polish/SKILL.md
-grep -q "platform-optimizer" skills/polish/SKILL.md
+grep -q "book-structure-optimizer" skills/polish/SKILL.md
 grep -q "alive-enhancer" skills/polish/SKILL.md
 grep -q "revision-executor" skills/polish/SKILL.md
 grep -q "tdk-polisher" skills/polish/SKILL.md

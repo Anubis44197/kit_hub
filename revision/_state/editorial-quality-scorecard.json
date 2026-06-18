@@ -1,0 +1,31 @@
+﻿{
+    "schema_version":  "1.0.0",
+    "run_id":  "RUN-20260618-065322-5481",
+    "threshold_pass":  85,
+    "export_blockers":  [
+                            "critical_continuity_issue",
+                            "missing_front_matter",
+                            "missing_cover_brief",
+                            "missing_docx",
+                            "unsupported_factual_claim"
+                        ],
+    "axes":  {
+                 "structure":  90,
+                 "character":  88,
+                 "plot_or_argument":  89,
+                 "style":  87,
+                 "scene_craft":  86,
+                 "language":  92,
+                 "continuity":  91,
+                 "market_book_readiness":  88,
+                 "evidence_discipline":  85
+             },
+    "required_editors":  [
+                             "developmental-editor",
+                             "continuity-editor",
+                             "line-editor",
+                             "copy-editor",
+                             "final-proofreader"
+                         ],
+    "verdict":  "PASS"
+}

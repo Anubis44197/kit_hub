@@ -1,32 +1,34 @@
 ﻿# Novel Writing Engine
 
-Professional multi-agent pipeline for Turkish long-form fiction production.
+Professional multi-agent pipeline for Turkish novel, story, and print-ready book production.
 
 ## Overview
-This repository provides an agent + skill based writing system for end-to-end novel production.
+This repository provides an agent + skill based writing system for end-to-end book production: idea expansion, full-book design, chapter writing, continuity control, Turkish editorial polish, front matter, cover brief, and DOCX export.
 
 Primary flow:
 `/propose -> /design-big -> /design-small -> /create -> /polish -> /rewrite -> /export-word`
+
+Reader-facing output is chapter/book based. Legacy internal paths may still use `episode/epNNN.md` for compatibility.
 
 ## Repository Positioning (Upstream vs This Repository)
 This project is based on the upstream architecture (`MJbae/awesome-novel-studio`) and extended for stricter Turkish publication workflow.
 
 | Criteria | Upstream (`awesome-novel-studio`) | This Repo (`kit_hub`) |
 |---|---|---|
-| Primary role | Novel production pipeline | Novel production pipeline |
+| Primary role | Novel production pipeline | Complete Turkish book production pipeline |
 | Turkish quality layer | Limited | Extended (`tdk-polisher`, optional dictionary check, exception governance) |
 | Book layout gate | Present | Present + mandatory gate contract in create/polish/rewrite flows |
 | Export safety | Basic export flow | Approval gate + validator + DOCX integrity checks |
 | Runner/orchestration | Phase-oriented | Phase-oriented + artifact gates + optional dictionary check integration |
-| Local preview | Minimal technical page | Word-style preview page (`index.html`) |
+| Local preview | Minimal technical page | Turkish reading preview page (`index.html`) |
 
 Summary: `kit_hub` is not only a content panel. It is an extended production engine with stronger quality controls.
 
 ## What This Repository Is
-- Contract-driven writing pipeline for long-form projects
+- Contract-driven writing pipeline for long-form book projects
 - Runtime-compatible plugin structure (`agents/`, `skills/`, `.claude-plugin/`)
 - Turkish-first quality model with mandatory TDK and layout gates
-- Approval-gated Word export pipeline
+- Approval-gated Word export pipeline with front matter and cover brief requirements
 
 ## What This Repository Is Not
 - Not a classic web application (`npm start` / API server)
@@ -40,17 +42,18 @@ Summary: `kit_hub` is not only a content panel. It is an extended production eng
 | Turkish Language Quality | Spelling, punctuation, grammar particles, dialogue normalization | `tdk-polisher` |
 | Book Layout Normalization | Readability-focused paragraph/dialogue page shaping | `tdk-layout-agent` |
 | Quality Gating | Contract checks before canonical writeback | `quality-verifier`, `revision-reviewer`, CI scripts |
-| Word Export Safety | Explicit user approval and export validation | `export-approval-gate`, `export-validator`, `book-exporter` |
+| Book Package Export | Explicit approval, front matter, cover brief, DOCX validation | `export-approval-gate`, `front-matter-editor`, `cover-designer`, `export-validator`, `book-exporter` |
 | Local Visual Preview | Book-like page preview before export | `index.html` |
 
 ## Long-Form Reliability Model (Three Walls)
-Long-form AI fiction commonly fails in three areas. This repository addresses each with explicit controls.
+Long-form AI fiction commonly fails in four areas. This repository addresses each with explicit controls.
 
 | Wall | Typical Failure | Mitigation in This Repository |
 |---|---|---|
 | Character Depth Drift | Characters become generic over many episodes | Character constraints from design docs + continuity checks (`continuity-bridge`, `episode-creator`, `revision-reviewer`) |
 | Story Coherence Breakdown | Timeline, cause-effect, and foreshadowing drift | `novel-config.md` as source-of-truth + `rule-checker` and `quality-verifier` gates |
 | Language/Mechanics Degradation | Punctuation, dialogue flow, readability degrade | `tdk-polisher` + `tdk-layout-agent` + canonical writeback restrictions |
+| Book Package Incompleteness | Missing preface, TOC, cover copy, or print blockers | `front-matter-editor`, `cover-designer`, export manifest gates |
 
 ## Turkish Novel Quality Layer (TDK + Layout)
 ### TDK Polisher Scope
@@ -106,6 +109,32 @@ Reference documents:
 5. Optional bootstrap:
    - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
 
+## No API Key / IDE Agent Mode
+You do not need to give this repository an API key. If your IDE already has an agent or model connection, run the repository in manual IDE mode.
+
+1. Bootstrap:
+   - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
+2. Create IDE manual config:
+   - `Copy-Item runtime/runner-config.ide-manual.template.json runtime/runner-config.ide-manual.json -Force`
+3. Write your book request:
+   - `runtime/book-request.md`
+4. Start the gated pipeline:
+   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase propose -ToPhase export`
+5. When the runner pauses, ask your IDE agent to complete the current phase.
+6. Optional phase prompt helper:
+   - `powershell -ExecutionPolicy Bypass -File scripts/ide_phase_prompt.ps1 -Phase create`
+7. Press Enter in the runner terminal after the IDE agent writes the required files.
+
+Manual IDE mode keeps `execution_claim_mode=simulated` because the runner cannot prove what the external IDE did, but artifact gates, text quality gates, TDK/layout gates, longform state checks, and publication-compliance checks still run.
+
+Each phase must also write an agent compliance manifest:
+- `runtime/agent-compliance/{phase}.json`
+
+The runner fails the phase if a required agent is missing from that manifest, if `contract_status` is not `PASS`, or if `missing_items` is not empty.
+
+Detailed guide:
+- `docs/IDE_AGENT_WORKFLOW.md`
+
 ## Quick Start
 1. `/run` (single-command full pipeline)
 2. `/propose` (if you want phase-by-phase control)
@@ -142,7 +171,7 @@ Reference documents:
 |---|---|
 | Story/Chapter Language | Turkish |
 | Agent/Skill Contract Language | English |
-| Disallowed Scripts in Story Text | Hangul, Han, Hiragana, Katakana |
+| Encoding / Script Safety | Valid UTF-8 Turkish; mojibake and unexplained non-Turkish script usage block print-ready export |
 
 ## Export and Approval Model
 | Stage | Result |
@@ -186,14 +215,19 @@ Reference documents:
   - issue JSON schema
   - verdict markdown token (`PASS|FAIL|BLOCKED`)
   - export manifest existence
+- Runner enforces agent compliance manifests:
+  - `runtime/agent-compliance/{phase}.json`
+  - required agents must be listed and marked executed
+  - missing items fail the phase
 - Runner enforces hard text quality gates (default):
   - min/max character limits
   - mojibake detection
   - duplicate-line ratio limit
   - dialogue style consistency
   - psychological marker minimum for psychological genres
-- Runner blocks critical phases unless `execution_claim_mode=executed`:
-  - `create`, `polish`, `rewrite`, `export` cannot pass as simulated
+- Runner can block critical phases unless `execution_claim_mode=executed`:
+  - set `quality_flags.require_executed_claims_for_critical_phases=true` after command-mode phase commands are configured
+  - use `verify_real_run.ps1` when you need proof that create/polish/rewrite/export were command-executed
 - Real-run proof check (no simulated/fake completion):
   - `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_real_run.ps1 -ProjectRoot .`
 - Runner retention policy:
@@ -201,6 +235,7 @@ Reference documents:
   - Configurable in `runtime/runner-config.json` via `quality_flags.retention`
 - Detailed runner guide:
   - `docs/RUNNER_USAGE.md`
+  - `docs/IDE_AGENT_WORKFLOW.md`
   - `docs/WORKSPACE_RETENTION_POLICY.md`
 
 ## Agent Architecture
@@ -208,7 +243,7 @@ Reference documents:
 |---|---|
 | Base architecture | 18 specialist agents |
 | Added project-specific agents/layers | `tdk-polisher`, `tdk-layout-agent`, export approval/validator/exporter set, and related gates |
-| Current total | 23 agent definitions |
+| Current total | 32 agent definitions |
 
 For complete mapping see `docs/ARCHITECTURE_MAP.md`.
 

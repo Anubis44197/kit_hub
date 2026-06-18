@@ -1,0 +1,20 @@
+﻿{
+    "run_id":  "RUN-20260618-065322-5481",
+    "step_id":  "design-small-03",
+    "phase":  "design-small",
+    "execution_claim_mode":  "executed",
+    "artifact_gate_passed":  true,
+    "dictionary_check_enabled":  false,
+    "started_at":  "2026-06-18T06:53:25.3161524+03:00",
+    "finished_at":  "2026-06-18T06:53:26.1456632+03:00",
+    "status":  "completed",
+    "executed_command":  "powershell -ExecutionPolicy Bypass -File scripts/local_phase.ps1 -ProjectRoot \".\" -Phase design-small -RunId \"RUN-20260618-065322-5481\"",
+    "output_artifacts":  [
+                             "design\\04_character-detail_EP001-EP002.md",
+                             "design\\05_plot-detail_EP001-EP002.md",
+                             "design\\EP001-EP002_scene_plan.md"
+                         ],
+    "notes":  [
+                  "artifact gate passed"
+              ]
+}

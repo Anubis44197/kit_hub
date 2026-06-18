@@ -1,0 +1,88 @@
+﻿{
+    "run_id":  "RUN-20260618-065322-5481",
+    "started_at":  "2026-06-18T06:53:22.9274783+03:00",
+    "status":  "completed",
+    "project_root":  ".",
+    "mode":  "command",
+    "steps":  [
+                  {
+                      "step_id":  "propose-01",
+                      "phase":  "propose",
+                      "status":  "completed",
+                      "started_at":  "2026-06-18T06:53:23.0037058+03:00",
+                      "command":  "powershell -ExecutionPolicy Bypass -File scripts/local_phase.ps1 -ProjectRoot \".\" -Phase propose -RunId \"RUN-20260618-065322-5481\"",
+                      "evidence_path":  ".\\runtime\\runs\\RUN-20260618-065322-5481\\evidence\\propose-01.json",
+                      "execution_claim_mode":  "executed",
+                      "message":  "Artifact validation passed.",
+                      "finished_at":  "2026-06-18T06:53:23.9313023+03:00"
+                  },
+                  {
+                      "step_id":  "design-big-02",
+                      "phase":  "design-big",
+                      "status":  "completed",
+                      "started_at":  "2026-06-18T06:53:23.9443249+03:00",
+                      "command":  "powershell -ExecutionPolicy Bypass -File scripts/local_phase.ps1 -ProjectRoot \".\" -Phase design-big -RunId \"RUN-20260618-065322-5481\"",
+                      "evidence_path":  ".\\runtime\\runs\\RUN-20260618-065322-5481\\evidence\\design-big-02.json",
+                      "execution_claim_mode":  "executed",
+                      "message":  "Artifact validation passed.",
+                      "finished_at":  "2026-06-18T06:53:25.3045711+03:00"
+                  },
+                  {
+                      "step_id":  "design-small-03",
+                      "phase":  "design-small",
+                      "status":  "completed",
+                      "started_at":  "2026-06-18T06:53:25.3161524+03:00",
+                      "command":  "powershell -ExecutionPolicy Bypass -File scripts/local_phase.ps1 -ProjectRoot \".\" -Phase design-small -RunId \"RUN-20260618-065322-5481\"",
+                      "evidence_path":  ".\\runtime\\runs\\RUN-20260618-065322-5481\\evidence\\design-small-03.json",
+                      "execution_claim_mode":  "executed",
+                      "message":  "Artifact validation passed.",
+                      "finished_at":  "2026-06-18T06:53:26.1631741+03:00"
+                  },
+                  {
+                      "step_id":  "create-04",
+                      "phase":  "create",
+                      "status":  "completed",
+                      "started_at":  "2026-06-18T06:53:26.1681153+03:00",
+                      "command":  "powershell -ExecutionPolicy Bypass -File scripts/local_phase.ps1 -ProjectRoot \".\" -Phase create -RunId \"RUN-20260618-065322-5481\"",
+                      "evidence_path":  ".\\runtime\\runs\\RUN-20260618-065322-5481\\evidence\\create-04.json",
+                      "execution_claim_mode":  "executed",
+                      "message":  "Artifact validation passed.",
+                      "finished_at":  "2026-06-18T06:53:27.4746577+03:00"
+                  },
+                  {
+                      "step_id":  "polish-05",
+                      "phase":  "polish",
+                      "status":  "completed",
+                      "started_at":  "2026-06-18T06:53:27.4811824+03:00",
+                      "command":  "powershell -ExecutionPolicy Bypass -File scripts/local_phase.ps1 -ProjectRoot \".\" -Phase polish -RunId \"RUN-20260618-065322-5481\"",
+                      "evidence_path":  ".\\runtime\\runs\\RUN-20260618-065322-5481\\evidence\\polish-05.json",
+                      "execution_claim_mode":  "executed",
+                      "message":  "Artifact validation passed.",
+                      "finished_at":  "2026-06-18T06:53:28.4579665+03:00"
+                  },
+                  {
+                      "step_id":  "rewrite-06",
+                      "phase":  "rewrite",
+                      "status":  "completed",
+                      "started_at":  "2026-06-18T06:53:28.4615837+03:00",
+                      "command":  "powershell -ExecutionPolicy Bypass -File scripts/local_phase.ps1 -ProjectRoot \".\" -Phase rewrite -RunId \"RUN-20260618-065322-5481\"",
+                      "evidence_path":  ".\\runtime\\runs\\RUN-20260618-065322-5481\\evidence\\rewrite-06.json",
+                      "execution_claim_mode":  "executed",
+                      "message":  "Artifact validation passed.",
+                      "finished_at":  "2026-06-18T06:53:29.3588887+03:00"
+                  },
+                  {
+                      "step_id":  "export-07",
+                      "phase":  "export",
+                      "status":  "completed",
+                      "started_at":  "2026-06-18T06:53:29.3652058+03:00",
+                      "command":  "powershell -ExecutionPolicy Bypass -File scripts/local_phase.ps1 -ProjectRoot \".\" -Phase export -RunId \"RUN-20260618-065322-5481\"",
+                      "evidence_path":  ".\\runtime\\runs\\RUN-20260618-065322-5481\\evidence\\export-07.json",
+                      "execution_claim_mode":  "executed",
+                      "message":  "Artifact validation passed.",
+                      "finished_at":  "2026-06-18T06:53:30.2599050+03:00"
+                  }
+              ],
+    "updated_at":  "2026-06-18T06:53:30.2599050+03:00",
+    "finished_at":  "2026-06-18T06:53:30.2648232+03:00"
+}

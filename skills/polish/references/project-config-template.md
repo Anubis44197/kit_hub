@@ -3,7 +3,7 @@
 ```yaml
 project:
   name: "My Novel"
-  target_platform: "NOVELPIA"
+  target_platform: "PRINT_BOOK"          # GENERIC_BOOK | PRINT_BOOK | EBOOK
   target_genre: "genre"
   episode_dir: "episode/"
   work_dir: "revision/"
@@ -14,9 +14,9 @@ design_documents:
   character_core: "design/my_character.md"
   character_detail: "design/my_character.md"
 
-ep_range_table:
-  - range: "EP001-EP025"
-    label: "Arc 1"
+chapter_range_table:
+  - range: "EP001-EP025"                 # legacy file ids; reader-facing label is chapter
+    label: "Part 1"
     plot_guide: "design/my_plot-hook.md"
 
 guard_rails:
@@ -32,14 +32,9 @@ language_profile:
   tdk_enforcement: true
   tdk_polisher_mandatory: true
   preserve_literary_voice: true
-  disallowed_scripts:
-    - "Hangul"
-    - "Han"
-    - "Hiragana"
-    - "Katakana"
 
 book_mode:
-  profile: "web_novel"                   # web_novel | print_preview | ebook
+  profile: "print_preview"               # print_preview | ebook
   enabled: true
   layout_agent_mandatory_when_enabled: true
   paragraph_max_lines_hint: 8
@@ -60,6 +55,53 @@ export_word:
   page_end_behavior: "chapter_new_page"    # auto | chapter_new_page
   summary_report_required: true
   compatibility_test_required: true
+
+book_package:
+  front_matter:
+    title_page: true
+    copyright_page: true
+    dedication: false
+    preface: true
+    table_of_contents: true
+  body:
+    chapter_ids_use_legacy_episode_files: true
+    require_full_arc_resolution: true
+    require_character_consistency_tracker: true
+  back_matter:
+    acknowledgements: false
+    author_note: true
+  cover:
+    brief_required: true
+    front_cover_prompt_required: true
+    back_cover_copy_required: true
+    spine_text_required_when_print: true
+  print_readiness:
+    trim_size: "A5"
+    docx_required: true
+    cover_brief_required: true
+    compatibility_test_required: true
+
+writing_profile:
+  writing_type: "novel"                 # novel | story | novella | essay | memoir | biography | research_book | self_help | business_book | academic
+  target_reader: "Turkish adult commercial fiction reader"
+  structure_model: "four_act_longform_novel"
+  evidence_policy: "fictional; factual claims require source placeholders"
+
+longform:
+  target_pages: 360                    # supports 300-500+ page projects
+  target_words: 150000
+  target_chapters: 60
+  words_per_chapter: 2500
+  generation_strategy: "chunked_chapter_state"
+  state_dir: "revision/_state/"
+  require_character_state: true
+  require_plot_ledger: true
+  require_chapter_summaries: true
+  require_style_profile: true
+  require_continuity_ledger: true
+  require_writing_type_profile: true
+  require_editorial_quality_scorecard: true
+  max_chapters_per_generation_batch: 3
 
 security_profile:
   name: "offline_first_secure"

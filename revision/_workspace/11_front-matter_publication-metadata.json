@@ -1,0 +1,13 @@
+﻿{
+    "run_id":  "RUN-20260618-065322-5481",
+    "title":  "Boğazda Bir Akşam",
+    "author":  "[Yazar adı girilecek]",
+    "publisher":  "[Yayımcı veya self-publisher bilgisi girilecek]",
+    "copyright_owner":  "[Telif sahibi girilecek]",
+    "publication_year":  "[Basım yılı girilecek]",
+    "edition":  "[Baskı sayısı girilecek]",
+    "print_quantity":  "[Basım adedi gerekiyorsa girilecek]",
+    "isbn":  null,
+    "barcode_status":  "not_assigned",
+    "bandrol_status":  "external_workflow_not_claimed"
+}

@@ -72,6 +72,10 @@ if ($reviseHits) {
 Write-Host "[final-readiness-ps] validating mandatory export gate..."
 Assert-Contains -Path "skills/export-word/SKILL.md" -Pattern "export-approval-gate" -ErrorMessage "Missing export-approval-gate reference"
 Assert-Contains -Path "skills/export-word/SKILL.md" -Pattern "export-validator" -ErrorMessage "Missing export-validator reference"
+Assert-Contains -Path "skills/export-word/SKILL.md" -Pattern "front-matter-editor" -ErrorMessage "Missing front-matter-editor reference"
+Assert-Contains -Path "skills/export-word/SKILL.md" -Pattern "cover-designer" -ErrorMessage "Missing cover-designer reference"
+Assert-File "agents/front-matter-editor.md"
+Assert-File "agents/cover-designer.md"
 
 Write-Host "[final-readiness-ps] validating quality-verifier strict metadata contract..."
 Assert-Contains -Path "agents/quality-verifier.md" -Pattern "## Required Report Metadata \(Strict\)" -ErrorMessage "Missing strict metadata contract section in quality-verifier"
@@ -80,7 +84,7 @@ Assert-Contains -Path "agents/quality-verifier.md" -Pattern "(?m)step_id" -Error
 Assert-Contains -Path "agents/quality-verifier.md" -Pattern "## Minimal Markdown Verdict Template \(Required\)" -ErrorMessage "Missing markdown verdict template section in quality-verifier"
 
 Write-Host "[final-readiness-ps] validating language policy blocks..."
-$policyPattern = [regex]::Escape("Disallowed scripts in story content: Hangul, Han, Hiragana, Katakana.")
+$policyPattern = [regex]::Escape("Chapter/story content language must be Turkish.")
 Assert-Contains -Path "skills/create/SKILL.md" -Pattern $policyPattern -ErrorMessage "Missing language policy in skills/create/SKILL.md"
 Assert-Contains -Path "skills/polish/SKILL.md" -Pattern $policyPattern -ErrorMessage "Missing language policy in skills/polish/SKILL.md"
 Assert-Contains -Path "skills/rewrite/SKILL.md" -Pattern $policyPattern -ErrorMessage "Missing language policy in skills/rewrite/SKILL.md"
@@ -97,12 +101,49 @@ Assert-File "skills/polish/references/tdk-source-assurance-chain.md"
 Assert-File "docs/STRICT_EXECUTION_POLICY.md"
 Assert-File "docs/PHASE_EVIDENCE_SCHEMA.md"
 Assert-File "docs/WORKSPACE_RETENTION_POLICY.md"
+Assert-File "docs/LONGFORM_ENGINE.md"
+Assert-File "docs/PROFESSIONAL_WRITING_SYSTEM.md"
+Assert-File "docs/IDE_AGENT_WORKFLOW.md"
+Assert-File "docs/AGENT_COMPLIANCE_ENFORCEMENT.md"
+Assert-File "runtime/agent-compliance.schema.json"
+Assert-File "runtime/runner-config.ide-manual.template.json"
+Assert-File "scripts/ide_phase_prompt.ps1"
+Assert-File "skills/polish/references/writing-type-profiles.md"
+Assert-File "skills/polish/references/genre-structure-templates.md"
+Assert-File "skills/polish/references/editorial-quality-scorecard.md"
+Assert-File "skills/polish/references/llm-adapter-contract.md"
+Assert-File "skills/polish/references/docx-professional-style-contract.md"
+Assert-File "skills/polish/references/tdk-official-writing-rules.md"
+Assert-File "skills/polish/references/tdk-print-submission-rules.md"
+Assert-File "skills/polish/references/source-citation-style-tdk.md"
+Assert-File "skills/polish/references/publication-metadata-checklist.md"
+Assert-File "skills/polish/references/isbn-kunye-bandrol-checklist.md"
+Assert-File "agents/publication-compliance-checker.md"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "current-run.json" -ErrorMessage "Missing current-run pointer contract in runner"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Invoke-RunRetention" -ErrorMessage "Missing retention invocation in runner"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Ensure-UserApproval" -ErrorMessage "Missing user approval gate enforcement in runner"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-PhaseContracts" -ErrorMessage "Missing phase contract enforcement in runner"
+Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-AgentCompliance" -ErrorMessage "Missing agent compliance validation in runner"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Assert-NoForbiddenPatterns" -ErrorMessage "Missing negative enforcement in runner"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-EpisodeTextQuality" -ErrorMessage "Missing text quality hard gate in runner"
+Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-LongformState" -ErrorMessage "Missing longform state validation in runner"
+Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-PublicationCompliance" -ErrorMessage "Missing publication compliance validation in runner"
+Assert-File "scripts/local_phase.ps1"
+Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "longform-plan.json" -ErrorMessage "Missing longform plan generation in local adapter"
+Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "character-state.json" -ErrorMessage "Missing character state generation in local adapter"
+Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "plot-ledger.json" -ErrorMessage "Missing plot ledger generation in local adapter"
+Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "chapter-summaries.json" -ErrorMessage "Missing chapter summaries generation in local adapter"
+Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "style-profile.json" -ErrorMessage "Missing style profile generation in local adapter"
+Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "writing-type-profile.json" -ErrorMessage "Missing writing type profile generation in local adapter"
+Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "editorial-quality-scorecard.json" -ErrorMessage "Missing editorial scorecard generation in local adapter"
+Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "Write-AgentCompliance" -ErrorMessage "Missing agent compliance manifest generation in local adapter"
+Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "14_publication-compliance_verdict" -ErrorMessage "Missing publication compliance verdict generation in local adapter"
+Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "llm-adapter-contract.json" -ErrorMessage "Missing LLM adapter contract validation in runner"
+Assert-Contains -Path "runtime/runner-config.template.json" -Pattern "scripts/local_phase.ps1" -ErrorMessage "Missing local phase adapter command in runner config template"
+Assert-Contains -Path "runtime/runner-config.ide-manual.template.json" -Pattern "manual_ide_agent" -ErrorMessage "Missing manual IDE adapter strategy"
+Assert-Contains -Path "README.md" -Pattern "No API Key / IDE Agent Mode" -ErrorMessage "README missing no-API IDE workflow"
+Assert-Contains -Path "README.md" -Pattern "runtime/agent-compliance/\{phase\}\.json" -ErrorMessage "README missing agent compliance manifest"
+Assert-Contains -Path "docs/RUNNER_USAGE.md" -Pattern "ide_phase_prompt.ps1" -ErrorMessage "Runner docs missing IDE phase prompt helper"
 Assert-Contains -Path "runtime/runner-config.template.json" -Pattern "require_user_approvals" -ErrorMessage "Missing require_user_approvals in runner config template"
 Assert-Contains -Path "runtime/runner-config.template.json" -Pattern "enforce_phase_contracts" -ErrorMessage "Missing enforce_phase_contracts in runner config template"
 Assert-Contains -Path "runtime/runner-config.template.json" -Pattern "enable_negative_enforcement" -ErrorMessage "Missing enable_negative_enforcement in runner config template"
@@ -121,7 +162,7 @@ $cfgRaw = Get-Content -LiteralPath $ConfigPath -Raw
 
 $requiredKeys = @(
   "project","name","target_platform","target_genre","episode_dir","work_dir","design_dir",
-  "language_profile","locale","content_language","interface_language","disallowed_scripts",
+  "language_profile","locale","content_language","interface_language",
   "book_mode","enabled","profile"
 )
 foreach ($key in $requiredKeys) {
@@ -129,7 +170,7 @@ foreach ($key in $requiredKeys) {
 }
 
 $platform = Get-KeyValue -Raw $cfgRaw -Key "target_platform"
-if ($platform -notin @("NOVELPIA","MUNPIA","KAKAO_PAGE","NAVER_SERIES","RIDI","GENERIC_BOOK")) {
+if ($platform -notin @("GENERIC_BOOK","PRINT_BOOK","EBOOK")) {
   throw "Invalid target_platform: $platform"
 }
 
@@ -144,7 +185,7 @@ if ($contentLanguage -ne "Turkish") {
 }
 
 $profile = Get-KeyValue -Raw $cfgRaw -Key "profile"
-if ($profile -notin @("web_novel","print_preview","ebook")) {
+if ($profile -notin @("print_preview","ebook")) {
   throw "Invalid book_mode.profile: $profile"
 }
 
@@ -183,7 +224,13 @@ Assert-Contains -Path "skills/create/SKILL.md" -Pattern "quality-verifier" -Erro
 Write-Host "[final-readiness-ps] validating polish flow contract..."
 Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "rule-checker" -ErrorMessage "Missing rule-checker in polish flow"
 Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "story-analyst" -ErrorMessage "Missing story-analyst in polish flow"
-Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "platform-optimizer" -ErrorMessage "Missing platform-optimizer in polish flow"
+Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "book-structure-optimizer" -ErrorMessage "Missing book-structure-optimizer in polish flow"
+Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "developmental-editor" -ErrorMessage "Missing developmental-editor in polish flow"
+Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "continuity-editor" -ErrorMessage "Missing continuity-editor in polish flow"
+Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "line-editor" -ErrorMessage "Missing line-editor in polish flow"
+Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "copy-editor" -ErrorMessage "Missing copy-editor in polish flow"
+Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "final-proofreader" -ErrorMessage "Missing final-proofreader in polish flow"
+Assert-Contains -Path "skills/export-word/SKILL.md" -Pattern "publication-compliance-checker" -ErrorMessage "Missing publication-compliance-checker in export flow"
 Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "alive-enhancer" -ErrorMessage "Missing alive-enhancer in polish flow"
 Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "revision-executor" -ErrorMessage "Missing revision-executor in polish flow"
 Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "tdk-polisher" -ErrorMessage "Missing tdk-polisher in polish flow"
@@ -227,6 +274,11 @@ foreach ($agent in $agentFiles) {
   $agentName = [System.IO.Path]::GetFileNameWithoutExtension($agent.Name)
   Assert-File "tests/golden/agents/$agentName/input.md"
   Assert-File "tests/golden/agents/$agentName/expected.md"
+  Assert-Contains -Path "tests/golden/agents/$agentName/expected.md" -Pattern "Expected contract" -ErrorMessage "Golden expected output is not contract-backed: $agentName"
+  $expectedRaw = Get-Content -LiteralPath "tests/golden/agents/$agentName/expected.md" -Raw
+  if ($expectedRaw -match "Placeholder expected output") {
+    throw "Golden expected output still contains placeholder text: $agentName"
+  }
 }
 
 Write-Host "[final-readiness-ps] done"

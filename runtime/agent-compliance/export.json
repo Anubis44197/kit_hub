@@ -1,0 +1,42 @@
+﻿{
+    "run_id":  "RUN-20260618-065322-5481",
+    "phase":  "export",
+    "required_agents":  [
+                            "export-approval-gate",
+                            "export-validator",
+                            "front-matter-editor",
+                            "cover-designer",
+                            "publication-compliance-checker",
+                            "final-proofreader",
+                            "book-exporter"
+                        ],
+    "agents_executed":  [
+                            "export-approval-gate",
+                            "export-validator",
+                            "front-matter-editor",
+                            "cover-designer",
+                            "publication-compliance-checker",
+                            "final-proofreader",
+                            "book-exporter"
+                        ],
+    "required_references":  [
+                                "skills/export-word/SKILL.md",
+                                "skills/polish/references/llm-agent-compliance-policy.md",
+                                "skills/polish/references/publication-metadata-checklist.md",
+                                "skills/polish/references/isbn-kunye-bandrol-checklist.md"
+                            ],
+    "loaded_state_files":  [
+                               "revision/_state/longform-plan.json",
+                               "revision/_state/editorial-quality-scorecard.json",
+                               "revision/_state/llm-adapter-contract.json"
+                           ],
+    "output_artifacts":  [
+                             "revision/_workspace/10_export-word_manifest_EP001-EP003.json",
+                             "revision/_workspace/14_publication-compliance_verdict_EP001-EP003.json",
+                             "revision/export/Boğazda Bir Akşam_EP001-EP003.docx"
+                         ],
+    "contract_status":  "PASS",
+    "missing_items":  [
+
+                      ]
+}

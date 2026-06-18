@@ -1,7 +1,7 @@
 ﻿{
-    "approved":  false,
+    "approved":  true,
     "title":  "Design Freeze Approval",
-    "approved_by":  "",
-    "approved_at":  "",
-    "note":  "Set approved=true only after explicit user confirmation."
+    "approved_by":  "user",
+    "approved_at":  "2026-06-17",
+    "note":  "Approved by user in current Codex session for local end-to-end validation."
 }

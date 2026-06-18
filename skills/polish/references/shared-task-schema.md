@@ -22,6 +22,7 @@ Use this schema for model-agnostic task execution across all skills and agents.
 
 ## Task Naming Convention
 - `create.episode_draft`
+- `polish.book_structure_diagnose`
 - `polish.episode_fix`
 - `rewrite.episode_rebuild`
 - `export.word_docx`

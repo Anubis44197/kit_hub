@@ -1,0 +1,35 @@
+﻿{
+    "run_id":  "RUN-20260618-065322-5481",
+    "phase":  "design-big",
+    "required_agents":  [
+                            "concept-builder",
+                            "character-architect",
+                            "plot-hook-engineer",
+                            "book-structure-optimizer"
+                        ],
+    "agents_executed":  [
+                            "concept-builder",
+                            "character-architect",
+                            "plot-hook-engineer",
+                            "book-structure-optimizer"
+                        ],
+    "required_references":  [
+                                "skills/design-big/SKILL.md",
+                                "skills/polish/references/llm-agent-compliance-policy.md",
+                                "skills/polish/references/writing-type-profiles.md"
+                            ],
+    "loaded_state_files":  [
+
+                           ],
+    "output_artifacts":  [
+                             "novel-config.md",
+                             "design/01_concept_bootstrap.md",
+                             "design/02_character_core.md",
+                             "design/03_macro_plot_hooks.md",
+                             "revision/_state/longform-plan.json"
+                         ],
+    "contract_status":  "PASS",
+    "missing_items":  [
+
+                      ]
+}

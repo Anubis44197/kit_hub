@@ -1,18 +1,18 @@
 ﻿---
 name: export-word
-description: "Export validated novel episodes to DOCX using mandatory approval gate and book-mode style profile."
+description: "Export a complete validated book package to DOCX using approval, front matter, cover brief, and book-mode style gates."
 prompt_version: "1.0.0"
 ---
 
 # Export Word Skill
 
 ## Purpose
-Export episode text to `.docx` only after explicit user approval and pre-export validation.
+Export book text to `.docx` only after explicit user approval and pre-export validation.
 
 ## Language Policy
 - Chapter/story content language must be Turkish.
 - Skill/agent contracts and tooling instructions remain English.
-- Disallowed scripts in story content: Hangul, Han, Hiragana, Katakana.
+- Preserve valid UTF-8 Turkish characters; mojibake or unexplained non-Turkish script usage must block print-ready export.
 
 ## Security, Privacy, and Copyright Policy
 - Apply PII redaction policy to reports/manifests: `references/pii-redaction-policy.md`.
@@ -48,13 +48,22 @@ Export episode text to `.docx` only after explicit user approval and pre-export 
   - `skills/polish/references/verdict-report-standard.md`
 - Inter-agent handoff payload must follow:
   - `skills/polish/references/handoff-contract.md`
+- Official language/publication rules must follow:
+  - `skills/polish/references/tdk-official-writing-rules.md`
+  - `skills/polish/references/tdk-print-submission-rules.md`
+  - `skills/polish/references/source-citation-style-tdk.md`
+  - `skills/polish/references/publication-metadata-checklist.md`
+  - `skills/polish/references/isbn-kunye-bandrol-checklist.md`
 
 ## Pipeline
 1. Approval check (`export-approval-gate`) [mandatory]
 2. Export readiness validation (`export-validator`) [mandatory]
 3. Source validation (`tdk-polisher` and `tdk-layout-agent` artifacts) [mandatory]
-4. DOCX build (`book-exporter`)
-5. Export summary report
+4. Front matter build/validation (`front-matter-editor`) [mandatory for complete book package]
+5. Cover package brief (`cover-designer`) [mandatory for complete book package]
+6. Publication metadata compliance (`publication-compliance-checker`) [mandatory before print-ready claim]
+7. DOCX build (`book-exporter`)
+8. Export summary report
 
 ## Source Priority
 - If `book_mode.enabled=true`, source text must come from:
@@ -67,9 +76,19 @@ Export episode text to `.docx` only after explicit user approval and pre-export 
 - If any critical TDK/layout issue remains unresolved, block export.
 - If selected episode source file is missing, stop with `artifact-missing` error.
 - Do not run `book-exporter` unless `export-validator` verdict is `READY`.
+- Do not mark the book package print-ready unless front matter and cover design manifest exist.
+- Do not mark the book package print-ready unless publication-compliance verdict is `READY`.
+- Do not invent ISBN, publisher, author identity, copyright owner, barcode, or final cover artwork.
+- Do not claim bandrol completion, ministry approval, ISBN assignment, or publisher approval from local export.
 
 ## Outputs
 - `{WORK_DIR}/export/{project_name}_EP{RANGE}.docx`
+- `{WORK_DIR}/_workspace/11_front-matter_*.md`
+- `{WORK_DIR}/_workspace/11_front-matter_toc.json`
+- `{WORK_DIR}/_workspace/12_cover-design_brief.md`
+- `{WORK_DIR}/_workspace/12_cover-design_manifest.json`
+- `{WORK_DIR}/_workspace/14_publication-compliance_report_EP{RANGE}.md`
+- `{WORK_DIR}/_workspace/14_publication-compliance_verdict_EP{RANGE}.json`
 - `{WORK_DIR}/_workspace/10_export-validator_report_EP{RANGE}.md`
 - `{WORK_DIR}/_workspace/10_export-validator_verdict_EP{RANGE}.json`
 - `{WORK_DIR}/_workspace/10_export-word_report_EP{RANGE}.md`
@@ -99,6 +118,9 @@ Export episode text to `.docx` only after explicit user approval and pre-export 
 - `source_files`
 - `style_profile`
 - `approval_artifact`
+- `front_matter_files`
+- `cover_design_manifest`
+- `publication_compliance_verdict`
 - `blocked` (bool)
 - `block_reasons`
 - `output_docx_path`
@@ -112,6 +134,8 @@ The summary report must include:
 - export-validator verdict
 - source mode and source files
 - applied style profile name
+- front matter status
+- cover brief status
+- publication metadata / ISBN / kunye compliance status
 - block reasons (if blocked)
 - produced docx path (if success)
-

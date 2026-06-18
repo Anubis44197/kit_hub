@@ -187,7 +187,7 @@
     <section class="panel controls">
       <h1 class="title">Word Preview Studio</h1>
       <p class="hint">
-        Paste chapter text on the left. The right side renders a live, book-style page preview suitable for Word export checks.
+        Paste chapter text on the left. The right side renders a live reading preview with estimated page breaks.
       </p>
 
       <label for="inputText">Manuscript Text</label>
@@ -225,7 +225,7 @@ Sözleri kıyıda yankılanıp kaybolurken, suyun yüzeyinde ince bir halka geni
 
     <section class="panel preview-wrap">
       <div class="preview-header">
-        <strong>Book Page Preview</strong>
+        <strong>Book Reading Preview</strong>
         <span id="previewStatus">Ready</span>
       </div>
       <div id="pages" class="pages"></div>
@@ -242,10 +242,21 @@ Sözleri kıyıda yankılanıp kaybolurken, suyun yüzeyinde ince bir halka geni
     const renderBtn = document.getElementById("renderBtn");
     const clearBtn = document.getElementById("clearBtn");
     const sampleBtn = document.getElementById("sampleBtn");
+    const defaultSample = [
+      "BÖLÜM 1",
+      "",
+      "Göl sabahın erken saatlerinde neredeyse cam kadar sakindi. Kenan oltasını usulca suya bıraktı.",
+      "",
+      "\"Bugün rüzgar ters dönecek,\" dedi kendi kendine.",
+      "",
+      "Sözleri kıyıda yankılanıp kaybolurken, suyun yüzeyinde ince bir halka genişledi."
+    ].join("\n");
 
     function paragraphKind(text) {
       const t = text.trim();
+      const normalized = t.toLocaleLowerCase("tr-TR");
       if (!t) return "empty";
+      if (/^b[öo]l[üu]m\s+\d+/i.test(normalized)) return "heading";
       if (/^b[öo]l[üu]m\s+\d+/i.test(t) || /^chapter\s+\d+/i.test(t)) return "heading";
       if (t.startsWith("\"") || t.startsWith("“") || t.startsWith("—") || t.startsWith("- ")) return "dialogue";
       return "normal";
@@ -308,7 +319,7 @@ Sözleri kıyıda yankılanıp kaybolurken, suyun yüzeyinde ince bir halka geni
         "Characters: " + charCount + "<br />" +
         "Words: " + wordCount + "<br />" +
         "Pages: " + pages.length;
-      previewStatus.textContent = pages.length ? ("Rendered " + pages.length + " page(s)") : "No content";
+      previewStatus.textContent = pages.length ? ("Estimated " + pages.length + " page(s)") : "No content";
     }
 
     renderBtn.addEventListener("click", updatePreview);
@@ -326,6 +337,12 @@ Sözleri kıyıda yankılanıp kaybolurken, suyun yüzeyinde ince bir halka geni
       updatePreview();
     });
 
+    sampleBtn.addEventListener("click", () => {
+      inputText.value = defaultSample;
+      updatePreview();
+    });
+
+    inputText.value = defaultSample;
     updatePreview();
   </script>
 </body>

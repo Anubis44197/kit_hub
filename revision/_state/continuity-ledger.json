@@ -1,0 +1,42 @@
+﻿{
+    "schema_version":  "1.0.0",
+    "run_id":  "RUN-20260618-065322-5481",
+    "timeline":  [
+                     {
+                         "chapter":  "EP001",
+                         "day":  "Gün 1",
+                         "location":  "Boğaz kıyısındaki lokanta",
+                         "event":  "Kemal mektup ve satış kararının baskısıyla Derya\u0027yı bekler."
+                     },
+                     {
+                         "chapter":  "EP002",
+                         "day":  "Gün 1",
+                         "location":  "Boğaz kıyısındaki lokanta",
+                         "event":  "Derya gelir ve mektup gerçeğini yüzeye çıkarır."
+                     },
+                     {
+                         "chapter":  "EP003",
+                         "day":  "Gün 1",
+                         "location":  "kıyı yolu",
+                         "event":  "Kemal mektubu teslim edip satıştan vazgeçer."
+                     }
+                 ],
+    "locations":  [
+                      "Boğaz kıyısındaki lokanta",
+                      "lokanta terası",
+                      "kıyı yolu"
+                  ],
+    "object_state":  {
+                         "mektup":  "Kemal\u0027in ceket iç cebinde",
+                         "aile_evi_tapu":  "satış baskısı altında",
+                         "telefon":  "Derya\u0027nın geliş haberini taşır"
+                     },
+    "continuity_rules":  [
+                             "Karakter bilmediği bilgiyi kullanamaz.",
+                             "Her ipucu açıldığı bölümden sonra plot-ledger içinde izlenir.",
+                             "Her bölüm en az bir olay, karakter veya tema ilerletir."
+                         ],
+    "violations":  [
+
+                   ]
+}
