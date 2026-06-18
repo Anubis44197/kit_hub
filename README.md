@@ -192,6 +192,7 @@ Detailed guide:
 | Export approval missing (`approval=false`) | Export blocked with `E_EXPORT_APPROVAL` |
 | Approval granted (`approval=true`) | Export proceeds through validator/manifests |
 | DOCX integrity check | Must pass structural verification (`verify_docx_integrity.ps1`) |
+| DOCX content match check | Exported DOCX text must contain snippets from current `episode/ep*.md` files; stale copied DOCX files are blocked |
 
 ## Local Validation
 | Task | Command |
@@ -210,8 +211,8 @@ Detailed guide:
 ## Runner Automation
 - Initialize runtime config:
   - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
-- Run full pipeline:
-  - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase export`
+- Run full pipeline in IDE manual mode:
+  - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase propose -ToPhase export`
 - One-time bootstrap + run:
   - `/run`
 - Run with optional dictionary check enabled:
@@ -228,6 +229,7 @@ Detailed guide:
   - issue JSON schema
   - verdict markdown token (`PASS|FAIL|BLOCKED`)
   - export manifest existence
+  - DOCX content must match current manuscript source files
 - Runner enforces agent compliance manifests:
   - `runtime/agent-compliance/{phase}.json`
   - required agents must be listed and marked executed

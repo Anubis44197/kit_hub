@@ -43,6 +43,24 @@ function Write-Json {
   Write-Utf8 -Path $Path -Content ($Value | ConvertTo-Json -Depth 30)
 }
 
+function Get-FileSha256 {
+  param([string]$Path)
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+      $hash = $sha.ComputeHash($stream)
+      return (($hash | ForEach-Object { $_.ToString("x2") }) -join "")
+    }
+    finally {
+      if ($stream) { $stream.Dispose() }
+    }
+  }
+  finally {
+    if ($sha) { $sha.Dispose() }
+  }
+}
+
 function Read-Json {
   param([string]$Path)
   return (Read-Utf8 -Path $Path) | ConvertFrom-Json
@@ -602,17 +620,26 @@ function Invoke-Export {
 
   $docxPath = Join-Path $export "$projectName`_$rangeLabel.docx"
   New-Docx -OutputPath $docxPath -Title $projectName -Paragraphs $paragraphs.ToArray()
+  $sourceHashes = @()
+  foreach ($ch in $chapters) {
+    $sourceHashes += [ordered]@{
+      path = "episode/$($ch.Name)"
+      sha256 = Get-FileSha256 -Path $ch.FullName
+    }
+  }
   Write-Json -Path (Join-Path $work "10_export-word_manifest_$rangeLabel.json") -Value ([ordered]@{
     project_name = $projectName
     episode_range = $rangeLabel
     source_mode = "existing_artifacts_only"
     source_files = @($chapters | ForEach-Object { "episode/$($_.Name)" })
+    source_hashes = $sourceHashes
     approval_artifact = "runtime/approvals/export-approval.json"
     front_matter_files = @($front.Keys | ForEach-Object { Get-RelativePath -Path $front[$_] })
     cover_design_manifest = Get-RelativePath -Path $cover.manifest
     cover_files = @($cover.Keys | ForEach-Object { Get-RelativePath -Path $cover[$_] })
     publication_compliance_verdict = "revision/_workspace/14_publication-compliance_verdict_$rangeLabel.json"
     local_adapter_boundary = "No manuscript, preface, or cover copy was invented during export."
+    docx_sha256 = Get-FileSha256 -Path $docxPath
     output_docx_path = "revision/export/$projectName`_$rangeLabel.docx"
   })
   Write-AgentCompliance -PhaseName "export" -RequiredAgents @("export-approval-gate", "export-validator", "publication-compliance-checker", "final-proofreader", "book-exporter") -RequiredReferences @("skills/export-word/SKILL.md", "skills/polish/references/publication-metadata-checklist.md", "skills/polish/references/isbn-kunye-bandrol-checklist.md") -LoadedStateFiles @("runtime/approvals/export-approval.json", "revision/_state/llm-adapter-contract.json") -OutputArtifacts @("revision/_workspace/10_export-word_manifest_$rangeLabel.json", "revision/_workspace/14_publication-compliance_verdict_$rangeLabel.json", "revision/export/$projectName`_$rangeLabel.docx")

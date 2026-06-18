@@ -61,10 +61,10 @@ After the IDE agent writes the required files, return to the terminal and press 
 Local test mode needs no API. It uses deterministic scaffolding and contract checks:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase export
+powershell -ExecutionPolicy Bypass -File scripts/local_phase.ps1 -ProjectRoot . -Phase propose -RunId RUN-LOCAL
 ```
 
-This proves proposal gating, state files, artifact contracts, and export packaging. It does not write the actual manuscript. For `create`, `polish`, and `rewrite`, use IDE manual mode or a configured provider/API/CLI command.
+This proves proposal scaffolding and approval-file creation. It does not write the actual manuscript. For `create`, `polish`, and `rewrite`, use IDE manual mode or a configured provider/API/CLI command.
 
 Local test mode is a smoke test adapter. It must not be presented as proof that a provider LLM, IDE agent, or autonomous agent team wrote the book.
 
@@ -107,7 +107,7 @@ The runner does not accept vague completion. Each phase must write real files:
 - DOCX under `revision/export/`
 - agent compliance manifest under `runtime/agent-compliance/{phase}.json`
 
-If files are missing, malformed, too short/long, repetitive, mojibake-corrupted, or publication metadata is falsely claimed, the runner fails the phase.
+If files are missing, malformed, too short/long, repetitive, mojibake-corrupted, publication metadata is falsely claimed, or the exported DOCX does not contain the current episode text, the runner fails the phase.
 
 The IDE agent must write the compliance manifest last:
 
@@ -138,3 +138,5 @@ To copy a file to Desktop:
 ```powershell
 Copy-Item -LiteralPath "revision/export/YOUR_FILE.docx" -Destination "$env:USERPROFILE\Desktop\" -Force
 ```
+
+Never copy or rename an older DOCX to satisfy export. If DOCX creation fails because a tool such as Pandoc is missing, report the failure and leave export blocked.

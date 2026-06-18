@@ -238,6 +238,7 @@ function Get-PhaseOutputArtifacts {
       $patterns = @(
         "revision/_workspace/*export*manifest*.json",
         "revision/_workspace/*export-validator*verdict*.json",
+        "revision/_workspace/*export-content-match*",
         "revision/_workspace/11_front-matter*",
         "revision/_workspace/12_cover-design*",
         "revision/_workspace/14_publication-compliance*",
@@ -663,6 +664,142 @@ function Validate-PublicationCompliance {
       throw "Publication compliance cannot set print_ready=true unless verdict=READY: $($file.FullName)"
     }
   }
+}
+
+function Get-DocxText {
+  param([string]$DocxPath)
+
+  Ensure-File $DocxPath
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $zip = $null
+  try {
+    $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $DocxPath))
+    $entry = $zip.Entries | Where-Object { $_.FullName -eq "word/document.xml" } | Select-Object -First 1
+    if (-not $entry) {
+      throw "DOCX package is missing word/document.xml: $DocxPath"
+    }
+    $stream = $entry.Open()
+    try {
+      $reader = New-Object System.IO.StreamReader($stream, [System.Text.Encoding]::UTF8)
+      $xml = $reader.ReadToEnd()
+    }
+    finally {
+      if ($reader) { $reader.Dispose() }
+      if ($stream) { $stream.Dispose() }
+    }
+  }
+  finally {
+    if ($zip) { $zip.Dispose() }
+  }
+
+  $text = $xml -replace "<w:tab[^>]*/>", " "
+  $text = $text -replace "</w:p>", "`n"
+  $text = $text -replace "<[^>]+>", " "
+  return [System.Net.WebUtility]::HtmlDecode($text)
+}
+
+function Normalize-ExportText {
+  param([string]$Text)
+  return (($Text.ToLowerInvariant() -replace "\s+", " ").Trim())
+}
+
+function Get-ManuscriptSnippets {
+  param([string]$Text)
+
+  $snippets = New-Object System.Collections.Generic.List[string]
+  foreach ($line in ($Text -split "\r?\n")) {
+    $clean = ($line -replace "^#{1,6}\s*", "" -replace "^\s*[-*]\s+", "").Trim()
+    if (-not $clean) { continue }
+    if ($clean -match "(?i)^\s*(run_id|step_id)\s*:") { continue }
+    if ($clean -match "(?i)^ep\d{3}$|^scene\s+\d+|^sahne\s+\d+") { continue }
+    if ($clean.Length -ge 45) {
+      $snippets.Add($clean.Substring(0, [Math]::Min(140, $clean.Length)))
+    }
+    if ($snippets.Count -ge 4) { break }
+  }
+  return $snippets
+}
+
+function Resolve-ExportManifestPath {
+  param([string]$Root)
+  $manifests = @(Get-ChildItem -Path (Join-Path $Root "revision/_workspace/10_export-word_manifest_EP*.json") -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
+  if ($manifests.Count -lt 1) {
+    throw "DOCX content match gate failed: export manifest is missing."
+  }
+  return $manifests[0].FullName
+}
+
+function Resolve-ProjectPath {
+  param([string]$Root, [string]$Path)
+  if ([System.IO.Path]::IsPathRooted($Path)) {
+    return $Path
+  }
+  return (Join-Path $Root $Path)
+}
+
+function Validate-DocxContentMatch {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled -or $Phase -ne "export") {
+    return
+  }
+
+  $manifestPath = Resolve-ExportManifestPath -Root $Root
+  $manifest = Read-Utf8 -Path $manifestPath | ConvertFrom-Json
+  foreach ($field in @("source_files","output_docx_path")) {
+    if (-not ($manifest.PSObject.Properties.Name -contains $field)) {
+      throw "DOCX content match gate failed: export manifest missing '$field'."
+    }
+  }
+
+  $docxPath = Resolve-ProjectPath -Root $Root -Path ([string]$manifest.output_docx_path)
+  $docxText = Normalize-ExportText -Text (Get-DocxText -DocxPath $docxPath)
+  if (-not $docxText) {
+    throw "DOCX content match gate failed: extracted DOCX text is empty."
+  }
+
+  $checked = 0
+  $matched = 0
+  $missing = New-Object System.Collections.Generic.List[string]
+  foreach ($rel in @($manifest.source_files)) {
+    $sourcePath = Resolve-ProjectPath -Root $Root -Path ([string]$rel)
+    Ensure-File $sourcePath
+    $sourceText = Read-Utf8 -Path $sourcePath
+    $snippets = @(Get-ManuscriptSnippets -Text $sourceText)
+    if ($snippets.Count -lt 1) {
+      throw "DOCX content match gate failed: source file has no usable manuscript snippet: $rel"
+    }
+
+    $checked++
+    $sourceMatched = $false
+    foreach ($snippet in $snippets) {
+      if ($docxText.Contains((Normalize-ExportText -Text $snippet))) {
+        $sourceMatched = $true
+        break
+      }
+    }
+    if ($sourceMatched) {
+      $matched++
+    }
+    else {
+      $missing.Add([string]$rel)
+    }
+  }
+
+  if ($checked -lt 1) {
+    throw "DOCX content match gate failed: no source files declared in export manifest."
+  }
+  if ($missing.Count -gt 0) {
+    throw "DOCX content match gate failed: DOCX does not contain current source manuscript snippets for $($missing -join ', '). Refusing stale/copied DOCX export."
+  }
+
+  $reportPath = Join-Path $Root "revision/_workspace/10_export-content-match_report.md"
+  $report = "# DOCX Content Match`n`nVERDICT: PASS`n`nmanifest: $(Get-RelativePathSafe -BasePath $Root -TargetPath $manifestPath)`nsource_files_checked: $checked`nsource_files_matched: $matched`n"
+  Write-Utf8Bom -Path $reportPath -Content $report
 }
 
 function Validate-LongformState {
@@ -1338,6 +1475,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     Validate-AgentCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-LongformState -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-PublicationCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
+    Validate-DocxContentMatch -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Assert-NoForbiddenPatterns -Root $ProjectRoot -Phase $phase -Patterns $negativePatterns -Enabled $enableNegativeEnforcement
     Validate-EpisodeTextQuality -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $enableTextQualityGates
     Validate-CrossChapterProgression -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $enableTextQualityGates

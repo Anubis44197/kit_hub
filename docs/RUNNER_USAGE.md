@@ -81,6 +81,7 @@ Important:
 - Command mode is for automatic CLI/model integrations.
 - Do not claim that local adapter output was written by autonomous agents. It is deterministic scaffolding and packaging for existing artifacts.
 - Do not claim internet research occurred unless a research phase/tool produced source artifacts.
+- Do not copy or rename an older DOCX to satisfy export. The runner checks that exported DOCX text matches current `episode/ep*.md` source files.
 
 Example:
 ```json
@@ -217,6 +218,7 @@ When `quality_flags.enforce_phase_contracts=true` (default):
 - issue JSON artifacts are schema-validated (required fields + severity enum)
 - verdict markdown must include `VERDICT: PASS|FAIL|BLOCKED`
 - export requires manifest JSON artifact
+- export requires DOCX content to match the current source manuscript files
 - every phase requires `runtime/agent-compliance/{phase}.json`
 - agent compliance manifests must include required agents, executed agents, references, state files, output artifacts, `contract_status=PASS`, and empty `missing_items`
 

@@ -3,5 +3,19 @@ _workspace/
 .DS_Store
 claudedocs/
 .omx/
+
+# Generated book/project outputs. Keep source control clean so agents do not
+# mistake stale smoke-test artifacts for the current manuscript.
+design/
+episode/
+revision/
+*_proposal.md
+*.docx
+
+# Runtime state is created by scripts/install.ps1 and scripts/run_pipeline.ps1.
 runtime/runner-config.json
 runtime/runs/
+runtime/current-run.json
+runtime/approvals/*.json
+runtime/agent-compliance/*.json
+!runtime/agent-compliance.schema.json
