@@ -4,6 +4,21 @@ This repository can run without an application-owned API key.
 
 Use this mode when an IDE agent such as Cursor, Windsurf, Continue, Claude Code, or Codex can edit files in the workspace. The IDE agent performs the writing work; the runner validates the files.
 
+## Responsibility Boundary
+
+In IDE Agent Mode, `kit_hub` is not the creative language model. The IDE agent or the human operator writes the creative manuscript files. `kit_hub` provides the production frame around that writing:
+
+- phase orchestration
+- required file contracts
+- longform state ledgers
+- text quality and continuity gates
+- agent compliance manifests
+- DOCX/front matter/cover brief export
+
+Do not describe an IDE Agent Mode result as "the app wrote the book by itself." The accurate description is: the IDE agent wrote or revised the content, and `kit_hub` validated, organized, tracked, and exported the book package.
+
+Autonomous creative generation requires an explicit provider-backed command or API integration configured in command mode. Internet research is not automatic; it must be a defined phase/tool with source artifacts.
+
 ## Setup
 
 ```powershell
@@ -50,6 +65,8 @@ powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot .
 ```
 
 This proves the pipeline, gates, state files, and DOCX export work. It is not a literary-quality model.
+
+Local test mode is a smoke test adapter. It must not be presented as proof that a provider LLM, IDE agent, or autonomous agent team wrote the book.
 
 ## Real Command Mode
 

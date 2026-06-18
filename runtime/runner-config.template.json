@@ -66,6 +66,9 @@
   },
   "notes": [
     "Default local adapter runs scripts/local_phase.ps1 and produces deterministic book-package artifacts.",
+    "Local adapter output is smoke-test scaffold text, not autonomous provider/IDE-agent authorship.",
+    "Creative writing requires either manual IDE agent work or explicit provider/API/CLI phase commands.",
+    "Do not claim internet research occurred unless a dedicated research phase/tool produced source artifacts.",
     "Template placeholders: {phase}, {project_root}, {run_id}, {from_phase}, {to_phase}, {phase_prompt}",
     "Alternative: fill phase_commands.<phase> for explicit per-phase commands.",
     "Dictionary check is optional and only runs for create/polish/rewrite when enabled.",

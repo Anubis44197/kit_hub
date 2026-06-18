@@ -54,6 +54,9 @@ function Write-AgentCompliance {
     required_references = $RequiredReferences
     loaded_state_files = $LoadedStateFiles
     output_artifacts = $OutputArtifacts
+    generation_boundary = "local deterministic adapter; not autonomous provider authorship"
+    creative_authority = "provider_or_ide_agent_required_for_real_generation"
+    research_boundary = "no internet research claimed by local adapter"
     contract_status = "PASS"
     missing_items = @()
   })
@@ -275,6 +278,9 @@ function Initialize-LongformState {
     schema_version = "1.0.0"
     run_id = $RunId
     adapter_contract = "provider_command_must_emit_same_artifacts"
+    local_adapter_boundary = "scripts/local_phase.ps1 is deterministic smoke-test scaffolding; it is not a substitute for provider-backed or IDE-agent creative writing."
+    authorship_policy = "Creative content must be attributed to the configured provider/IDE agent/human process, not to autonomous kit_hub execution unless that provider command ran."
+    research_policy = "Do not claim web or source research unless a dedicated research tool/phase emits source artifacts."
     max_chapters_per_batch = 3
     required_input_state = @(
       "writing-type-profile.json",

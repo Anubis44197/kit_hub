@@ -10,6 +10,15 @@ Primary flow:
 
 Reader-facing output is chapter/book based. Legacy internal paths may still use `episode/epNNN.md` for compatibility.
 
+## Generation Responsibility
+`kit_hub` is a book-production orchestrator, not a hidden standalone brain. Creative text is produced by one of these explicitly configured sources:
+
+- an IDE agent or human writer in manual mode
+- a provider/API/CLI command in command mode
+- the deterministic local adapter for smoke testing only
+
+The repository validates, tracks, structures, and exports the result. It should not claim that autonomous agents wrote a book unless a real provider-backed command/API executed those phases. It should not claim internet research occurred unless source artifacts were produced.
+
 ## Repository Positioning (Upstream vs This Repository)
 This project is based on the upstream architecture (`MJbae/awesome-novel-studio`) and extended for stricter Turkish publication workflow.
 
@@ -34,6 +43,7 @@ Summary: `kit_hub` is not only a content panel. It is an extended production eng
 - Not a classic web application (`npm start` / API server)
 - `index.html` is a local utility tool (Word-style preview), not the core runtime engine
 - Main orchestration is command-based in IDE/runtime or via runner scripts
+- Not an autonomous writer when no provider/API/IDE agent has been configured
 
 ## Core Capabilities
 | Capability | Description | Main Components |

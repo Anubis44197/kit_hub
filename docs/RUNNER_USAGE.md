@@ -10,6 +10,7 @@ Important:
 - Runner validates phase artifacts and emits run/evidence logs.
 - Runner execution is not equal to literary quality acceptance by itself.
 - Phase completion claims are proof-bound by evidence files.
+- The runner is an orchestrator and validator. Creative text is produced by a configured provider command/API, by an IDE agent in manual mode, or by the deterministic local test adapter.
 
 ## 1) Install Bootstrap
 
@@ -28,6 +29,8 @@ This creates:
 
 Manual mode still asks the user/IDE to run each phase, but phase transitions and artifact gates are automated and tracked.
 Manual mode records `execution_claim_mode=simulated`; use command mode when you need real execution proof.
+
+In manual mode, the IDE agent or human operator is responsible for creative writing. `kit_hub` checks and packages the resulting artifacts; it does not secretly call a model unless you configure that model command yourself.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase propose -ToPhase export
@@ -76,6 +79,8 @@ Important:
 - Local adapter mode is for pipeline testing, not literary quality.
 - IDE manual mode is for API-free real writing when an IDE agent writes the files.
 - Command mode is for automatic CLI/model integrations.
+- Do not claim that local adapter output was written by autonomous agents. It is deterministic scaffold text for testing gates/export.
+- Do not claim internet research occurred unless a research phase/tool produced source artifacts.
 
 Example:
 ```json

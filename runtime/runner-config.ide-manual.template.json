@@ -66,6 +66,9 @@
   },
   "notes": [
     "Use this profile when a human-operated IDE agent such as Cursor, Windsurf, Continue, Claude Code, or Codex writes files directly.",
+    "In IDE manual mode, the IDE agent or human operator writes creative content; kit_hub validates, tracks, and exports it.",
+    "Do not claim autonomous app authorship unless a provider/API/CLI command actually executed the phase.",
+    "Do not claim internet research occurred unless source artifacts were produced.",
     "The runner waits after each phase, then validates the artifacts produced by the IDE agent.",
     "No external API key is required by this repository in manual IDE mode.",
     "Because the IDE agent is external to this runner, execution_claim_mode remains simulated, but artifact gates still run.",
