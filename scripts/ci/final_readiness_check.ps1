@@ -1,8 +1,13 @@
-param(
+﻿param(
   [string]$ConfigPath = "tests/fixtures/sample-project/novel-config.md"
 )
 
 $ErrorActionPreference = "Stop"
+
+function Read-Utf8 {
+  param([string]$Path)
+  return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
+}
 
 function Assert-File {
   param([string]$Path)
@@ -24,7 +29,7 @@ function Assert-Contains {
     [string]$Pattern,
     [string]$ErrorMessage
   )
-  $raw = Get-Content -LiteralPath $Path -Raw
+  $raw = Read-Utf8 -Path $Path
   if ($raw -notmatch $Pattern) {
     throw $ErrorMessage
   }
@@ -45,7 +50,7 @@ function Get-KeyValue {
 Write-Host "[final-readiness-ps] validating agent frontmatter..."
 $agentFiles = Get-ChildItem -LiteralPath "agents" -Filter "*.md" -File
 foreach ($file in $agentFiles) {
-  $raw = Get-Content -LiteralPath $file.FullName -Raw
+  $raw = Read-Utf8 -Path $file.FullName
   if ($raw -notmatch "(?m)^---\s*$") { throw "Missing frontmatter marker in $($file.FullName)" }
   if ($raw -notmatch "(?m)^name:\s*") { throw "Missing name in $($file.FullName)" }
   if ($raw -notmatch "(?m)^description:\s*") { throw "Missing description in $($file.FullName)" }
@@ -55,7 +60,7 @@ foreach ($file in $agentFiles) {
 Write-Host "[final-readiness-ps] validating skill frontmatter..."
 $skillFiles = Get-ChildItem -LiteralPath "skills" -Recurse -Filter "SKILL.md" -File
 foreach ($file in $skillFiles) {
-  $raw = Get-Content -LiteralPath $file.FullName -Raw
+  $raw = Read-Utf8 -Path $file.FullName
   if ($raw -notmatch "(?m)^---\s*$") { throw "Missing frontmatter marker in $($file.FullName)" }
   if ($raw -notmatch "(?m)^name:\s*") { throw "Missing name in $($file.FullName)" }
   if ($raw -notmatch "(?m)^description:\s*") { throw "Missing description in $($file.FullName)" }
@@ -158,7 +163,7 @@ Assert-Directory "tests/fixtures/sample-project/revision"
 
 Write-Host "[final-readiness-ps] validating novel-config schema keys..."
 Assert-File $ConfigPath
-$cfgRaw = Get-Content -LiteralPath $ConfigPath -Raw
+$cfgRaw = Read-Utf8 -Path $ConfigPath
 
 $requiredKeys = @(
   "project","name","target_platform","target_genre","episode_dir","work_dir","design_dir",
@@ -275,7 +280,7 @@ foreach ($agent in $agentFiles) {
   Assert-File "tests/golden/agents/$agentName/input.md"
   Assert-File "tests/golden/agents/$agentName/expected.md"
   Assert-Contains -Path "tests/golden/agents/$agentName/expected.md" -Pattern "Expected contract" -ErrorMessage "Golden expected output is not contract-backed: $agentName"
-  $expectedRaw = Get-Content -LiteralPath "tests/golden/agents/$agentName/expected.md" -Raw
+  $expectedRaw = Read-Utf8 -Path "tests/golden/agents/$agentName/expected.md"
   if ($expectedRaw -match "Placeholder expected output") {
     throw "Golden expected output still contains placeholder text: $agentName"
   }

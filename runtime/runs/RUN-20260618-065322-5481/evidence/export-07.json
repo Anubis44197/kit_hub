@@ -20,9 +20,7 @@
                              "revision\\_state\\plot-ledger.json",
                              "revision\\_state\\style-profile.json",
                              "revision\\_state\\writing-type-profile.json",
-                             "revision\\_workspace\\10_export-validator_verdict_EP001-EP002.json",
                              "revision\\_workspace\\10_export-validator_verdict_EP001-EP003.json",
-                             "revision\\_workspace\\10_export-word_manifest_EP001-EP002.json",
                              "revision\\_workspace\\10_export-word_manifest_EP001-EP003.json",
                              "revision\\_workspace\\11_front-matter_copyright-page.md",
                              "revision\\_workspace\\11_front-matter_preface.md",
@@ -34,12 +32,9 @@
                              "revision\\_workspace\\12_cover-design_brief.md",
                              "revision\\_workspace\\12_cover-design_front-prompt.md",
                              "revision\\_workspace\\12_cover-design_manifest.json",
-                             "revision\\_workspace\\14_publication-compliance_report_EP001-EP002.md",
                              "revision\\_workspace\\14_publication-compliance_report_EP001-EP003.md",
-                             "revision\\_workspace\\14_publication-compliance_verdict_EP001-EP002.json",
                              "revision\\_workspace\\14_publication-compliance_verdict_EP001-EP003.json",
-                             "revision\\export\\Boğazda Bir Akşam_EP001-EP003.docx",
-                             "revision\\export\\Saklı Defter_EP001-EP002.docx"
+                             "revision\\export\\Boğazda Bir Akşam_EP001-EP003.docx"
                          ],
     "notes":  [
                   "artifact gate passed"

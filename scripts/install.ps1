@@ -13,6 +13,21 @@ $approvalsDir = Join-Path $runtimeDir "approvals"
 $templatePath = Join-Path $runtimeDir "runner-config.template.json"
 $configPath = Join-Path $runtimeDir "runner-config.json"
 
+function Read-Utf8 {
+  param([string]$Path)
+  return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
+}
+
+function Write-Utf8Bom {
+  param([string]$Path, [string]$Content)
+  $dir = Split-Path -Parent $Path
+  if ($dir -and -not (Test-Path -LiteralPath $dir -PathType Container)) {
+    New-Item -ItemType Directory -Path $dir | Out-Null
+  }
+  $utf8Bom = New-Object System.Text.UTF8Encoding($true)
+  [System.IO.File]::WriteAllText($Path, $Content, $utf8Bom)
+}
+
 function ConvertTo-HashtableDeep {
   param([object]$Value)
 
@@ -95,12 +110,12 @@ if (-not (Test-Path -LiteralPath $configPath -PathType Leaf)) {
   Write-Host "[install] created $configPath"
 }
 else {
-  $templateObj = Get-Content -LiteralPath $templatePath -Raw | ConvertFrom-Json
-  $currentObj = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+  $templateObj = Read-Utf8 -Path $templatePath | ConvertFrom-Json
+  $currentObj = Read-Utf8 -Path $configPath | ConvertFrom-Json
   $templateHash = ConvertTo-HashtableDeep -Value $templateObj
   $currentHash = ConvertTo-HashtableDeep -Value $currentObj
   $mergedHash = Merge-ConfigDefaults -BaseDefaults $templateHash -CurrentConfig $currentHash
-  $mergedHash | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $configPath -Encoding UTF8
+  Write-Utf8Bom -Path $configPath -Content ($mergedHash | ConvertTo-Json -Depth 20)
   Write-Host "[install] config migrated with missing defaults: $configPath"
 }
 
@@ -117,7 +132,7 @@ function Ensure-ApprovalFile {
       approved_at = ""
       note = "Set approved=true only after explicit user confirmation."
     } | ConvertTo-Json -Depth 5
-    $payload | Set-Content -LiteralPath $Path -Encoding UTF8
+    Write-Utf8Bom -Path $Path -Content $payload
     Write-Host "[install] created approval file: $Path"
   }
 }

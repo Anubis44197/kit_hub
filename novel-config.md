@@ -1,4 +1,4 @@
-# Novel Config
+﻿# Novel Config
 
 project:
   name: "Konu Bekleniyor"

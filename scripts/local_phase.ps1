@@ -21,7 +21,13 @@ function Write-Utf8 {
   param([string]$Path, [string]$Content)
   $dir = Split-Path -Parent $Path
   if ($dir) { Ensure-Dir $dir }
-  Set-Content -LiteralPath $Path -Value $Content -Encoding UTF8
+  $utf8Bom = New-Object System.Text.UTF8Encoding($true)
+  [System.IO.File]::WriteAllText($Path, $Content, $utf8Bom)
+}
+
+function Read-Utf8 {
+  param([string]$Path)
+  return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
 }
 
 function Write-Json {
@@ -56,7 +62,7 @@ function Write-AgentCompliance {
 function Get-BookSeed {
   $requestPath = Join-Path $ProjectRoot "runtime/book-request.md"
   if (Test-Path -LiteralPath $requestPath -PathType Leaf) {
-    $raw = (Get-Content -LiteralPath $requestPath -Raw).Trim()
+    $raw = (Read-Utf8 -Path $requestPath).Trim()
     if ($raw -and $raw -notmatch "(?i)^\s*(#|konu bekleniyor|topic pending|TODO|buraya.*konu)") { return $raw }
   }
   throw "Book request missing: runtime/book-request.md içine önce kullanıcı konusunu yazın. Konu olmadan varsayılan roman üretilmez."
@@ -65,7 +71,7 @@ function Get-BookSeed {
 function Get-RequestedChapterCount {
   $requestPath = Join-Path $ProjectRoot "runtime/book-request.md"
   if (Test-Path -LiteralPath $requestPath -PathType Leaf) {
-    $raw = Get-Content -LiteralPath $requestPath -Raw
+    $raw = Read-Utf8 -Path $requestPath
     $m = [regex]::Match($raw, "(?i)(\d+)\s*(bölüm|bolum|chapter|chapters)")
     if ($m.Success) {
       $count = [int]$m.Groups[1].Value
@@ -118,7 +124,7 @@ function Get-Slug {
 function Get-ProjectName {
   $cfg = Join-Path $ProjectRoot "novel-config.md"
   if (Test-Path -LiteralPath $cfg -PathType Leaf) {
-    $raw = Get-Content -LiteralPath $cfg -Raw
+    $raw = Read-Utf8 -Path $cfg
     $m = [regex]::Match($raw, '(?m)^\s*name:\s*"?([^"#\r\n]+)"?')
     if ($m.Success) { return $m.Groups[1].Value.Trim() }
   }
@@ -367,7 +373,7 @@ function Update-LongformStateAfterChapter {
   $state = Get-StateDir
   Ensure-Dir $state
   $summaryPath = Join-Path $state "chapter-summaries.json"
-  $summary = Get-Content -LiteralPath $summaryPath -Raw | ConvertFrom-Json
+  $summary = Read-Utf8 -Path $summaryPath | ConvertFrom-Json
   $chapters = @($summary.chapters)
   $chapterSummary = if ($Number -eq 1) {
     "Kemal Boğaz kıyısındaki lokantada Derya'yı bekler; Leyla'nın saklı mektubu ve aile evinin satışı ilk kez aynı masada görünür olur."
@@ -403,7 +409,7 @@ function Update-LongformStateAfterChapter {
   Write-Json -Path $summaryPath -Value $summary
 
   $plotPath = Join-Path $state "plot-ledger.json"
-  $plot = Get-Content -LiteralPath $plotPath -Raw | ConvertFrom-Json
+  $plot = Read-Utf8 -Path $plotPath | ConvertFrom-Json
   $chain = @($plot.cause_effect_chain)
   $chain += [ordered]@{
     chapter = ("EP{0:D3}" -f $Number)
@@ -426,7 +432,7 @@ function Update-LongformStateAfterChapter {
   Write-Json -Path $plotPath -Value $plot
 
   $continuityPath = Join-Path $state "continuity-ledger.json"
-  $continuity = Get-Content -LiteralPath $continuityPath -Raw | ConvertFrom-Json
+  $continuity = Read-Utf8 -Path $continuityPath | ConvertFrom-Json
   $timeline = @($continuity.timeline)
   $timeline += [ordered]@{
     chapter = ("EP{0:D3}" -f $Number)
@@ -1195,7 +1201,7 @@ function Invoke-Export {
   }
   foreach ($ch in $chapters) {
     $paragraphs.Add("")
-    $paragraphs.Add((Get-Content -LiteralPath $ch.FullName -Raw))
+    $paragraphs.Add((Read-Utf8 -Path $ch.FullName))
   }
 
   Write-Utf8 -Path (Join-Path $work "11_front-matter_title-page.md") -Content "# $projectName`n`nYazar: [Yazar adı girilecek]`n"

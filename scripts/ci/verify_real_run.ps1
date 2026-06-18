@@ -5,6 +5,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Read-Utf8 {
+  param([string]$Path)
+  return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
+}
+
 function Ensure-File {
   param([string]$Path)
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
@@ -21,14 +26,14 @@ function Ensure-True {
 
 $pointerPath = Join-Path $ProjectRoot "runtime\current-run.json"
 Ensure-File $pointerPath
-$pointer = Get-Content -LiteralPath $pointerPath -Raw | ConvertFrom-Json
+$pointer = Read-Utf8 -Path $pointerPath | ConvertFrom-Json
 
 Ensure-True -Condition ($pointer.PSObject.Properties.Name -contains "run_id") -Message "current-run.json missing run_id"
 Ensure-True -Condition ($pointer.PSObject.Properties.Name -contains "summary_path") -Message "current-run.json missing summary_path"
 
 $summaryPath = Join-Path $ProjectRoot $pointer.summary_path
 Ensure-File $summaryPath
-$summary = Get-Content -LiteralPath $summaryPath -Raw | ConvertFrom-Json
+$summary = Read-Utf8 -Path $summaryPath | ConvertFrom-Json
 
 Ensure-True -Condition ($summary.status -eq "completed") -Message "Run is not completed. status=$($summary.status)"
 Ensure-True -Condition ($summary.PSObject.Properties.Name -contains "steps") -Message "run-summary missing steps"
@@ -42,7 +47,7 @@ foreach ($phase in $RequiredPhases) {
 
   $evidencePath = Join-Path $ProjectRoot $phaseStep.evidence_path
   Ensure-File $evidencePath
-  $evidence = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
+  $evidence = Read-Utf8 -Path $evidencePath | ConvertFrom-Json
 
   Ensure-True -Condition ($evidence.status -eq "completed") -Message "Phase evidence status is not completed: $phase"
   Ensure-True -Condition ($evidence.artifact_gate_passed -eq $true) -Message "artifact_gate_passed is false: $phase"
@@ -58,4 +63,3 @@ foreach ($phase in $RequiredPhases) {
 Write-Host "[verify-real-run] PASS"
 Write-Host "[verify-real-run] run_id=$($pointer.run_id)"
 Write-Host "[verify-real-run] summary=$($pointer.summary_path)"
-

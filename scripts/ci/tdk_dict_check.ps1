@@ -10,6 +10,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Write-Utf8Bom {
+  param([string]$Path, [string]$Content)
+  $dir = Split-Path -Parent $Path
+  if ($dir -and -not (Test-Path -LiteralPath $dir -PathType Container)) {
+    New-Item -ItemType Directory -Path $dir | Out-Null
+  }
+  $utf8Bom = New-Object System.Text.UTF8Encoding($true)
+  [System.IO.File]::WriteAllText($Path, $Content, $utf8Bom)
+}
+
 function New-SkippedReport {
   param(
     [string]$Root,
@@ -34,7 +44,7 @@ function New-SkippedReport {
     findings = @()
     notes = @($Reason)
   }
-  $obj | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $outPath -Encoding UTF8
+  Write-Utf8Bom -Path $outPath -Content ($obj | ConvertTo-Json -Depth 6)
   Write-Host "[tdk-dict-check] skipped: $Reason"
   Write-Host "[tdk-dict-check] report: $outPath"
 }

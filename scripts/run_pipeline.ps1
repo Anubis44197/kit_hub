@@ -20,6 +20,21 @@ function Ensure-File {
   }
 }
 
+function Read-Utf8 {
+  param([string]$Path)
+  return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
+}
+
+function Write-Utf8Bom {
+  param([string]$Path, [string]$Content)
+  $dir = Split-Path -Parent $Path
+  if ($dir -and -not (Test-Path -LiteralPath $dir -PathType Container)) {
+    New-Item -ItemType Directory -Path $dir | Out-Null
+  }
+  $utf8Bom = New-Object System.Text.UTF8Encoding($true)
+  [System.IO.File]::WriteAllText($Path, $Content, $utf8Bom)
+}
+
 function Ensure-Any {
   param([string[]]$Patterns, [string]$BasePath)
   foreach ($pattern in $Patterns) {
@@ -266,7 +281,7 @@ function Load-RunnerConfig {
       throw "Runner config not found: $Path"
     }
   }
-  return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+  return Read-Utf8 -Path $Path | ConvertFrom-Json
 }
 
 function Save-RunSummary {
@@ -278,7 +293,7 @@ function Save-RunSummary {
   if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
     New-Item -ItemType Directory -Path $dir | Out-Null
   }
-  $Summary | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $Path -Encoding UTF8
+  Write-Utf8Bom -Path $Path -Content ($Summary | ConvertTo-Json -Depth 10)
 }
 
 function Save-CurrentRunPointer {
@@ -290,7 +305,7 @@ function Save-CurrentRunPointer {
   if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
     New-Item -ItemType Directory -Path $dir | Out-Null
   }
-  $Pointer | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $Path -Encoding UTF8
+  Write-Utf8Bom -Path $Path -Content ($Pointer | ConvertTo-Json -Depth 10)
 }
 
 function Invoke-RunRetention {
@@ -373,14 +388,14 @@ function Save-PhaseEvidence {
   if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
     New-Item -ItemType Directory -Path $dir | Out-Null
   }
-  $Evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $Path -Encoding UTF8
+  Write-Utf8Bom -Path $Path -Content ($Evidence | ConvertTo-Json -Depth 10)
 }
 
 function Validate-PhaseEvidenceFile {
   param([string]$Path)
 
   Ensure-File $Path
-  $raw = Get-Content -LiteralPath $Path -Raw
+  $raw = Read-Utf8 -Path $Path
   $obj = $raw | ConvertFrom-Json
 
   $required = @(
@@ -497,7 +512,7 @@ function Ensure-UserApproval {
   $path = Join-Path $Root $rel
   Ensure-File $path
 
-  $obj = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+  $obj = Read-Utf8 -Path $Path | ConvertFrom-Json
   if (-not ($obj.PSObject.Properties.Name -contains "approved")) {
     throw "Approval gate missing 'approved' field: $rel"
   }
@@ -510,7 +525,7 @@ function Validate-JsonIssueContract {
   param([string]$Path)
 
   Ensure-File $Path
-  $obj = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+  $obj = Read-Utf8 -Path $Path | ConvertFrom-Json
   if (-not ($obj.PSObject.Properties.Name -contains "issues")) {
     throw "Issue contract missing 'issues': $Path"
   }
@@ -530,7 +545,7 @@ function Validate-MarkdownVerdictContract {
   param([string]$Path)
 
   Ensure-File $Path
-  $raw = Get-Content -LiteralPath $Path -Raw
+  $raw = Read-Utf8 -Path $Path
   if ($raw -notmatch "(?i)\bVERDICT\b.*\b(PASS|FAIL|BLOCKED)\b") {
     throw "Verdict contract missing PASS/FAIL/BLOCKED token: $Path"
   }
@@ -591,7 +606,7 @@ function Validate-AgentCompliance {
 
   $path = Join-Path $Root ("runtime/agent-compliance/{0}.json" -f $Phase)
   Ensure-File $path
-  $obj = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+  $obj = Read-Utf8 -Path $Path | ConvertFrom-Json
   foreach ($field in @("run_id","phase","required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","contract_status","missing_items")) {
     if (-not ($obj.PSObject.Properties.Name -contains $field)) {
       throw "Agent compliance manifest missing '$field': $path"
@@ -634,7 +649,7 @@ function Validate-PublicationCompliance {
   }
 
   foreach ($file in $verdicts) {
-    $obj = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-Json
+    $obj = Read-Utf8 -Path $file.FullName | ConvertFrom-Json
     foreach ($field in @("run_id","step_id","verdict","print_ready","metadata_placeholders","isbn_status","barcode_status","kunye_status","bandrol_external","block_reasons")) {
       if (-not ($obj.PSObject.Properties.Name -contains $field)) {
         throw "Publication compliance verdict missing '$field': $($file.FullName)"
@@ -680,7 +695,7 @@ function Validate-LongformState {
     Ensure-File (Join-Path $stateDir $name)
   }
 
-  $plan = Get-Content -LiteralPath (Join-Path $stateDir "longform-plan.json") -Raw | ConvertFrom-Json
+  $plan = Read-Utf8 -Path (Join-Path $stateDir "longform-plan.json") | ConvertFrom-Json
   foreach ($field in @("target_pages","target_words","target_chapters","chapters","required_state_files")) {
     if (-not ($plan.PSObject.Properties.Name -contains $field)) {
       throw "Longform plan missing '$field'."
@@ -693,47 +708,47 @@ function Validate-LongformState {
     throw "Longform plan target_chapters must be positive after a topic is provided; found $($plan.target_chapters)."
   }
 
-  $character = Get-Content -LiteralPath (Join-Path $stateDir "character-state.json") -Raw | ConvertFrom-Json
+  $character = Read-Utf8 -Path (Join-Path $stateDir "character-state.json") | ConvertFrom-Json
   if (-not ($character.PSObject.Properties.Name -contains "characters")) {
     throw "character-state.json missing characters."
   }
 
-  $plot = Get-Content -LiteralPath (Join-Path $stateDir "plot-ledger.json") -Raw | ConvertFrom-Json
+  $plot = Read-Utf8 -Path (Join-Path $stateDir "plot-ledger.json") | ConvertFrom-Json
   foreach ($field in @("main_question","open_threads","final_promises")) {
     if (-not ($plot.PSObject.Properties.Name -contains $field)) {
       throw "plot-ledger.json missing '$field'."
     }
   }
 
-  $style = Get-Content -LiteralPath (Join-Path $stateDir "style-profile.json") -Raw | ConvertFrom-Json
+  $style = Read-Utf8 -Path (Join-Path $stateDir "style-profile.json") | ConvertFrom-Json
   foreach ($field in @("profile","narration","dialogue_policy","print_format")) {
     if (-not ($style.PSObject.Properties.Name -contains $field)) {
       throw "style-profile.json missing '$field'."
     }
   }
 
-  $writingProfile = Get-Content -LiteralPath (Join-Path $stateDir "writing-type-profile.json") -Raw | ConvertFrom-Json
+  $writingProfile = Read-Utf8 -Path (Join-Path $stateDir "writing-type-profile.json") | ConvertFrom-Json
   foreach ($field in @("writing_type","target_reader","structure_model","voice_model","evidence_policy","continuity_policy","completion_criteria")) {
     if (-not ($writingProfile.PSObject.Properties.Name -contains $field)) {
       throw "writing-type-profile.json missing '$field'."
     }
   }
 
-  $structureTemplate = Get-Content -LiteralPath (Join-Path $stateDir "genre-structure-template.json") -Raw | ConvertFrom-Json
+  $structureTemplate = Read-Utf8 -Path (Join-Path $stateDir "genre-structure-template.json") | ConvertFrom-Json
   foreach ($field in @("template_id","acts","chapter_rules","mandatory_ledgers")) {
     if (-not ($structureTemplate.PSObject.Properties.Name -contains $field)) {
       throw "genre-structure-template.json missing '$field'."
     }
   }
 
-  $scorecard = Get-Content -LiteralPath (Join-Path $stateDir "editorial-quality-scorecard.json") -Raw | ConvertFrom-Json
+  $scorecard = Read-Utf8 -Path (Join-Path $stateDir "editorial-quality-scorecard.json") | ConvertFrom-Json
   foreach ($field in @("threshold_pass","axes","export_blockers")) {
     if (-not ($scorecard.PSObject.Properties.Name -contains $field)) {
       throw "editorial-quality-scorecard.json missing '$field'."
     }
   }
 
-  $adapterContract = Get-Content -LiteralPath (Join-Path $stateDir "llm-adapter-contract.json") -Raw | ConvertFrom-Json
+  $adapterContract = Read-Utf8 -Path (Join-Path $stateDir "llm-adapter-contract.json") | ConvertFrom-Json
   foreach ($field in @("adapter_contract","max_chapters_per_batch","required_input_state","required_output_state")) {
     if (-not ($adapterContract.PSObject.Properties.Name -contains $field)) {
       throw "llm-adapter-contract.json missing '$field'."
@@ -741,7 +756,7 @@ function Validate-LongformState {
   }
 
   if ($Phase -in @("create","polish","rewrite","export")) {
-    $summaries = Get-Content -LiteralPath (Join-Path $stateDir "chapter-summaries.json") -Raw | ConvertFrom-Json
+    $summaries = Read-Utf8 -Path (Join-Path $stateDir "chapter-summaries.json") | ConvertFrom-Json
     if (-not ($summaries.PSObject.Properties.Name -contains "chapters") -or @($summaries.chapters).Count -lt 1) {
       throw "chapter-summaries.json must include at least one generated chapter summary after create."
     }
@@ -770,7 +785,7 @@ function Assert-NoForbiddenPatterns {
 
   $episodes = Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File -ErrorAction SilentlyContinue
   foreach ($ep in $episodes) {
-    $raw = Get-Content -LiteralPath $ep.FullName -Raw
+    $raw = Read-Utf8 -Path $ep.FullName
     foreach ($p in $Patterns) {
       if ($raw -match $p) {
         throw "Negative enforcement BLOCKED in $($ep.Name): pattern '$p'"
@@ -866,7 +881,7 @@ function Validate-CrossChapterProgression {
 
   $texts = @{}
   foreach ($ep in $episodes) {
-    $texts[$ep.Name] = Get-Content -LiteralPath $ep.FullName -Raw
+    $texts[$ep.Name] = Read-Utf8 -Path $ep.FullName
   }
 
   for ($i = 0; $i -lt $episodes.Count; $i++) {
@@ -916,7 +931,7 @@ function Validate-CrossChapterProgression {
 
   $summaryPath = Join-Path $Root "revision/_state/chapter-summaries.json"
   if (Test-Path -LiteralPath $summaryPath -PathType Leaf) {
-    $summary = Get-Content -LiteralPath $summaryPath -Raw | ConvertFrom-Json
+    $summary = Read-Utf8 -Path $summaryPath | ConvertFrom-Json
     $chapters = @($summary.chapters)
     if ($chapters.Count -ge 2) {
       $uniqueSummaries = @($chapters | ForEach-Object { [string]$_.summary } | Sort-Object -Unique)
@@ -938,7 +953,7 @@ function Validate-CrossChapterProgression {
 
   $plotPath = Join-Path $Root "revision/_state/plot-ledger.json"
   if (Test-Path -LiteralPath $plotPath -PathType Leaf) {
-    $plot = Get-Content -LiteralPath $plotPath -Raw | ConvertFrom-Json
+    $plot = Read-Utf8 -Path $plotPath | ConvertFrom-Json
     $chain = @($plot.cause_effect_chain)
     if ($chain.Count -lt $episodes.Count) {
       throw "Cross-chapter progression gate failed: plot-ledger cause_effect_chain has $($chain.Count) entries for $($episodes.Count) chapters."
@@ -976,7 +991,7 @@ function Validate-EpisodeTextQuality {
 
   $cfgPath = Join-Path $Root "novel-config.md"
   Ensure-File $cfgPath
-  $cfgRaw = Get-Content -LiteralPath $cfgPath -Raw
+  $cfgRaw = Read-Utf8 -Path $cfgPath
 
   $minCharacters = [int](Get-NovelConfigNumericValue -ConfigRaw $cfgRaw -Key "min_characters" -Default 6500)
   $maxCharacters = [int](Get-NovelConfigNumericValue -ConfigRaw $cfgRaw -Key "max_characters" -Default 14000)
@@ -1005,7 +1020,7 @@ function Validate-EpisodeTextQuality {
   }
 
   foreach ($ep in $episodes) {
-    $rawText = Get-Content -LiteralPath $ep.FullName -Raw
+    $rawText = Read-Utf8 -Path $ep.FullName
 
     if ($rawText -match "[ÃÅÄ]") {
       throw "Text quality gate failed in $($ep.Name): mojibake/encoding corruption detected."
