@@ -1008,6 +1008,27 @@ function Validate-LongformState {
     Ensure-File (Join-Path $stateDir $name)
   }
 
+  $planningFiles = @(
+    "book-plan.json",
+    "chapter-plan.json",
+    "layout-plan.json",
+    "character-state.json",
+    "plot-ledger.json",
+    "style-profile.json",
+    "writing-type-profile.json",
+    "genre-structure-template.json",
+    "editorial-quality-scorecard.json",
+    "llm-adapter-contract.json"
+  )
+  $planningPlaceholderPattern = "(?i)(plan_required|to_be_confirmed|placeholder|todo|tbd|fill\s*in|lorem ipsum|konu bekleniyor|buraya.*konu)"
+  foreach ($planningFile in $planningFiles) {
+    $planningPath = Join-Path $stateDir $planningFile
+    $planningRaw = Read-Utf8 -Path $planningPath
+    if ($planningRaw -match $planningPlaceholderPattern) {
+      throw "Planning state contains unresolved placeholder text: revision/_state/$planningFile"
+    }
+  }
+
   $plan = Read-Utf8 -Path (Join-Path $stateDir "longform-plan.json") | ConvertFrom-Json
   foreach ($field in @("target_pages","target_words","target_chapters","chapters","required_state_files")) {
     if (-not ($plan.PSObject.Properties.Name -contains $field)) {
@@ -1038,6 +1059,18 @@ function Validate-LongformState {
   }
   if (@($bookPlan.characters).Count -lt 1) {
     throw "book-plan.json must include at least one planned character before writing starts."
+  }
+  foreach ($characterPlan in @($bookPlan.characters)) {
+    foreach ($field in @("role","name","desire","fear","arc")) {
+      if (-not ($characterPlan.PSObject.Properties.Name -contains $field) -or -not ([string]$characterPlan.$field).Trim()) {
+        throw "book-plan.json character entry missing concrete '$field'."
+      }
+    }
+  }
+  foreach ($arcField in @("opening_promise","inciting_incident","midpoint_turn","climax","resolution")) {
+    if (-not ($bookPlan.plot_arc.PSObject.Properties.Name -contains $arcField) -or -not ([string]$bookPlan.plot_arc.$arcField).Trim()) {
+      throw "book-plan.json plot_arc missing concrete '$arcField'."
+    }
   }
 
   $chapterPlan = Read-Utf8 -Path (Join-Path $stateDir "chapter-plan.json") | ConvertFrom-Json

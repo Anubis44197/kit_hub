@@ -394,6 +394,10 @@ function Invoke-DesignBig {
   $targetWords = $targetChapters * $wordsPerChapter
   $targetPages = [Math]::Max(1, [Math]::Ceiling($targetWords / 420))
   $structureModel = if ($targetChapters -le 5) { "short_story_arc" } else { "chaptered_longform_book" }
+  $protagonistName = "$projectName yolcusu"
+  if ($protagonistName.Length -gt 70) { $protagonistName = $protagonistName.Substring(0, 70).Trim() }
+  $genreLabel = if ($targetChapters -le 5) { "edebi hikaye" } else { "uzun roman" }
+  $themeLabel = "hafiza, karar ve sonuclar"
   $design = Join-Path $ProjectRoot "design"
   $state = Get-StateDir
   Ensure-Dir $design
@@ -534,27 +538,27 @@ plan_id: $planId
     source_prompt = $seed
     approved_story_option = $choice.selected_option
     title_working = $projectName
-    writing_type = "user_defined_book"
-    genre = "user_defined_from_request"
-    theme = "user_defined_from_request"
+    writing_type = $genreLabel
+    genre = $genreLabel
+    theme = $themeLabel
     premise = $seed
-    narrative_pov = "to_be_confirmed_in_plan"
-    tense = "to_be_confirmed_in_plan"
+    narrative_pov = "ucuncu tekil sinirli bakis"
+    tense = "gecmis zaman"
     characters = @(
       [ordered]@{
         role = "protagonist"
-        name = "plan_required_before_writing"
-        desire = "Somut arzu yazım başlamadan önce netleştirilecek."
-        fear = "Somut korku yazım başlamadan önce netleştirilecek."
-        arc = "Başlangıç, kırılma ve sonuç konumu plan onayında net olmalıdır."
+        name = $protagonistName
+        desire = "Verilen konunun merkezindeki ihtiyaci tamamlamak ve kendi kararinin sonucuyla yuzlesmek."
+        fear = "Gecmis kararlarinin bugunku iliskilerini ve benlik algisini bozmasi."
+        arc = "Baslangicta gozlemci ve kacingen; ortada karar vermeye zorlanan; sonda sonucu sahiplenen karakter."
       }
     )
     plot_arc = [ordered]@{
-      opening_promise = "Açılış vaadi plan onayında net olmalıdır."
-      inciting_incident = "Kışkırtıcı olay plan onayında net olmalıdır."
-      midpoint_turn = "Orta nokta dönüşü plan onayında net olmalıdır."
-      climax = "Doruk plan onayında net olmalıdır."
-      resolution = "Kapanış vaatleri plan onayında net olmalıdır."
+      opening_promise = "Okur, konunun merkezindeki karakterin siradan gorunen aninda sakli gerilimi sezer."
+      inciting_incident = "Karakterin rutinini bozan kucuk ama geri donulmez bir isaret veya karsilasma ortaya cikar."
+      midpoint_turn = "Karakter, dis olaydan cok kendi payini gormeye baslar ve pasif konumdan cikar."
+      climax = "Karakter, kacindigi bilgiyi veya duyguyu acik bir secimle karsilar."
+      resolution = "Sonuc, acilis vaadini kapatir ve karakterin degisimini okura somut davranisla gosterir."
     }
     chapter_count = $targetChapters
     approval_required = $true
@@ -591,8 +595,8 @@ plan_id: $planId
     chapters = $chapters
     required_state_files = $requiredStateFiles
   })
-  Write-Json -Path (Join-Path $state "character-state.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; characters = @([ordered]@{ id = "protagonist"; name = "plan_required_before_writing"; stable_traits = @(); knows = @(); does_not_know = @(); arc_position = "planned" }); required = @("stable_traits", "knows", "does_not_know", "arc_position") })
-  Write-Json -Path (Join-Path $state "plot-ledger.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; main_question = "Plan onayında netleştirilecek ana dramatik soru."; open_threads = @("Ana konu plan onayında somutlaştırılacak."); closed_threads = @(); cause_effect_chain = @(); final_promises = @("Açılış vaadi ve kapanış beklentisi plan onayında netleştirilecek.") })
+  Write-Json -Path (Join-Path $state "character-state.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; characters = @([ordered]@{ id = "protagonist"; name = $protagonistName; stable_traits = @("gozlemci", "ic gerilimini saklayan", "karar aninda gec tepki veren"); knows = @("Kendi gorunen davranisinin ardinda bitmemis bir hesap oldugunu sezer."); does_not_know = @("Karsilasacagi sonucun onu hangi secime zorlayacagini bilmez."); arc_position = "opening" }); required = @("stable_traits", "knows", "does_not_know", "arc_position") })
+  Write-Json -Path (Join-Path $state "plot-ledger.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; main_question = "Karakter verilen konunun yarattigi gerilim karsisinda kacmak yerine sonucunu sahiplenebilecek mi?"; open_threads = @("Acilis anindaki sakli gerilim", "Karakterin gecmis kararinin bugune etkisi", "Son secimin bedeli"); closed_threads = @(); cause_effect_chain = @("Konu istegi karakterin rutinini kurar.", "Rutin bozulunca karakterin sakladigi duygu gorunur."); final_promises = @("Acilis vaadi kapanista davranisla cevaplanacak.", "Karakterin bilgi siniri her bolumde ledger'a islenecek.") })
   Write-Json -Path (Join-Path $state "chapter-summaries.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; chapters = @() })
   Write-Json -Path (Join-Path $state "continuity-ledger.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; timeline = @(); locations = @(); object_state = [ordered]@{}; violations = @() })
   Write-Json -Path (Join-Path $state "style-profile.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; profile = "Turkish print-ready prose"; narration = "Plan onayında bakış açısı ve zaman kesinleşir."; language = "tr-TR"; dialogue_policy = "dash_dialogue"; print_format = "A5, readable paragraphs, no technical labels in reader output"; forbidden = @("EP001 in reader output", "scene labels in reader output", "untracked time jump", "repeated chapter premise") })

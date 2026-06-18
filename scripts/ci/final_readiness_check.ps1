@@ -138,6 +138,7 @@ Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-EpisodeTextQ
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-LongformState" -ErrorMessage "Missing longform state validation in runner"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "book-plan-approval.json" -ErrorMessage "Missing book plan approval gate in runner"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "layout-plan.json" -ErrorMessage "Missing layout plan validation in runner"
+Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Planning state contains unresolved placeholder text" -ErrorMessage "Missing unresolved planning placeholder rejection in runner"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-PublicationCompliance" -ErrorMessage "Missing publication compliance validation in runner"
 Assert-File "scripts/local_phase.ps1"
 Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "book-plan.json" -ErrorMessage "Missing book plan generation in local adapter"
@@ -170,6 +171,10 @@ Assert-Contains -Path "runtime/runner-config.template.json" -Pattern "enable_tex
 Assert-Contains -Path "runtime/runner-config.template.json" -Pattern "text_quality_gates" -ErrorMessage "Missing text_quality_gates block in runner config template"
 Assert-Contains -Path "runtime/runner-config.template.json" -Pattern "book-plan-approval.json" -ErrorMessage "Missing book plan approval mapping in runner config template"
 Assert-Contains -Path "runtime/runner-config.ide-manual.template.json" -Pattern "book-plan-approval.json" -ErrorMessage "Missing book plan approval mapping in IDE manual template"
+Assert-Contains -Path "scripts/ide_phase_prompt.ps1" -Pattern "revision/_state/book-plan.json" -ErrorMessage "IDE phase prompt missing book-plan state output"
+Assert-Contains -Path "scripts/ide_phase_prompt.ps1" -Pattern "runtime/approvals/book-plan-approval.json" -ErrorMessage "IDE phase prompt missing book-plan approval gate"
+Assert-Contains -Path "skills/design-big/SKILL.md" -Pattern "revision/_state/book-plan.json" -ErrorMessage "design-big skill missing book plan output contract"
+Assert-Contains -Path "skills/design-small/SKILL.md" -Pattern "book-plan-approval.json" -ErrorMessage "design-small skill missing book plan approval prerequisite"
 
 Write-Host "[final-readiness-ps] checking fixture presence..."
 Assert-File "tests/fixtures/sample-project/novel-config.md"
