@@ -120,9 +120,23 @@ The IDE agent must write the compliance manifest last:
   "required_references": ["skills/create/SKILL.md"],
   "loaded_state_files": ["revision/_state/longform-plan.json"],
   "output_artifacts": ["episode/ep001.md"],
+  "artifact_hashes": [
+    {
+      "path": "episode/ep001.md",
+      "sha256": "lowercase-64-character-sha256"
+    }
+  ],
+  "phase_authority": "manual_ide_agent",
+  "completed_at": "2026-06-18T12:00:00.0000000+03:00",
   "contract_status": "PASS",
   "missing_items": []
 }
+```
+
+Recommended helper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/ci/write_agent_compliance.ps1 -ProjectRoot . -Phase create -RunId RUN-... -RequiredAgents episode-creator,tdk-polisher,tdk-layout-agent,quality-verifier -RequiredReferences skills/create/SKILL.md -LoadedStateFiles revision/_state/longform-plan.json -OutputArtifacts episode/ep001.md -PhaseAuthority manual_ide_agent
 ```
 
 ## Output

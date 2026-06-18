@@ -18,7 +18,11 @@ The runner validates:
 - required agents are listed;
 - every required agent appears in `agents_executed`;
 - required references and state files are recorded;
-- output artifacts are listed;
+- output artifacts are listed as concrete files;
+- every output artifact exists and has a matching SHA-256 entry in `artifact_hashes`;
+- artifact hashes match the actual file bytes at validation time;
+- `phase_authority` is one of the accepted execution authorities;
+- `completed_at` is a valid timestamp;
 - `contract_status` is `PASS`;
 - `missing_items` is empty.
 
@@ -36,10 +40,12 @@ powershell -ExecutionPolicy Bypass -File scripts/ide_phase_prompt.ps1 -Phase cre
 
 The prompt tells the IDE agent which files and agents are mandatory.
 
+Use `scripts/ci/write_agent_compliance.ps1` to write the manifest. It computes artifact hashes and prevents wildcard artifact paths.
+
 ## Real LLM Adapter Mode
 
 A real LLM adapter must emit the same compliance manifest. If using an API with strict structured output, bind the manifest to a JSON schema and use strict mode where the provider supports it.
 
 ## Current Limitation
 
-The runner can prove that required files exist and manifests pass. It cannot prove a closed-source IDE agent internally reasoned exactly as instructed. This is why artifacts, schema checks, text gates, state ledgers, and export validators are mandatory.
+The runner can prove that required files exist, hashes match, manifests pass, and exported DOCX content matches the current manuscript. It cannot prove a closed-source IDE agent internally reasoned exactly as instructed. This is why artifacts, schema checks, hash gates, text gates, state ledgers, and export validators are mandatory.

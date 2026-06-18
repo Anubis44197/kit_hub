@@ -73,6 +73,8 @@
     "The runner waits after each phase, then validates the artifacts produced by the IDE agent.",
     "No external API key is required by this repository in manual IDE mode.",
     "Because the IDE agent is external to this runner, execution_claim_mode remains simulated, but artifact gates still run.",
+    "Agent compliance manifests must include concrete output_artifacts plus matching artifact_hashes.",
+    "Exported DOCX text must match the current episode source files.",
     "For machine-verifiable executed evidence, use runtime/runner-config.json command mode instead."
   ]
 }

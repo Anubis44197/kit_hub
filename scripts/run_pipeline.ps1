@@ -35,6 +35,42 @@ function Write-Utf8Bom {
   [System.IO.File]::WriteAllText($Path, $Content, $utf8Bom)
 }
 
+function Get-FileSha256 {
+  param([string]$Path)
+  Ensure-File $Path
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+      $hash = $sha.ComputeHash($stream)
+      return (($hash | ForEach-Object { $_.ToString("x2") }) -join "")
+    }
+    finally {
+      if ($stream) { $stream.Dispose() }
+    }
+  }
+  finally {
+    if ($sha) { $sha.Dispose() }
+  }
+}
+
+function Get-ArtifactHashRecords {
+  param([string]$Root, [string[]]$Artifacts)
+  $records = @()
+  foreach ($rel in $Artifacts) {
+    if ($rel -match "[\*\?]") {
+      throw "Artifact hash gate refuses wildcard artifact path: $rel"
+    }
+    $path = Join-Path $Root $rel
+    Ensure-File $path
+    $records += [ordered]@{
+      path = $rel
+      sha256 = Get-FileSha256 -Path $path
+    }
+  }
+  return $records
+}
+
 function Ensure-Any {
   param([string[]]$Patterns, [string]$BasePath)
   foreach ($pattern in $Patterns) {
@@ -53,13 +89,13 @@ function Get-RelativePathSafe {
   )
 
   try {
-    return [System.IO.Path]::GetRelativePath($BasePath, $TargetPath)
+    return ([System.IO.Path]::GetRelativePath($BasePath, $TargetPath) -replace "\\", "/")
   }
   catch {
     $base = [System.IO.Path]::GetFullPath($BasePath)
     $target = [System.IO.Path]::GetFullPath($TargetPath)
     if ($target.StartsWith($base, [System.StringComparison]::OrdinalIgnoreCase)) {
-      return $target.Substring($base.Length).TrimStart('\')
+      return ($target.Substring($base.Length).TrimStart('\') -replace "\\", "/")
     }
     return $TargetPath
   }
@@ -210,10 +246,10 @@ function Get-PhaseOutputArtifacts {
   $patterns = @()
   switch ($Phase) {
     "propose" {
-      $patterns = @("_workspace/01_proposals*.md","*_proposal.md")
+      $patterns = @("_workspace/01_proposals*.md","*_proposal.md","runtime/approvals/story-choice.json")
     }
     "design-big" {
-      $patterns = @("novel-config.md","design/*_bootstrap.md","design/*_character.md","design/*_plot-hook.md","revision/_state/*.json")
+      $patterns = @("novel-config.md","design/*_bootstrap.md","design/02_character_core.md","design/*_character*.md","design/03_macro_plot_hooks.md","design/*plot*hook*.md","revision/_state/*.json")
     }
     "design-small" {
       $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md")
@@ -393,7 +429,7 @@ function Save-PhaseEvidence {
 }
 
 function Validate-PhaseEvidenceFile {
-  param([string]$Path)
+  param([string]$Path, [string]$Root)
 
   Ensure-File $Path
   $raw = Read-Utf8 -Path $Path
@@ -401,7 +437,7 @@ function Validate-PhaseEvidenceFile {
 
   $required = @(
     "run_id","step_id","phase","execution_claim_mode","artifact_gate_passed",
-    "dictionary_check_enabled","started_at","finished_at","status","output_artifacts","notes"
+    "dictionary_check_enabled","started_at","finished_at","status","output_artifacts","artifact_hashes","notes"
   )
   foreach ($k in $required) {
     if (-not ($obj.PSObject.Properties.Name -contains $k)) {
@@ -417,6 +453,34 @@ function Validate-PhaseEvidenceFile {
   }
   if ($obj.status -eq "completed" -and $obj.output_artifacts.Count -lt 1) {
     throw "Completed phase evidence must include output_artifacts: $Path"
+  }
+  if ($obj.status -eq "completed" -and $obj.artifact_hashes.Count -lt 1) {
+    throw "Completed phase evidence must include artifact_hashes: $Path"
+  }
+  if ($obj.status -eq "completed") {
+    $artifactPaths = @($obj.output_artifacts | ForEach-Object { [string]$_ })
+    foreach ($record in @($obj.artifact_hashes)) {
+      foreach ($field in @("path","sha256")) {
+        if (-not ($record.PSObject.Properties.Name -contains $field) -or -not ([string]$record.$field).Trim()) {
+          throw "Phase evidence artifact_hashes entry missing '$field': $Path"
+        }
+      }
+      $rel = [string]$record.path
+      if ($artifactPaths -notcontains $rel) {
+        throw "Phase evidence hash path '$rel' not listed in output_artifacts: $Path"
+      }
+      if ($rel -match "[\*\?]") {
+        throw "Phase evidence refuses wildcard artifact path: $rel"
+      }
+      $sha = [string]$record.sha256
+      if ($sha -notmatch "^[a-f0-9]{64}$") {
+        throw "Phase evidence artifact hash is not lowercase SHA-256 for '$rel': $Path"
+      }
+      $actual = Get-FileSha256 -Path (Join-Path $Root $rel)
+      if ($actual -ne $sha) {
+        throw "Phase evidence hash mismatch for '$rel'. Expected $sha, actual $actual."
+      }
+    }
   }
 }
 
@@ -599,19 +663,51 @@ function Validate-AgentCompliance {
   param(
     [string]$Root,
     [string]$Phase,
-    [bool]$Enabled
+    [bool]$Enabled,
+    [string[]]$Artifacts = @()
   )
 
   if (-not $Enabled) {
     return
   }
 
+  $schemaPath = Join-Path $Root "runtime/agent-compliance.schema.json"
+  Ensure-File $schemaPath
+  $schemaRaw = Read-Utf8 -Path $schemaPath
+  foreach ($schemaToken in @("artifact_hashes","phase_authority","completed_at","additionalProperties")) {
+    if ($schemaRaw -notmatch [regex]::Escape($schemaToken)) {
+      throw "Agent compliance schema missing required token '$schemaToken': $schemaPath"
+    }
+  }
+
   $path = Join-Path $Root ("runtime/agent-compliance/{0}.json" -f $Phase)
   Ensure-File $path
   $obj = Read-Utf8 -Path $Path | ConvertFrom-Json
-  foreach ($field in @("run_id","phase","required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","contract_status","missing_items")) {
+
+  $requiredFields = @("run_id","phase","required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","phase_authority","completed_at","contract_status","missing_items")
+  $allowedFields = $requiredFields + @("generation_boundary","creative_authority","research_boundary")
+  foreach ($prop in $obj.PSObject.Properties.Name) {
+    if ($allowedFields -notcontains $prop) {
+      throw "Agent compliance manifest has unexpected field '$prop': $path"
+    }
+  }
+  foreach ($field in $requiredFields) {
     if (-not ($obj.PSObject.Properties.Name -contains $field)) {
       throw "Agent compliance manifest missing '$field': $path"
+    }
+  }
+  foreach ($field in @("run_id","phase","contract_status","phase_authority","completed_at")) {
+    if (-not ([string]$obj.$field).Trim()) {
+      throw "Agent compliance field '$field' must be a non-empty string: $path"
+    }
+  }
+  foreach ($field in @("required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","missing_items")) {
+    $items = @($obj.$field)
+    if ($null -eq $obj.$field) {
+      throw "Agent compliance field '$field' must be an array: $path"
+    }
+    if ($field -in @("required_agents","agents_executed","output_artifacts","artifact_hashes") -and $items.Count -lt 1) {
+      throw "Agent compliance field '$field' must not be empty: $path"
     }
   }
   if ([string]$obj.phase -ne $Phase) {
@@ -620,8 +716,26 @@ function Validate-AgentCompliance {
   if ($obj.contract_status -ne "PASS") {
     throw "Agent compliance failed for phase '$Phase': status=$($obj.contract_status)"
   }
+  if ($obj.phase_authority -notin @("local_adapter_scaffold","manual_ide_agent","provider_command","human_operator")) {
+    throw "Agent compliance has invalid phase_authority '$($obj.phase_authority)': $path"
+  }
+  $completedAt = [datetime]::MinValue
+  if (-not [datetime]::TryParse([string]$obj.completed_at, [ref]$completedAt)) {
+    throw "Agent compliance completed_at is not a valid timestamp: $path"
+  }
   if (@($obj.required_agents).Count -lt 1) {
     throw "Agent compliance required_agents is empty for phase '$Phase'."
+  }
+  foreach ($listName in @("required_agents","agents_executed","required_references","loaded_state_files","output_artifacts")) {
+    $values = @($obj.$listName | ForEach-Object { [string]$_ })
+    $bad = @($values | Where-Object { -not $_.Trim() })
+    if ($bad.Count -gt 0) {
+      throw "Agent compliance '$listName' contains empty value for phase '$Phase'."
+    }
+    $unique = @($values | Sort-Object -Unique)
+    if ($unique.Count -ne $values.Count) {
+      throw "Agent compliance '$listName' contains duplicate values for phase '$Phase'."
+    }
   }
   $executed = @($obj.agents_executed)
   foreach ($agent in @($obj.required_agents)) {
@@ -631,6 +745,63 @@ function Validate-AgentCompliance {
   }
   if (@($obj.missing_items).Count -gt 0) {
     throw "Agent compliance has missing_items for phase '$Phase': $($obj.missing_items -join ', ')"
+  }
+
+  foreach ($rel in @($obj.required_references)) {
+    Ensure-File (Join-Path $Root ([string]$rel))
+  }
+  foreach ($rel in @($obj.loaded_state_files)) {
+    Ensure-File (Join-Path $Root ([string]$rel))
+  }
+
+  $outputArtifacts = @($obj.output_artifacts | ForEach-Object { [string]$_ })
+  foreach ($rel in $outputArtifacts) {
+    if ($rel -match "[\*\?]") {
+      throw "Agent compliance output_artifacts must list concrete files, not wildcard path '$rel'."
+    }
+    Ensure-File (Join-Path $Root $rel)
+  }
+
+  $hashByPath = @{}
+  foreach ($record in @($obj.artifact_hashes)) {
+    foreach ($field in @("path","sha256")) {
+      if (-not ($record.PSObject.Properties.Name -contains $field) -or -not ([string]$record.$field).Trim()) {
+        throw "Agent compliance artifact_hashes entry missing '$field': $path"
+      }
+    }
+    $rel = [string]$record.path
+    $sha = [string]$record.sha256
+    if ($rel -match "[\*\?]") {
+      throw "Agent compliance artifact_hashes must list concrete files, not wildcard path '$rel'."
+    }
+    if ($sha -notmatch "^[a-f0-9]{64}$") {
+      throw "Agent compliance artifact hash is not lowercase SHA-256 for '$rel': $path"
+    }
+    if ($hashByPath.ContainsKey($rel)) {
+      throw "Agent compliance duplicate artifact_hashes path '$rel': $path"
+    }
+    if ($outputArtifacts -notcontains $rel) {
+      throw "Agent compliance artifact_hashes path '$rel' is not listed in output_artifacts."
+    }
+    $actual = Get-FileSha256 -Path (Join-Path $Root $rel)
+    if ($actual -ne $sha) {
+      throw "Agent compliance hash mismatch for '$rel'. Expected $sha, actual $actual."
+    }
+    $hashByPath[$rel] = $sha
+  }
+  foreach ($rel in $outputArtifacts) {
+    if (-not $hashByPath.ContainsKey($rel)) {
+      throw "Agent compliance output artifact '$rel' has no matching artifact_hashes entry."
+    }
+  }
+
+  if ($Artifacts -and $Artifacts.Count -gt 0) {
+    $artifactSet = @($Artifacts | Sort-Object -Unique)
+    foreach ($rel in $outputArtifacts) {
+      if ($artifactSet -notcontains $rel) {
+        throw "Agent compliance output artifact '$rel' was not discovered by the phase artifact gate."
+      }
+    }
   }
 }
 
@@ -1470,12 +1641,13 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       throw "Phase '$phase' requires execution_claim_mode=executed. Configure command mode and real phase commands."
     }
 
+    Validate-DocxContentMatch -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     $artifacts = Get-PhaseOutputArtifacts -Phase $phase -Root $ProjectRoot
+    $artifactHashes = @(Get-ArtifactHashRecords -Root $ProjectRoot -Artifacts $artifacts)
     Validate-PhaseContracts -Root $ProjectRoot -Phase $phase -Artifacts $artifacts -Enabled $enforcePhaseContracts
-    Validate-AgentCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
+    Validate-AgentCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts -Artifacts $artifacts
     Validate-LongformState -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-PublicationCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
-    Validate-DocxContentMatch -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Assert-NoForbiddenPatterns -Root $ProjectRoot -Phase $phase -Patterns $negativePatterns -Enabled $enableNegativeEnforcement
     Validate-EpisodeTextQuality -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $enableTextQualityGates
     Validate-CrossChapterProgression -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $enableTextQualityGates
@@ -1494,11 +1666,12 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       status = "completed"
       executed_command = $step.command
       output_artifacts = $artifacts
+      artifact_hashes = $artifactHashes
       notes = @("artifact gate passed")
     }
     Save-PhaseEvidence -Path $evidencePath -Evidence $evidence
     if ($requirePhaseEvidence) {
-      Validate-PhaseEvidenceFile -Path $evidencePath
+      Validate-PhaseEvidenceFile -Path $evidencePath -Root $ProjectRoot
     }
 
     $step.evidence_path = $evidencePath
@@ -1523,11 +1696,12 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       status = "failed"
       executed_command = $step.command
       output_artifacts = @()
+      artifact_hashes = @()
       notes = @($_.Exception.Message)
     }
     Save-PhaseEvidence -Path $failedEvidencePath -Evidence $failedEvidence
     if ($requirePhaseEvidence) {
-      Validate-PhaseEvidenceFile -Path $failedEvidencePath
+      Validate-PhaseEvidenceFile -Path $failedEvidencePath -Root $ProjectRoot
     }
     $step.evidence_path = $failedEvidencePath
     $step.execution_claim_mode = "simulated"

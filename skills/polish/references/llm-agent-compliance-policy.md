@@ -25,6 +25,9 @@ The runner must fail the phase when this manifest is missing, malformed, incompl
 - `required_references`
 - `loaded_state_files`
 - `output_artifacts`
+- `artifact_hashes`
+- `phase_authority`
+- `completed_at`
 - `contract_status`
 - `missing_items`
 
@@ -34,7 +37,9 @@ The runner must fail the phase when this manifest is missing, malformed, incompl
 - `contract_status` must be `PASS`.
 - `missing_items` must be empty.
 - If a phase uses state, `loaded_state_files` must list the state files used.
-- If a phase writes outputs, `output_artifacts` must list the produced artifacts.
+- If a phase writes outputs, `output_artifacts` must list the produced artifacts as concrete file paths, not wildcards.
+- Every listed output artifact must have a matching SHA-256 record in `artifact_hashes`.
+- `phase_authority` must identify whether the phase was written by `manual_ide_agent`, `provider_command`, `human_operator`, or `local_adapter_scaffold`.
 
 ## LLM / IDE Agent Instructions
 An LLM or IDE agent must:
@@ -43,7 +48,7 @@ An LLM or IDE agent must:
 - read the relevant skill and reference files under `skills/`;
 - read required state files under `revision/_state/`;
 - write the required artifacts;
-- write the compliance manifest last.
+- write the compliance manifest last, preferably via `scripts/ci/write_agent_compliance.ps1`.
 
 If the LLM cannot satisfy a required agent, reference, state file, or output artifact, it must write `contract_status: "BLOCKED"` with explicit `missing_items`.
 

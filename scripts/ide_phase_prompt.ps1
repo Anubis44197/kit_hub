@@ -18,7 +18,8 @@ function Show-CommonHeader {
   Write-Host "- Preserve valid UTF-8 Turkish characters."
   Write-Host "- Do not invent ISBN, publisher, barcode, copyright owner, or official approval."
   Write-Host "- Write the required files; the runner will validate artifacts after you finish."
-  Write-Host "- Write runtime/agent-compliance/$PhaseName.json last with contract_status PASS, or BLOCKED with missing_items."
+  Write-Host "- Write runtime/agent-compliance/$PhaseName.json last with full schema fields, artifact hashes, and contract_status PASS; use scripts/ci/write_agent_compliance.ps1 instead of hand-writing it."
+  Write-Host "- Compliance output_artifacts must list concrete files only; wildcards such as episode/ep*.md are rejected."
   Write-Host ""
 }
 

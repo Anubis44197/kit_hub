@@ -14,6 +14,7 @@ Each phase must emit one JSON evidence file under:
 - `finished_at` (ISO-8601)
 - `status` (`completed` | `failed`)
 - `output_artifacts` (array of relative paths)
+- `artifact_hashes` (array of `{ path, sha256 }` records; empty only when `status=failed`)
 - `notes` (array of strings)
 
 ## Optional Fields
@@ -23,9 +24,10 @@ Each phase must emit one JSON evidence file under:
 
 ## Validation Rules
 1. `execution_claim_mode=executed` is allowed only when a phase command is actually invoked in command mode.
-2. `artifact_gate_passed=true` requires at least one `output_artifacts` entry.
+2. `artifact_gate_passed=true` requires at least one `output_artifacts` entry and matching `artifact_hashes`.
 3. `status=completed` requires `artifact_gate_passed=true`.
-4. If `status=failed`, `notes` must include failure reason.
+4. Every completed evidence hash must match the current file bytes at validation time.
+5. If `status=failed`, `notes` must include failure reason.
 
 ## Example
 ```json
@@ -43,6 +45,16 @@ Each phase must emit one JSON evidence file under:
   "output_artifacts": [
     "episode/ep001.md",
     "revision/_workspace/04_quality-verifier_verdict_EP001.md"
+  ],
+  "artifact_hashes": [
+    {
+      "path": "episode/ep001.md",
+      "sha256": "lowercase-64-character-sha256"
+    },
+    {
+      "path": "revision/_workspace/04_quality-verifier_verdict_EP001.md",
+      "sha256": "lowercase-64-character-sha256"
+    }
   ],
   "notes": [
     "artifact gate passed"

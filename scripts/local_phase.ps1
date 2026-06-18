@@ -151,6 +151,20 @@ function Write-AgentCompliance {
 
   $dir = Join-Path $ProjectRoot "runtime/agent-compliance"
   Ensure-Dir $dir
+  $artifactHashes = @()
+  foreach ($rel in $OutputArtifacts) {
+    if ($rel -match "[\*\?]") { continue }
+    $artifactPath = Join-Path $ProjectRoot $rel
+    if (Test-Path -LiteralPath $artifactPath -PathType Leaf) {
+      $artifactHashes += [ordered]@{
+        path = $rel
+        sha256 = Get-FileSha256 -Path $artifactPath
+      }
+    }
+  }
+  if ($OutputArtifacts.Count -gt 0 -and $artifactHashes.Count -lt 1) {
+    throw "Agent compliance cannot be written without at least one concrete artifact hash for phase '$PhaseName'."
+  }
   Write-Json -Path (Join-Path $dir "$PhaseName.json") -Value ([ordered]@{
     run_id = $RunId
     phase = $PhaseName
@@ -159,6 +173,9 @@ function Write-AgentCompliance {
     required_references = $RequiredReferences
     loaded_state_files = $LoadedStateFiles
     output_artifacts = $OutputArtifacts
+    artifact_hashes = $artifactHashes
+    phase_authority = "local_adapter_scaffold"
+    completed_at = (Get-Date).ToString("o")
     generation_boundary = "local adapter validates contracts and packages existing artifacts; it does not write the book"
     creative_authority = "provider_or_ide_agent_or_human_required_for_real_generation"
     research_boundary = "no internet research claimed by local adapter"
