@@ -58,13 +58,13 @@ After the IDE agent writes the required files, return to the terminal and press 
 
 ## Local Test Mode
 
-Local test mode needs no IDE agent and no API. It uses deterministic placeholder generation:
+Local test mode needs no API. It uses deterministic scaffolding and contract checks:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase export
 ```
 
-This proves the pipeline, gates, state files, and DOCX export work. It is not a literary-quality model.
+This proves proposal gating, state files, artifact contracts, and export packaging. It does not write the actual manuscript. For `create`, `polish`, and `rewrite`, use IDE manual mode or a configured provider/API/CLI command.
 
 Local test mode is a smoke test adapter. It must not be presented as proof that a provider LLM, IDE agent, or autonomous agent team wrote the book.
 

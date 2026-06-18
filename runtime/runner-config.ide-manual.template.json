@@ -34,6 +34,7 @@
     "enable_text_quality_gates": true,
     "require_executed_claims_for_critical_phases": false,
     "approval_files": {
+      "design-big": "runtime/approvals/story-choice.json",
       "create": "runtime/approvals/design-freeze.json",
       "rewrite": "runtime/approvals/rewrite-approval.json",
       "export": "runtime/approvals/export-approval.json"

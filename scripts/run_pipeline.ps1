@@ -490,6 +490,7 @@ function Ensure-UserApproval {
   }
 
   $approvalMap = @{
+    "design-big" = "runtime/approvals/story-choice.json"
     "create" = "runtime/approvals/design-freeze.json"
     "rewrite" = "runtime/approvals/rewrite-approval.json"
     "export" = "runtime/approvals/export-approval.json"
@@ -497,7 +498,7 @@ function Ensure-UserApproval {
 
   if ($Config -and $Config.quality_flags -and $Config.quality_flags.approval_files) {
     $custom = $Config.quality_flags.approval_files
-    foreach ($k in @("create","rewrite","export")) {
+    foreach ($k in @("design-big","create","rewrite","export")) {
       if ($custom.PSObject.Properties.Name -contains $k -and $custom.$k) {
         $approvalMap[$k] = [string]$custom.$k
       }

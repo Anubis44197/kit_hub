@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$ProjectRoot = (Get-Location).Path
 )
 
@@ -122,7 +122,8 @@ else {
 function Ensure-ApprovalFile {
   param(
     [string]$Path,
-    [string]$Title
+    [string]$Title,
+    [hashtable]$ExtraFields = @{}
   )
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
     $payload = [ordered]@{
@@ -131,13 +132,18 @@ function Ensure-ApprovalFile {
       approved_by = ""
       approved_at = ""
       note = "Set approved=true only after explicit user confirmation."
-    } | ConvertTo-Json -Depth 5
-    Write-Utf8Bom -Path $Path -Content $payload
+    }
+    foreach ($key in $ExtraFields.Keys) {
+      $payload[$key] = $ExtraFields[$key]
+    }
+    $payloadJson = $payload | ConvertTo-Json -Depth 5
+    Write-Utf8Bom -Path $Path -Content $payloadJson
     Write-Host "[install] created approval file: $Path"
   }
 }
 
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "design-freeze.json") -Title "Design Freeze Approval"
+Ensure-ApprovalFile -Path (Join-Path $approvalsDir "story-choice.json") -Title "Story Choice Approval" -ExtraFields @{ selected_option = ""; note = "Set approved=true and selected_option to 1, 2, or 3 only after the user chooses the story direction." }
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "rewrite-approval.json") -Title "Rewrite Approval"
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "export-approval.json") -Title "Export Approval"
 

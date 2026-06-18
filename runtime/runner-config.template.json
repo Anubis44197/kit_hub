@@ -34,6 +34,7 @@
     "enable_text_quality_gates": true,
     "require_executed_claims_for_critical_phases": true,
     "approval_files": {
+      "design-big": "runtime/approvals/story-choice.json",
       "create": "runtime/approvals/design-freeze.json",
       "rewrite": "runtime/approvals/rewrite-approval.json",
       "export": "runtime/approvals/export-approval.json"
@@ -75,7 +76,7 @@
     "When dictionary check is enabled, require_dictionary_provider=true makes missing Python/tdk-py fail instead of silently skipping.",
     "Phase evidence is mandatory when require_phase_evidence=true.",
     "execution_claim_mode should be 'executed' only when actual command-mode execution is used.",
-    "create/rewrite/export require explicit approval JSON files when require_user_approvals=true.",
+    "design-big/create/rewrite/export require explicit approval JSON files when require_user_approvals=true.",
     "phase contracts are hard gates when enforce_phase_contracts=true.",
     "negative enforcement blocks forbidden content patterns in episode outputs.",
     "text quality gates block weak episodes (length, repetition, dialogue style, psychological markers, encoding).",

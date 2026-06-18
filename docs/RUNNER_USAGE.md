@@ -59,7 +59,7 @@ powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot .
 Edit `runtime/runner-config.json` and fill `phase_commands`.
 Then set `execution_mode` to `command`.
 
-By default this repository now ships with a local command adapter:
+This repository ships with a local command adapter for scaffolding and contract checks:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/local_phase.ps1 -ProjectRoot "." -Phase propose -RunId "RUN-LOCAL"
@@ -73,13 +73,13 @@ runtime/book-request.md
 
 If that file is missing or still contains the `Konu Bekleniyor` placeholder, the local adapter must fail before generation. The repository must not silently write a default novel topic.
 
-The local adapter is deterministic and validates the full book-package pipeline; replace it with a real model command when production AI generation is wired.
+The local adapter does not write manuscript chapters, prefaces, or cover copy. It proposes directions, prepares gated scaffolding, and exports only artifacts that already exist. If required creative files are missing, it fails instead of inventing placeholder book content. Replace it with a real model command when production AI generation is wired.
 
 Important:
-- Local adapter mode is for pipeline testing, not literary quality.
+- Local adapter mode is for contract testing, not literary authorship.
 - IDE manual mode is for API-free real writing when an IDE agent writes the files.
 - Command mode is for automatic CLI/model integrations.
-- Do not claim that local adapter output was written by autonomous agents. It is deterministic scaffold text for testing gates/export.
+- Do not claim that local adapter output was written by autonomous agents. It is deterministic scaffolding and packaging for existing artifacts.
 - Do not claim internet research occurred unless a research phase/tool produced source artifacts.
 
 Example:
@@ -204,6 +204,7 @@ Relevant config keys:
 ## 5.1) Approval Gates (Hard)
 
 When `quality_flags.require_user_approvals=true` (default), these gates are mandatory:
+- `design-big` requires `runtime/approvals/story-choice.json` with `approved=true` and a chosen `selected_option`
 - `create` requires `runtime/approvals/design-freeze.json` with `approved=true`
 - `rewrite` requires `runtime/approvals/rewrite-approval.json` with `approved=true`
 - `export` requires `runtime/approvals/export-approval.json` with `approved=true`

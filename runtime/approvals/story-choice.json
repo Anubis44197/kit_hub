@@ -1,0 +1,8 @@
+{
+  "approved": false,
+  "title": "Story Choice Approval",
+  "selected_option": "",
+  "approved_by": "",
+  "approved_at": "",
+  "note": "Set approved=true and selected_option to 1, 2, or 3 only after the user chooses the story direction."
+}

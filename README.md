@@ -1,4 +1,4 @@
-﻿# Novel Writing Engine
+# Novel Writing Engine
 
 Professional multi-agent pipeline for Turkish novel, story, and print-ready book production.
 
@@ -130,10 +130,11 @@ You do not need to give this repository an API key. If your IDE already has an a
    - `runtime/book-request.md`
 4. Start the gated pipeline:
    - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase propose -ToPhase export`
-5. When the runner pauses, ask your IDE agent to complete the current phase.
-6. Optional phase prompt helper:
+5. After `propose`, choose one story direction in `runtime/approvals/story-choice.json` by setting `selected_option` and `approved=true`.
+6. When the runner pauses, ask your IDE agent to complete the current phase.
+7. Optional phase prompt helper:
    - `powershell -ExecutionPolicy Bypass -File scripts/ide_phase_prompt.ps1 -Phase create`
-7. Press Enter in the runner terminal after the IDE agent writes the required files.
+8. Press Enter in the runner terminal after the IDE agent writes the required files.
 
 Manual IDE mode keeps `execution_claim_mode=simulated` because the runner cannot prove what the external IDE did, but artifact gates, text quality gates, TDK/layout gates, longform state checks, and publication-compliance checks still run.
 
@@ -218,9 +219,11 @@ Detailed guide:
 - Runner writes a live pointer file:
   - `runtime/current-run.json`
 - Runner requires hard approval files (default):
+  - `runtime/approvals/story-choice.json`
   - `runtime/approvals/design-freeze.json`
   - `runtime/approvals/rewrite-approval.json`
   - `runtime/approvals/export-approval.json`
+- `story-choice.json` must include both `approved=true` and a `selected_option` before `design-big` can continue. This prevents the app from silently choosing a plot direction after a simple topic prompt.
 - Runner enforces hard phase contracts (default):
   - issue JSON schema
   - verdict markdown token (`PASS|FAIL|BLOCKED`)
