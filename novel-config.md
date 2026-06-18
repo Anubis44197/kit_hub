@@ -1,9 +1,9 @@
-﻿# Novel Config
+# Novel Config
 
 project:
-  name: "Boğazda Bir Akşam"
+  name: "Konu Bekleniyor"
   target_platform: "PRINT_BOOK"
-  target_genre: "gizem"
+  target_genre: "user_defined_after_topic"
   episode_dir: "episode/"
   work_dir: "revision/"
   design_dir: "design/"
@@ -11,12 +11,12 @@ project:
 language_profile:
   locale: "tr-TR"
   content_language: "Turkish"
-  interface_language: "English"
+  interface_language: "Turkish"
   tdk_enforcement: true
 
 book_mode:
-  profile: "print_preview"
-  enabled: true
+  profile: "topic_required"
+  enabled: false
   dialogue_style: "dash"
 
 create_quality:
@@ -41,16 +41,16 @@ book_package:
     compatibility_test_required: true
 
 writing_profile:
-  writing_type: "novel"
-  target_reader: "Turkish adult commercial fiction reader"
-  structure_model: "four_act_longform_novel"
+  writing_type: "user_defined_after_topic"
+  target_reader: "user_defined_after_topic"
+  structure_model: "selected_after_topic"
   evidence_policy: "fictional; factual claims require source placeholders"
 
 longform:
-  target_pages: 360
-  target_words: 150000
-  target_chapters: 60
-  generation_strategy: "chunked_chapter_state"
+  target_pages: 0
+  target_words: 0
+  target_chapters: 0
+  generation_strategy: "topic_required_before_generation"
   state_dir: "revision/_state/"
   require_character_state: true
   require_plot_ledger: true

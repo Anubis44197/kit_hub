@@ -57,9 +57,9 @@ function Get-BookSeed {
   $requestPath = Join-Path $ProjectRoot "runtime/book-request.md"
   if (Test-Path -LiteralPath $requestPath -PathType Leaf) {
     $raw = (Get-Content -LiteralPath $requestPath -Raw).Trim()
-    if ($raw) { return $raw }
+    if ($raw -and $raw -notmatch "(?i)^\s*(#|konu bekleniyor|topic pending|TODO|buraya.*konu)") { return $raw }
   }
-  return "3 bölümlük kısa kitap testi: İstanbul'da Boğaz'da yemek yiyen bir adam betimlensin; yemek sahnesi baba-kız yüzleşmesine, saklı mektuba ve aile evi kararına ilerlesin."
+  throw "Book request missing: runtime/book-request.md içine önce kullanıcı konusunu yazın. Konu olmadan varsayılan roman üretilmez."
 }
 
 function Get-RequestedChapterCount {
@@ -74,7 +74,7 @@ function Get-RequestedChapterCount {
       }
     }
   }
-  return 2
+  return 3
 }
 
 function Get-RequestedProjectName {
@@ -82,7 +82,12 @@ function Get-RequestedProjectName {
   if ($seed -match "(?i)boğaz|bogaz|istanbul") {
     return "Boğazda Bir Akşam"
   }
-  return "Boğazda Bir Akşam"
+  $clean = ($seed -replace "(?i)^\s*\d+\s*(bölüm|bolum|chapter|chapters)\s*", "").Trim()
+  $words = @($clean -split "\s+" | Where-Object { $_.Trim() -ne "" } | Select-Object -First 4)
+  if ($words.Count -gt 0) {
+    return ($words -join " ")
+  }
+  return "Konu Bekleniyor"
 }
 
 function Get-EpisodeRangeLabel {
@@ -100,7 +105,7 @@ function Get-ChapterDisplayTitle {
   if ($Number -le $titles.Count) {
     return $titles[$Number - 1]
   }
-  return "BÖLÜM $Number - Boğaz Kıyısında Devam Eden Gece"
+  return "BÖLÜM $Number"
 }
 
 function Get-Slug {
@@ -127,17 +132,29 @@ function Get-StateDir {
 function New-LongformPlan {
   param([string]$Seed)
 
+  $targetChapters = Get-RequestedChapterCount
+  $wordsPerChapter = 2500
+  $targetWords = $targetChapters * $wordsPerChapter
+  $targetPages = [Math]::Max(1, [Math]::Ceiling($targetWords / 420))
   $chapters = @()
-  for ($i = 1; $i -le 60; $i++) {
-    $act = if ($i -le 15) { "Act I - Kurulum" } elseif ($i -le 40) { "Act II - Derinleşme" } else { "Act III - Çözüm" }
+  for ($i = 1; $i -le $targetChapters; $i++) {
+    $act = if ($targetChapters -le 3) {
+      if ($i -eq 1) { "Kurulum" } elseif ($i -eq $targetChapters) { "Çözüm" } else { "Yüzleşme" }
+    } elseif ($i -le [Math]::Ceiling($targetChapters * 0.25)) {
+      "Act I - Kurulum"
+    } elseif ($i -le [Math]::Ceiling($targetChapters * 0.70)) {
+      "Act II - Derinleşme"
+    } else {
+      "Act III - Çözüm"
+    }
     $chapters += [ordered]@{
       id = ("EP{0:D3}" -f $i)
       reader_label = ("Bölüm {0}" -f $i)
       act = $act
-      target_words = 2500
-      purpose = if ($i -eq 1) { "Ana sır ve karakter vaadini başlatır." } elseif ($i -eq 60) { "Ana çatışmayı kapatır ve karakter dönüşümünü tamamlar." } else { "Neden-sonuç zincirini ilerletir ve karakter baskısını artırır." }
+      target_words = $wordsPerChapter
+      purpose = if ($i -eq 1) { "Ana çatışma ve karakter vaadini başlatır." } elseif ($i -eq $targetChapters) { "Ana çatışmayı kapatır ve karakter dönüşümünü görünür kılar." } else { "Neden-sonuç zincirini ilerletir ve karakter baskısını artırır." }
       must_advance = @("plot", "character", "theme")
-      unresolved_threads_allowed = if ($i -lt 58) { 3 } else { 0 }
+      unresolved_threads_allowed = if ($i -lt $targetChapters) { 3 } else { 0 }
     }
   }
 
@@ -145,10 +162,10 @@ function New-LongformPlan {
     schema_version = "1.0.0"
     run_id = $RunId
     premise = $Seed
-    target_pages = 360
-    target_words = 150000
-    target_chapters = 60
-    words_per_chapter = 2500
+    target_pages = $targetPages
+    target_words = $targetWords
+    target_chapters = $targetChapters
+    words_per_chapter = $wordsPerChapter
     production_mode = "chunked_longform"
     context_strategy = "chapter_state_ledgers"
     required_state_files = @(
@@ -882,6 +899,11 @@ $seed
 function Invoke-DesignBig {
   $seed = Get-BookSeed
   $projectName = Get-RequestedProjectName
+  $targetChapters = Get-RequestedChapterCount
+  $wordsPerChapter = 2500
+  $targetWords = $targetChapters * $wordsPerChapter
+  $targetPages = [Math]::Max(1, [Math]::Ceiling($targetWords / 420))
+  $structureModel = if ($targetChapters -le 5) { "short_story_arc" } else { "chaptered_longform_book" }
   $design = Join-Path $ProjectRoot "design"
   Ensure-Dir $design
   Initialize-LongformState -Seed $seed
@@ -941,7 +963,7 @@ Derya hemen affetmez; baba-kız ilişkisi dürüst ama açık uçlu bir başlang
 project:
   name: "$projectName"
   target_platform: "PRINT_BOOK"
-  target_genre: "gizem"
+  target_genre: "user_defined_from_request"
   episode_dir: "episode/"
   work_dir: "revision/"
   design_dir: "design/"
@@ -949,7 +971,7 @@ project:
 language_profile:
   locale: "tr-TR"
   content_language: "Turkish"
-  interface_language: "English"
+  interface_language: "Turkish"
   tdk_enforcement: true
 
 book_mode:
@@ -979,15 +1001,15 @@ book_package:
     compatibility_test_required: true
 
 writing_profile:
-  writing_type: "novel"
-  target_reader: "Turkish adult commercial fiction reader"
-  structure_model: "four_act_longform_novel"
+  writing_type: "user_defined_from_request"
+  target_reader: "user_defined_from_request"
+  structure_model: "$structureModel"
   evidence_policy: "fictional; factual claims require source placeholders"
 
 longform:
-  target_pages: 360
-  target_words: 150000
-  target_chapters: 60
+  target_pages: $targetPages
+  target_words: $targetWords
+  target_chapters: $targetChapters
   generation_strategy: "chunked_chapter_state"
   state_dir: "revision/_state/"
   require_character_state: true

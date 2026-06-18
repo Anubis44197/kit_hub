@@ -68,7 +68,9 @@ For a simple user topic, write the topic into:
 runtime/book-request.md
 ```
 
-If that file is missing, the local adapter uses a built-in sample premise. The local adapter is deterministic and validates the full book-package pipeline; replace it with a real model command when production AI generation is wired.
+If that file is missing or still contains the `Konu Bekleniyor` placeholder, the local adapter must fail before generation. The repository must not silently write a default novel topic.
+
+The local adapter is deterministic and validates the full book-package pipeline; replace it with a real model command when production AI generation is wired.
 
 Important:
 - Local adapter mode is for pipeline testing, not literary quality.

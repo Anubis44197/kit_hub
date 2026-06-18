@@ -686,11 +686,11 @@ function Validate-LongformState {
       throw "Longform plan missing '$field'."
     }
   }
-  if ([int]$plan.target_pages -lt 200) {
-    throw "Longform plan target_pages must support long books; found $($plan.target_pages)."
+  if ([int]$plan.target_pages -lt 1) {
+    throw "Longform plan target_pages must be positive after a topic is provided; found $($plan.target_pages)."
   }
-  if ([int]$plan.target_chapters -lt 20) {
-    throw "Longform plan target_chapters too low for longform mode; found $($plan.target_chapters)."
+  if ([int]$plan.target_chapters -lt 1) {
+    throw "Longform plan target_chapters must be positive after a topic is provided; found $($plan.target_chapters)."
   }
 
   $character = Get-Content -LiteralPath (Join-Path $stateDir "character-state.json") -Raw | ConvertFrom-Json
