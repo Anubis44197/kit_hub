@@ -76,6 +76,9 @@
     "Because the IDE agent is external to this runner, execution_claim_mode remains simulated, but artifact gates still run.",
     "design-big must present book, chapter, and layout plans; design-small is blocked until the user approves book-plan-approval.json.",
     "Agent compliance manifests must include concrete output_artifacts plus matching artifact_hashes.",
+    "Agent orchestration is governed by runtime/agent-registry.json, runtime/agent-status-contract.json, and runtime/phase-contracts/*.json.",
+    "Agent compliance manifests must include agent_statuses; required agents must be completed.",
+    "The runner writes runtime/runs/{run_id}/run-journal.jsonl for phase audit events.",
     "Exported DOCX text must match the current episode source files.",
     "For machine-verifiable executed evidence, use runtime/runner-config.json command mode instead."
   ]

@@ -12,6 +12,7 @@ param(
   [string[]]$LoadedStateFiles = @(),
   [Parameter(Mandatory = $true)]
   [string[]]$OutputArtifacts,
+  [string[]]$AgentStatuses = @(),
   [ValidateSet("manual_ide_agent","provider_command","human_operator","local_adapter_scaffold")]
   [string]$PhaseAuthority = "manual_ide_agent",
   [ValidateSet("PASS","BLOCKED")]
@@ -79,6 +80,7 @@ $AgentsExecuted = Normalize-List -Values $AgentsExecuted
 $RequiredReferences = Normalize-List -Values $RequiredReferences
 $LoadedStateFiles = Normalize-List -Values $LoadedStateFiles
 $OutputArtifacts = Normalize-List -Values $OutputArtifacts
+$AgentStatuses = Normalize-List -Values $AgentStatuses
 $MissingItems = Normalize-List -Values $MissingItems
 
 if ($AgentsExecuted.Count -lt 1) {
@@ -109,6 +111,36 @@ if ($ContractStatus -eq "PASS" -and $MissingItems.Count -gt 0) {
   throw "PASS manifest cannot include MissingItems."
 }
 
+$agentStatusRecords = @()
+$seenAgentStatus = @{}
+foreach ($entry in $AgentStatuses) {
+  $parts = ([string]$entry).Split("=", 2)
+  if ($parts.Count -ne 2 -or -not $parts[0].Trim() -or -not $parts[1].Trim()) {
+    throw "AgentStatuses entries must use agent=status format. Bad entry: $entry"
+  }
+  $agentName = $parts[0].Trim()
+  $agentStatus = $parts[1].Trim()
+  if ($agentStatus -notin @("completed","failed","blocked","timed_out","invalid_output")) {
+    throw "Invalid agent status '$agentStatus' for '$agentName'."
+  }
+  if ($seenAgentStatus.ContainsKey($agentName)) {
+    throw "Duplicate AgentStatuses entry for '$agentName'."
+  }
+  $seenAgentStatus[$agentName] = $true
+  $agentStatusRecords += [ordered]@{
+    agent = $agentName
+    status = $agentStatus
+  }
+}
+foreach ($agentName in $RequiredAgents) {
+  if (-not $seenAgentStatus.ContainsKey($agentName)) {
+    $agentStatusRecords += [ordered]@{
+      agent = $agentName
+      status = $(if ($ContractStatus -eq "PASS") { "completed" } else { "blocked" })
+    }
+  }
+}
+
 $payload = [ordered]@{
   run_id = $RunId
   phase = $Phase
@@ -118,6 +150,7 @@ $payload = [ordered]@{
   loaded_state_files = $LoadedStateFiles
   output_artifacts = $OutputArtifacts
   artifact_hashes = $artifactHashes
+  agent_statuses = $agentStatusRecords
   phase_authority = $PhaseAuthority
   completed_at = (Get-Date).ToString("o")
   contract_status = $ContractStatus

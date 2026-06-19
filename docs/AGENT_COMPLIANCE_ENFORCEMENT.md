@@ -21,6 +21,9 @@ The runner validates:
 - output artifacts are listed as concrete files;
 - every output artifact exists and has a matching SHA-256 entry in `artifact_hashes`;
 - artifact hashes match the actual file bytes at validation time;
+- every required agent has an `agent_statuses` entry;
+- every required agent status is `completed`;
+- required agents, references, and loaded state files satisfy `runtime/phase-contracts/{phase}.json`;
 - `phase_authority` is one of the accepted execution authorities;
 - `completed_at` is a valid timestamp;
 - `contract_status` is `PASS`;
@@ -49,3 +52,16 @@ A real LLM adapter must emit the same compliance manifest. If using an API with 
 ## Current Limitation
 
 The runner can prove that required files exist, hashes match, manifests pass, and exported DOCX content matches the current manuscript. It cannot prove a closed-source IDE agent internally reasoned exactly as instructed. This is why artifacts, schema checks, hash gates, text gates, state ledgers, and export validators are mandatory.
+
+## Agent Governance
+
+The canonical orchestration files are:
+
+```text
+runtime/agent-registry.json
+runtime/agent-status-contract.json
+runtime/phase-contracts/{phase}.json
+runtime/runs/{run_id}/run-journal.jsonl
+```
+
+Use `scripts/ci/validate_agent_governance.ps1` to verify that the registry, status contract, and phase contracts agree.

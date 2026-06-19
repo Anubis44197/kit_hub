@@ -25,6 +25,90 @@ function Read-Utf8 {
   return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
 }
 
+function Read-JsonFile {
+  param([string]$Path)
+  Ensure-File $Path
+  return Read-Utf8 -Path $Path | ConvertFrom-Json
+}
+
+function ConvertTo-RelativeContractPath {
+  param([string]$Path)
+  return (([string]$Path) -replace "\\", "/").Trim()
+}
+
+function Get-AgentRegistry {
+  param([string]$Root)
+  return Read-JsonFile -Path (Join-Path $Root "runtime/agent-registry.json")
+}
+
+function Get-AgentByName {
+  param([object]$Registry, [string]$Name)
+  return @($Registry.agents | Where-Object { $_.name -eq $Name } | Select-Object -First 1)[0]
+}
+
+function Get-AgentStatusContract {
+  param([string]$Root)
+  return Read-JsonFile -Path (Join-Path $Root "runtime/agent-status-contract.json")
+}
+
+function Get-PhaseContract {
+  param([string]$Root, [string]$Phase)
+  return Read-JsonFile -Path (Join-Path $Root ("runtime/phase-contracts/{0}.json" -f $Phase))
+}
+
+function Test-ContractPattern {
+  param([string]$Value, [string]$Pattern)
+  $normalizedValue = ConvertTo-RelativeContractPath -Path $Value
+  $normalizedPattern = ConvertTo-RelativeContractPath -Path $Pattern
+  return ($normalizedValue -like $normalizedPattern)
+}
+
+function Test-AnyContractPattern {
+  param([string]$Value, [object[]]$Patterns)
+  foreach ($pattern in @($Patterns)) {
+    if (Test-ContractPattern -Value $Value -Pattern ([string]$pattern)) {
+      return $true
+    }
+  }
+  return $false
+}
+
+function Validate-AgentGovernanceCatalog {
+  param([string]$Root)
+
+  $registry = Get-AgentRegistry -Root $Root
+  $status = Get-AgentStatusContract -Root $Root
+  foreach ($field in @("schema_version","status_contract","agents")) {
+    if (-not ($registry.PSObject.Properties.Name -contains $field)) {
+      throw "Agent registry missing '$field'."
+    }
+  }
+  if (@($registry.agents).Count -lt 1) {
+    throw "Agent registry has no agents."
+  }
+  $names = @($registry.agents | ForEach-Object { [string]$_.name })
+  if (($names | Sort-Object -Unique).Count -ne $names.Count) {
+    throw "Agent registry contains duplicate agent names."
+  }
+  foreach ($agent in @($registry.agents)) {
+    foreach ($field in @("name","allowed_phases","required_references","allowed_write_roots","timeout_seconds","max_turns")) {
+      if (-not ($agent.PSObject.Properties.Name -contains $field)) {
+        throw "Agent registry entry missing '$field'."
+      }
+    }
+    Ensure-File (Join-Path $Root ("agents/{0}.md" -f $agent.name))
+    foreach ($ref in @($agent.required_references)) {
+      Ensure-File (Join-Path $Root ([string]$ref))
+    }
+    if (@($agent.allowed_phases).Count -lt 1) {
+      throw "Agent '$($agent.name)' must declare allowed_phases."
+    }
+  }
+  if (-not ($status.PSObject.Properties.Name -contains "valid_status_values") -or @($status.valid_status_values).Count -lt 3) {
+    throw "Agent status contract must declare valid_status_values."
+  }
+}
+
 function Write-Utf8Bom {
   param([string]$Path, [string]$Content)
   $dir = Split-Path -Parent $Path
@@ -431,6 +515,32 @@ function Save-PhaseEvidence {
   Write-Utf8Bom -Path $Path -Content ($Evidence | ConvertTo-Json -Depth 10)
 }
 
+function Write-RunJournalEvent {
+  param(
+    [string]$Path,
+    [string]$RunId,
+    [string]$Phase,
+    [string]$StepId,
+    [string]$EventType,
+    [object]$Metadata = @{}
+  )
+
+  $dir = Split-Path -Parent $Path
+  if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
+    New-Item -ItemType Directory -Path $dir | Out-Null
+  }
+  $event = [ordered]@{
+    run_id = $RunId
+    phase = $Phase
+    step_id = $StepId
+    event_type = $EventType
+    created_at = (Get-Date).ToString("o")
+    metadata = $Metadata
+  }
+  $line = ($event | ConvertTo-Json -Depth 20 -Compress)
+  [System.IO.File]::AppendAllText($Path, $line + [Environment]::NewLine, [System.Text.Encoding]::UTF8)
+}
+
 function Validate-PhaseEvidenceFile {
   param([string]$Path, [string]$Root)
 
@@ -633,6 +743,44 @@ function Validate-PhaseContracts {
     return
   }
 
+  $registry = Get-AgentRegistry -Root $Root
+  $contract = Get-PhaseContract -Root $Root -Phase $Phase
+  if ([string]$contract.phase -ne $Phase) {
+    throw "Phase contract mismatch. Expected '$Phase', found '$($contract.phase)'."
+  }
+  foreach ($field in @("required_agents","required_references","required_state_files","allowed_output_patterns","denied_output_patterns","status_contract")) {
+    if (-not ($contract.PSObject.Properties.Name -contains $field)) {
+      throw "Phase contract '$Phase' missing '$field'."
+    }
+  }
+  foreach ($agentName in @($contract.required_agents)) {
+    $agent = Get-AgentByName -Registry $registry -Name ([string]$agentName)
+    if ($null -eq $agent) {
+      throw "Phase contract '$Phase' references unknown agent '$agentName'."
+    }
+    if (@($agent.allowed_phases) -notcontains $Phase) {
+      throw "Agent '$agentName' is not allowed to run in phase '$Phase'."
+    }
+  }
+  foreach ($rel in @($contract.required_references)) {
+    Ensure-File (Join-Path $Root ([string]$rel))
+  }
+  foreach ($rel in @($contract.required_state_files)) {
+    Ensure-File (Join-Path $Root ([string]$rel))
+  }
+  foreach ($rel in @($contract.required_approvals)) {
+    Ensure-File (Join-Path $Root ([string]$rel))
+  }
+  foreach ($artifact in @($Artifacts)) {
+    $relArtifact = ConvertTo-RelativeContractPath -Path $artifact
+    if (Test-AnyContractPattern -Value $relArtifact -Patterns @($contract.denied_output_patterns)) {
+      throw "Phase '$Phase' produced denied artifact '$relArtifact' according to runtime/phase-contracts/$Phase.json."
+    }
+    if (-not (Test-AnyContractPattern -Value $relArtifact -Patterns @($contract.allowed_output_patterns))) {
+      throw "Phase '$Phase' produced artifact outside allowed output patterns: $relArtifact"
+    }
+  }
+
   if ($Phase -in @("create","polish","rewrite")) {
     $issueArtifacts = $Artifacts | Where-Object { $_ -match "tdk-polisher.*issues.*\.json$" -or $_ -match "layout.*issues.*\.json$" }
     if (-not $issueArtifacts -or $issueArtifacts.Count -lt 1) {
@@ -678,7 +826,7 @@ function Validate-AgentCompliance {
   $schemaPath = Join-Path $Root "runtime/agent-compliance.schema.json"
   Ensure-File $schemaPath
   $schemaRaw = Read-Utf8 -Path $schemaPath
-  foreach ($schemaToken in @("artifact_hashes","phase_authority","completed_at","additionalProperties")) {
+  foreach ($schemaToken in @("artifact_hashes","agent_statuses","phase_authority","completed_at","additionalProperties")) {
     if ($schemaRaw -notmatch [regex]::Escape($schemaToken)) {
       throw "Agent compliance schema missing required token '$schemaToken': $schemaPath"
     }
@@ -688,7 +836,7 @@ function Validate-AgentCompliance {
   Ensure-File $path
   $obj = Read-Utf8 -Path $Path | ConvertFrom-Json
 
-  $requiredFields = @("run_id","phase","required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","phase_authority","completed_at","contract_status","missing_items")
+  $requiredFields = @("run_id","phase","required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","agent_statuses","phase_authority","completed_at","contract_status","missing_items")
   $allowedFields = $requiredFields + @("generation_boundary","creative_authority","research_boundary")
   foreach ($prop in $obj.PSObject.Properties.Name) {
     if ($allowedFields -notcontains $prop) {
@@ -705,12 +853,12 @@ function Validate-AgentCompliance {
       throw "Agent compliance field '$field' must be a non-empty string: $path"
     }
   }
-  foreach ($field in @("required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","missing_items")) {
+  foreach ($field in @("required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","agent_statuses","missing_items")) {
     $items = @($obj.$field)
     if ($null -eq $obj.$field) {
       throw "Agent compliance field '$field' must be an array: $path"
     }
-    if ($field -in @("required_agents","agents_executed","output_artifacts","artifact_hashes") -and $items.Count -lt 1) {
+    if ($field -in @("required_agents","agents_executed","output_artifacts","artifact_hashes","agent_statuses") -and $items.Count -lt 1) {
       throw "Agent compliance field '$field' must not be empty: $path"
     }
   }
@@ -747,6 +895,55 @@ function Validate-AgentCompliance {
       throw "Agent compliance missing executed agent '$agent' for phase '$Phase'."
     }
   }
+
+  $registry = Get-AgentRegistry -Root $Root
+  $statusContract = Get-AgentStatusContract -Root $Root
+  $phaseContract = Get-PhaseContract -Root $Root -Phase $Phase
+  foreach ($agent in @($phaseContract.required_agents)) {
+    if (@($obj.required_agents) -notcontains $agent) {
+      throw "Agent compliance required_agents omits phase-contract required agent '$agent' for phase '$Phase'."
+    }
+  }
+  foreach ($ref in @($phaseContract.required_references)) {
+    if (@($obj.required_references) -notcontains $ref) {
+      throw "Agent compliance required_references omits phase-contract reference '$ref' for phase '$Phase'."
+    }
+  }
+  foreach ($stateFile in @($phaseContract.required_state_files)) {
+    if (@($obj.loaded_state_files) -notcontains $stateFile) {
+      throw "Agent compliance loaded_state_files omits phase-contract state '$stateFile' for phase '$Phase'."
+    }
+  }
+
+  $validStatuses = @($statusContract.valid_status_values | ForEach-Object { [string]$_ })
+  $statusByAgent = @{}
+  foreach ($record in @($obj.agent_statuses)) {
+    foreach ($field in @("agent","status")) {
+      if (-not ($record.PSObject.Properties.Name -contains $field) -or -not ([string]$record.$field).Trim()) {
+        throw "Agent compliance agent_statuses entry missing '$field': $path"
+      }
+    }
+    $agentName = [string]$record.agent
+    $agentStatus = [string]$record.status
+    if ($statusByAgent.ContainsKey($agentName)) {
+      throw "Agent compliance duplicate agent_statuses entry for '$agentName': $path"
+    }
+    if ($validStatuses -notcontains $agentStatus) {
+      throw "Agent compliance invalid status '$agentStatus' for agent '$agentName'."
+    }
+    if ($null -eq (Get-AgentByName -Registry $registry -Name $agentName)) {
+      throw "Agent compliance references unknown agent '$agentName'."
+    }
+    $statusByAgent[$agentName] = $agentStatus
+  }
+  foreach ($agent in @($obj.required_agents)) {
+    if (-not $statusByAgent.ContainsKey([string]$agent)) {
+      throw "Agent compliance missing agent_statuses entry for required agent '$agent'."
+    }
+    if ($statusByAgent[[string]$agent] -ne "completed") {
+      throw "Agent '$agent' did not complete successfully in phase '$Phase': status=$($statusByAgent[[string]$agent])"
+    }
+  }
   if (@($obj.missing_items).Count -gt 0) {
     throw "Agent compliance has missing_items for phase '$Phase': $($obj.missing_items -join ', ')"
   }
@@ -762,6 +959,12 @@ function Validate-AgentCompliance {
   foreach ($rel in $outputArtifacts) {
     if ($rel -match "[\*\?]") {
       throw "Agent compliance output_artifacts must list concrete files, not wildcard path '$rel'."
+    }
+    if (Test-AnyContractPattern -Value $rel -Patterns @($phaseContract.denied_output_patterns)) {
+      throw "Agent compliance output artifact '$rel' is denied by phase contract '$Phase'."
+    }
+    if (-not (Test-AnyContractPattern -Value $rel -Patterns @($phaseContract.allowed_output_patterns))) {
+      throw "Agent compliance output artifact '$rel' is outside allowed phase contract outputs for '$Phase'."
     }
     Ensure-File (Join-Path $Root $rel)
   }
@@ -1187,6 +1390,27 @@ function Validate-LongformState {
     if (-not ($summaries.PSObject.Properties.Name -contains "chapters") -or @($summaries.chapters).Count -lt 1) {
       throw "chapter-summaries.json must include at least one generated chapter summary after create."
     }
+  }
+}
+
+function Validate-StateReducers {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+  if ($Phase -notin @("design-big","design-small","create","polish","rewrite","export")) {
+    return
+  }
+  $scriptPath = Join-Path $Root "scripts/ci/validate_state_reducers.ps1"
+  Ensure-File $scriptPath
+  & powershell -ExecutionPolicy Bypass -File $scriptPath -ProjectRoot $Root -Phase $Phase
+  if ($LASTEXITCODE -ne 0) {
+    throw "State reducer validation failed (exit=$LASTEXITCODE)."
   }
 }
 
@@ -1648,6 +1872,7 @@ $runId = "RUN-" + (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + (Get-Random -Mini
 $runsRoot = Join-Path $runtimeDir "runs"
 $summaryPath = Join-Path $runtimeDir ("runs/" + $runId + "/run-summary.json")
 $evidenceDirPath = Join-Path $runtimeDir ("runs/" + $runId + "/evidence")
+$runJournalPath = Join-Path $runtimeDir ("runs/" + $runId + "/run-journal.jsonl")
 $currentRunPointerPath = Join-Path $runtimeDir "current-run.json"
 $summary = [ordered]@{
   run_id = $runId
@@ -1655,6 +1880,7 @@ $summary = [ordered]@{
   status = "in_progress"
   project_root = $ProjectRoot
   mode = $effectiveMode
+  run_journal_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $runJournalPath
   steps = @()
 }
 
@@ -1671,6 +1897,7 @@ Write-Host "[runner] enable_negative_enforcement: $enableNegativeEnforcement"
 Write-Host "[runner] enable_text_quality_gates: $enableTextQualityGates"
 Write-Host "[runner] require_executed_claims_for_critical_phases: $requireExecutedClaimsForCriticalPhases"
 
+Validate-AgentGovernanceCatalog -Root $ProjectRoot
 Save-RunSummary -Path $summaryPath -Summary $summary
 Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
   run_id = $runId
@@ -1679,6 +1906,7 @@ Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
   project_root = $ProjectRoot
   summary_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $summaryPath
   evidence_dir = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $evidenceDirPath
+  run_journal_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $runJournalPath
   last_step_id = $null
   last_evidence_path = $null
   message = "Run started."
@@ -1706,6 +1934,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
   try {
     Write-Host ""
     Write-Host "=== PHASE: $phase ==="
+    Write-RunJournalEvent -Path $runJournalPath -RunId $runId -Phase $phase -StepId $stepId -EventType "phase.started" -Metadata ([ordered]@{ mode = $effectiveMode })
 
     $phaseClaimMode = "simulated"
     if ($configuredClaimMode) {
@@ -1765,6 +1994,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     Validate-PhaseContracts -Root $ProjectRoot -Phase $phase -Artifacts $artifacts -Enabled $enforcePhaseContracts
     Validate-AgentCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts -Artifacts $artifacts
     Validate-LongformState -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
+    Validate-StateReducers -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-PublicationCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Assert-NoForbiddenPatterns -Root $ProjectRoot -Phase $phase -Patterns $negativePatterns -Enabled $enableNegativeEnforcement
     Validate-EpisodeTextQuality -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $enableTextQualityGates
@@ -1791,6 +2021,10 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     if ($requirePhaseEvidence) {
       Validate-PhaseEvidenceFile -Path $evidencePath -Root $ProjectRoot
     }
+    Write-RunJournalEvent -Path $runJournalPath -RunId $runId -Phase $phase -StepId $stepId -EventType "phase.completed" -Metadata ([ordered]@{
+      execution_claim_mode = $phaseClaimMode
+      output_artifacts = $artifacts
+    })
 
     $step.evidence_path = $evidencePath
     $step.execution_claim_mode = $phaseClaimMode
@@ -1821,6 +2055,10 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     if ($requirePhaseEvidence) {
       Validate-PhaseEvidenceFile -Path $failedEvidencePath -Root $ProjectRoot
     }
+    Write-RunJournalEvent -Path $runJournalPath -RunId $runId -Phase $phase -StepId $stepId -EventType "phase.failed" -Metadata ([ordered]@{
+      message = $_.Exception.Message
+      executed_command = $step.command
+    })
     $step.evidence_path = $failedEvidencePath
     $step.execution_claim_mode = "simulated"
     $step.status = "failed"
@@ -1837,6 +2075,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       project_root = $ProjectRoot
       summary_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $summaryPath
       evidence_dir = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $evidenceDirPath
+      run_journal_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $runJournalPath
       last_step_id = $stepId
       last_evidence_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $failedEvidencePath
       message = $step.message
@@ -1860,6 +2099,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     project_root = $ProjectRoot
     summary_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $summaryPath
     evidence_dir = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $evidenceDirPath
+    run_journal_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $runJournalPath
     last_step_id = $stepId
     last_evidence_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $step.evidence_path
     message = "Phase completed."
@@ -1872,6 +2112,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
 
 $summary.status = "completed"
 $summary.finished_at = (Get-Date).ToString("o")
+Write-RunJournalEvent -Path $runJournalPath -RunId $runId -Phase "run" -StepId "run" -EventType "run.completed" -Metadata ([ordered]@{ steps = @($summary.steps).Count })
 Save-RunSummary -Path $summaryPath -Summary $summary
 Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
   run_id = $runId
@@ -1880,6 +2121,7 @@ Save-CurrentRunPointer -Path $currentRunPointerPath -Pointer ([ordered]@{
   project_root = $ProjectRoot
   summary_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $summaryPath
   evidence_dir = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $evidenceDirPath
+  run_journal_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $runJournalPath
   last_step_id = $summary.steps[-1].step_id
   last_evidence_path = Get-RelativePathSafe -BasePath $ProjectRoot -TargetPath $summary.steps[-1].evidence_path
   message = "Run completed."

@@ -30,12 +30,19 @@ $pointer = Read-Utf8 -Path $pointerPath | ConvertFrom-Json
 
 Ensure-True -Condition ($pointer.PSObject.Properties.Name -contains "run_id") -Message "current-run.json missing run_id"
 Ensure-True -Condition ($pointer.PSObject.Properties.Name -contains "summary_path") -Message "current-run.json missing summary_path"
+Ensure-True -Condition ($pointer.PSObject.Properties.Name -contains "run_journal_path") -Message "current-run.json missing run_journal_path"
 
 $summaryPath = Join-Path $ProjectRoot $pointer.summary_path
 Ensure-File $summaryPath
 $summary = Read-Utf8 -Path $summaryPath | ConvertFrom-Json
+$journalPath = Join-Path $ProjectRoot $pointer.run_journal_path
+Ensure-File $journalPath
+$journalRaw = Read-Utf8 -Path $journalPath
+Ensure-True -Condition ($journalRaw -match '"event_type":"phase\.started"') -Message "run journal missing phase.started event"
+Ensure-True -Condition ($journalRaw -match '"event_type":"phase\.completed"') -Message "run journal missing phase.completed event"
 
 Ensure-True -Condition ($summary.status -eq "completed") -Message "Run is not completed. status=$($summary.status)"
+Ensure-True -Condition ($summary.PSObject.Properties.Name -contains "run_journal_path") -Message "run-summary missing run_journal_path"
 Ensure-True -Condition ($summary.PSObject.Properties.Name -contains "steps") -Message "run-summary missing steps"
 Ensure-True -Condition ($summary.steps.Count -gt 0) -Message "run-summary has no steps"
 

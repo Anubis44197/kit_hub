@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "phase": "design-big",
+  "required_agents": ["concept-builder", "character-architect", "plot-hook-engineer", "book-structure-optimizer"],
+  "required_references": ["skills/design-big/SKILL.md", "skills/polish/references/llm-agent-compliance-policy.md"],
+  "required_state_files": ["runtime/book-request.md", "runtime/approvals/story-choice.json"],
+  "required_approvals": ["runtime/approvals/story-choice.json"],
+  "allowed_write_roots": ["novel-config.md", "design", "revision/_state", "runtime/agent-compliance"],
+  "allowed_output_patterns": ["novel-config.md", "design/*.md", "revision/_state/*.json"],
+  "denied_output_patterns": ["episode/*", "revision/export/*"],
+  "status_contract": "runtime/agent-status-contract.json"
+}

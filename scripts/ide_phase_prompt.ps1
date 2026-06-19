@@ -17,9 +17,10 @@ function Show-CommonHeader {
   Write-Host "- Story/book content must be Turkish."
   Write-Host "- Preserve valid UTF-8 Turkish characters."
   Write-Host "- Do not invent ISBN, publisher, barcode, copyright owner, or official approval."
+  Write-Host "- Follow runtime/agent-registry.json and runtime/phase-contracts/$PhaseName.json; do not add agents or outputs outside the contract."
   Write-Host "- Write the required files; the runner will validate artifacts after you finish."
   Write-Host "- Do not use unresolved placeholder text such as plan_required, to_be_confirmed, TBD, TODO, or fill in later."
-  Write-Host "- Write runtime/agent-compliance/$PhaseName.json last with full schema fields, artifact hashes, and contract_status PASS; use scripts/ci/write_agent_compliance.ps1 instead of hand-writing it."
+  Write-Host "- Write runtime/agent-compliance/$PhaseName.json last with full schema fields, artifact hashes, agent_statuses, and contract_status PASS; use scripts/ci/write_agent_compliance.ps1 instead of hand-writing it."
   Write-Host "- Compliance output_artifacts must list concrete files only; wildcards such as episode/ep*.md are rejected."
   Write-Host ""
 }

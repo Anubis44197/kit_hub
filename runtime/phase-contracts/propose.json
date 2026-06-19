@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "phase": "propose",
+  "required_agents": ["proposal-generator"],
+  "required_references": ["skills/propose/SKILL.md"],
+  "required_state_files": ["runtime/book-request.md"],
+  "required_approvals": [],
+  "allowed_write_roots": ["_workspace", "runtime/approvals", "runtime/agent-compliance"],
+  "allowed_output_patterns": ["_workspace/01_proposals*.md", "*_proposal.md", "runtime/approvals/story-choice.json"],
+  "denied_output_patterns": ["episode/*", "revision/export/*", "design/*"],
+  "status_contract": "runtime/agent-status-contract.json"
+}

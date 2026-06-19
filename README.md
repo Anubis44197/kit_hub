@@ -138,10 +138,16 @@ You do not need to give this repository an API key. If your IDE already has an a
 
 Manual IDE mode keeps `execution_claim_mode=simulated` because the runner cannot prove what the external IDE did, but artifact gates, text quality gates, TDK/layout gates, longform state checks, and publication-compliance checks still run.
 
+Agent orchestration is contract-bound:
+- `runtime/agent-registry.json` lists every allowed agent, phase, reference, and write boundary.
+- `runtime/agent-status-contract.json` defines allowed agent statuses.
+- `runtime/phase-contracts/*.json` defines mandatory agents, state files, approvals, allowed outputs, and denied outputs.
+- `runtime/runs/{run_id}/run-journal.jsonl` records phase audit events.
+
 Each phase must also write an agent compliance manifest:
 - `runtime/agent-compliance/{phase}.json`
 
-The runner fails the phase if a required agent is missing from that manifest, if `contract_status` is not `PASS`, or if `missing_items` is not empty.
+The runner fails the phase if a required agent is missing from that manifest, if a required `agent_statuses` entry is not `completed`, if `contract_status` is not `PASS`, or if `missing_items` is not empty.
 
 Detailed guide:
 - `docs/IDE_AGENT_WORKFLOW.md`
@@ -236,7 +242,7 @@ Detailed guide:
   - DOCX content must match current manuscript source files
 - Runner enforces agent compliance manifests:
   - `runtime/agent-compliance/{phase}.json`
-  - required agents must be listed and marked executed
+  - required agents must be listed, marked executed, and have `agent_statuses.status=completed`
   - missing items fail the phase
 - Runner enforces hard text quality gates (default):
   - min/max character limits

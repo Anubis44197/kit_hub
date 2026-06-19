@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": 1,
+  "description": "Canonical agent execution status contract. Runner, compliance manifests, and IDE/CLI agents must use these values only.",
+  "valid_status_values": [
+    "completed",
+    "failed",
+    "blocked",
+    "timed_out",
+    "invalid_output"
+  ],
+  "terminal_status_values": [
+    "completed",
+    "failed",
+    "blocked",
+    "timed_out",
+    "invalid_output"
+  ],
+  "pass_status": "completed",
+  "failure_status_values": [
+    "failed",
+    "blocked",
+    "timed_out",
+    "invalid_output"
+  ],
+  "rules": [
+    "Every required agent in a phase must have exactly one agent_statuses entry.",
+    "A phase can pass only when every required agent status is completed.",
+    "Agents may not invent new status values.",
+    "A status is evidence metadata, not proof of authorship; artifacts, hashes, and phase contracts remain mandatory."
+  ]
+}

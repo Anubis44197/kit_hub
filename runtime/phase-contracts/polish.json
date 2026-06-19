@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "phase": "polish",
+  "required_agents": ["developmental-editor", "continuity-editor", "line-editor", "copy-editor", "tdk-polisher", "revision-reviewer"],
+  "required_references": ["skills/polish/SKILL.md", "skills/polish/references/editorial-quality-scorecard.md", "skills/polish/references/tdk-official-writing-rules.md"],
+  "required_state_files": ["revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json"],
+  "required_approvals": [],
+  "allowed_write_roots": ["episode", "revision/_workspace", "revision/_state", "runtime/agent-compliance"],
+  "allowed_output_patterns": ["episode/ep*.md", "revision/_workspace/*.md", "revision/_workspace/*.json", "revision/_state/*.json"],
+  "denied_output_patterns": ["revision/export/*", "*.docx", "*.zip"],
+  "status_contract": "runtime/agent-status-contract.json"
+}

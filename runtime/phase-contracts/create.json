@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "phase": "create",
+  "required_agents": ["episode-architect", "continuity-bridge", "episode-creator", "quality-verifier", "tdk-polisher", "tdk-layout-agent"],
+  "required_references": ["skills/create/SKILL.md", "skills/create/references/creation-principles.md", "skills/polish/references/tdk-official-writing-rules.md"],
+  "required_state_files": ["revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/continuity-ledger.json", "revision/_state/style-profile.json", "runtime/approvals/design-freeze.json"],
+  "required_approvals": ["runtime/approvals/design-freeze.json"],
+  "allowed_write_roots": ["episode", "revision/_workspace", "revision/_state", "runtime/agent-compliance"],
+  "allowed_output_patterns": ["episode/ep*.md", "revision/_workspace/*.md", "revision/_workspace/*.json", "revision/_state/*.json"],
+  "denied_output_patterns": ["revision/export/*", "*.docx", "*.zip"],
+  "status_contract": "runtime/agent-status-contract.json"
+}

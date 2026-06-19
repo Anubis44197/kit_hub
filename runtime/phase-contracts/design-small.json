@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "phase": "design-small",
+  "required_agents": ["episode-architect", "continuity-bridge"],
+  "required_references": ["skills/design-small/SKILL.md", "skills/polish/references/handoff-contract.md"],
+  "required_state_files": ["revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/continuity-ledger.json", "runtime/approvals/book-plan-approval.json"],
+  "required_approvals": ["runtime/approvals/book-plan-approval.json"],
+  "allowed_write_roots": ["design", "revision/_state", "runtime/agent-compliance"],
+  "allowed_output_patterns": ["design/*scene_plan*.md", "design/*_character-detail_*.md", "design/*_plot-detail_*.md", "revision/_state/*.json"],
+  "denied_output_patterns": ["episode/*", "revision/export/*"],
+  "status_contract": "runtime/agent-status-contract.json"
+}

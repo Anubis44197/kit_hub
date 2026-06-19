@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "phase": "rewrite",
+  "required_agents": ["revision-analyst", "revision-executor", "episode-rewriter", "quality-verifier", "tdk-polisher"],
+  "required_references": ["skills/rewrite/SKILL.md", "skills/rewrite/references/rewrite-quality-criteria.md", "skills/rewrite/references/rewrite-report-unified-schema.md"],
+  "required_state_files": ["revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "runtime/approvals/rewrite-approval.json"],
+  "required_approvals": ["runtime/approvals/rewrite-approval.json"],
+  "allowed_write_roots": ["episode", "revision/_workspace", "revision/_state", "runtime/agent-compliance"],
+  "allowed_output_patterns": ["episode/ep*.md", "revision/_workspace/*.md", "revision/_workspace/*.json", "revision/_state/*.json"],
+  "denied_output_patterns": ["revision/export/*", "*.docx", "*.zip"],
+  "status_contract": "runtime/agent-status-contract.json"
+}

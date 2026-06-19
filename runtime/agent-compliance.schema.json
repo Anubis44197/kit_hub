@@ -12,6 +12,7 @@
     "loaded_state_files",
     "output_artifacts",
     "artifact_hashes",
+    "agent_statuses",
     "phase_authority",
     "completed_at",
     "contract_status",
@@ -61,6 +62,23 @@
         "properties": {
           "path": { "type": "string", "minLength": 1 },
           "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "agent_statuses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["agent", "status"],
+        "properties": {
+          "agent": { "type": "string", "minLength": 1 },
+          "status": {
+            "type": "string",
+            "enum": ["completed", "failed", "blocked", "timed_out", "invalid_output"]
+          },
+          "notes": { "type": "string" }
         }
       }
     },

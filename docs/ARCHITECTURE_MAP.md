@@ -22,6 +22,16 @@
 - run metadata (`run_id`, `step_id`)
 - mandatory artifact gates
 - issue enum contracts (TDK/layout)
+- agent registry (`runtime/agent-registry.json`)
+- agent status contract (`runtime/agent-status-contract.json`)
+- phase contracts (`runtime/phase-contracts/*.json`)
+- run journal (`runtime/runs/{run_id}/run-journal.jsonl`)
+
+## Agent Governance Layer
+- Agents are registered centrally and are allowed only in declared phases.
+- Phase contracts declare mandatory agents, references, input state, approvals, allowed outputs, and denied outputs.
+- Compliance manifests must include `agent_statuses`; every required agent must be `completed`.
+- The runner writes append-only JSONL events so claims can be audited after execution.
 
 ## Complete Book Package Layer
 - `front-matter-editor`: title page, copyright placeholders, preface, and TOC plan

@@ -165,6 +165,13 @@ function Write-AgentCompliance {
   if ($OutputArtifacts.Count -gt 0 -and $artifactHashes.Count -lt 1) {
     throw "Agent compliance cannot be written without at least one concrete artifact hash for phase '$PhaseName'."
   }
+  $agentStatuses = @()
+  foreach ($agent in $RequiredAgents) {
+    $agentStatuses += [ordered]@{
+      agent = $agent
+      status = $(if ($Status -eq "PASS") { "completed" } else { "blocked" })
+    }
+  }
   Write-Json -Path (Join-Path $dir "$PhaseName.json") -Value ([ordered]@{
     run_id = $RunId
     phase = $PhaseName
@@ -174,6 +181,7 @@ function Write-AgentCompliance {
     loaded_state_files = $LoadedStateFiles
     output_artifacts = $OutputArtifacts
     artifact_hashes = $artifactHashes
+    agent_statuses = $agentStatuses
     phase_authority = "local_adapter_scaffold"
     completed_at = (Get-Date).ToString("o")
     generation_boundary = "local adapter validates contracts and packages existing artifacts; it does not write the book"
