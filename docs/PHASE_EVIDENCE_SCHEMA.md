@@ -15,6 +15,7 @@ Each phase must emit one JSON evidence file under:
 - `status` (`completed` | `failed`)
 - `output_artifacts` (array of relative paths)
 - `artifact_hashes` (array of `{ path, sha256 }` records; empty only when `status=failed`)
+- `contract_hashes` (array of `{ path, sha256 }` records for the current agent registry, status contract, and phase contract)
 - `notes` (array of strings)
 
 ## Optional Fields
@@ -27,7 +28,8 @@ Each phase must emit one JSON evidence file under:
 2. `artifact_gate_passed=true` requires at least one `output_artifacts` entry and matching `artifact_hashes`.
 3. `status=completed` requires `artifact_gate_passed=true`.
 4. Every completed evidence hash must match the current file bytes at validation time.
-5. If `status=failed`, `notes` must include failure reason.
+5. Every completed evidence file must include current `contract_hashes`; stale phase evidence fails after any governance contract change.
+6. If `status=failed`, `notes` must include failure reason.
 
 ## Example
 ```json
@@ -53,6 +55,20 @@ Each phase must emit one JSON evidence file under:
     },
     {
       "path": "revision/_workspace/04_quality-verifier_verdict_EP001.md",
+      "sha256": "lowercase-64-character-sha256"
+    }
+  ],
+  "contract_hashes": [
+    {
+      "path": "runtime/agent-registry.json",
+      "sha256": "lowercase-64-character-sha256"
+    },
+    {
+      "path": "runtime/agent-status-contract.json",
+      "sha256": "lowercase-64-character-sha256"
+    },
+    {
+      "path": "runtime/phase-contracts/create.json",
       "sha256": "lowercase-64-character-sha256"
     }
   ],

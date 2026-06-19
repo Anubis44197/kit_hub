@@ -61,6 +61,26 @@ function Get-FileSha256 {
   }
 }
 
+function Get-ContractHashRecords {
+  param([string]$PhaseName)
+
+  $contractFiles = @(
+    "runtime/agent-registry.json",
+    "runtime/agent-status-contract.json",
+    ("runtime/phase-contracts/{0}.json" -f $PhaseName)
+  )
+  $records = @()
+  foreach ($rel in $contractFiles) {
+    $path = Join-Path $ProjectRoot $rel
+    Ensure-File -Path $path -Message "Missing governance contract: $rel"
+    $records += [ordered]@{
+      path = $rel
+      sha256 = Get-FileSha256 -Path $path
+    }
+  }
+  return $records
+}
+
 function Read-Json {
   param([string]$Path)
   return (Read-Utf8 -Path $Path) | ConvertFrom-Json
@@ -181,6 +201,7 @@ function Write-AgentCompliance {
     loaded_state_files = $LoadedStateFiles
     output_artifacts = $OutputArtifacts
     artifact_hashes = $artifactHashes
+    contract_hashes = @(Get-ContractHashRecords -PhaseName $PhaseName)
     agent_statuses = $agentStatuses
     phase_authority = "local_adapter_scaffold"
     completed_at = (Get-Date).ToString("o")

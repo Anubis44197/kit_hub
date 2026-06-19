@@ -148,6 +148,7 @@ Each phase must also write an agent compliance manifest:
 - `runtime/agent-compliance/{phase}.json`
 
 The runner fails the phase if a required agent is missing from that manifest, if a required `agent_statuses` entry is not `completed`, if `contract_status` is not `PASS`, or if `missing_items` is not empty.
+The manifest and phase evidence also carry `contract_hashes`; stale compliance files fail after any agent registry, status contract, or phase contract change.
 
 Detailed guide:
 - `docs/IDE_AGENT_WORKFLOW.md`
@@ -243,7 +244,11 @@ Detailed guide:
 - Runner enforces agent compliance manifests:
   - `runtime/agent-compliance/{phase}.json`
   - required agents must be listed, marked executed, and have `agent_statuses.status=completed`
+  - `artifact_hashes` and `contract_hashes` must match current files
   - missing items fail the phase
+- Runner enforces command and evidence guardrails:
+  - configured phase commands are scanned for destructive commands, nested expression execution, remote-download-to-shell patterns, and project-external absolute paths
+  - oversized text/JSON/Markdown evidence artifacts are blocked so agents cannot hide unreviewable bulk output in logs
 - Runner enforces hard text quality gates (default):
   - min/max character limits
   - mojibake detection

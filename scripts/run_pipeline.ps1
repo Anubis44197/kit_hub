@@ -155,6 +155,150 @@ function Get-ArtifactHashRecords {
   return $records
 }
 
+function Get-ContractHashRecords {
+  param([string]$Root, [string]$Phase)
+
+  $contractFiles = @(
+    "runtime/agent-registry.json",
+    "runtime/agent-status-contract.json",
+    ("runtime/phase-contracts/{0}.json" -f $Phase)
+  )
+  $records = @()
+  foreach ($rel in $contractFiles) {
+    $path = Join-Path $Root $rel
+    Ensure-File $path
+    $records += [ordered]@{
+      path = $rel
+      sha256 = Get-FileSha256 -Path $path
+    }
+  }
+  return $records
+}
+
+function Validate-ContractHashRecords {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [object[]]$Records,
+    [string]$SourcePath
+  )
+
+  $expected = @(Get-ContractHashRecords -Root $Root -Phase $Phase)
+  $expectedByPath = @{}
+  foreach ($record in $expected) {
+    $expectedByPath[[string]$record.path] = [string]$record.sha256
+  }
+
+  $seen = @{}
+  foreach ($record in @($Records)) {
+    foreach ($field in @("path","sha256")) {
+      if (-not ($record.PSObject.Properties.Name -contains $field) -or -not ([string]$record.$field).Trim()) {
+        throw "Contract hash entry missing '$field': $SourcePath"
+      }
+    }
+    $rel = ConvertTo-RelativeContractPath -Path ([string]$record.path)
+    $sha = [string]$record.sha256
+    if ($sha -notmatch "^[a-f0-9]{64}$") {
+      throw "Contract hash is not lowercase SHA-256 for '$rel': $SourcePath"
+    }
+    if (-not $expectedByPath.ContainsKey($rel)) {
+      throw "Unexpected contract hash path '$rel': $SourcePath"
+    }
+    if ($seen.ContainsKey($rel)) {
+      throw "Duplicate contract hash path '$rel': $SourcePath"
+    }
+    if ($expectedByPath[$rel] -ne $sha) {
+      throw "Contract hash mismatch for '$rel'. Expected $($expectedByPath[$rel]), found $sha. Regenerate phase artifacts against the current contracts."
+    }
+    $seen[$rel] = $true
+  }
+
+  foreach ($rel in $expectedByPath.Keys) {
+    if (-not $seen.ContainsKey($rel)) {
+      throw "Missing contract hash for '$rel': $SourcePath"
+    }
+  }
+}
+
+function Validate-CommandSafety {
+  param(
+    [string]$Command,
+    [string]$Root,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+  if (-not ([string]$Command).Trim()) {
+    throw "Command safety gate received an empty command."
+  }
+
+  $blockedPatterns = @(
+    @{ pattern = "(?i)\bInvoke-Expression\b|\biex\b"; reason = "nested Invoke-Expression is not allowed in configured phase commands" },
+    @{ pattern = "(?i)\bRemove-Item\b[^\r\n]*(?:-Recurse|-Force)|\brm\s+-rf\b|\bdel\s+/[fsq]\b"; reason = "destructive delete commands are not allowed in phase commands" },
+    @{ pattern = "(?i)\bgit\s+reset\s+--hard\b|\bgit\s+clean\b[^\r\n]*\s-[^\r\n]*f"; reason = "destructive git commands are not allowed in phase commands" },
+    @{ pattern = "(?i)(?:curl|wget|Invoke-WebRequest|iwr)[^\r\n]*(?:\||;|&&)[^\r\n]*(?:sh|bash|powershell|pwsh|cmd|iex|Invoke-Expression)"; reason = "remote download piped into execution is not allowed" },
+    @{ pattern = "(?i)\bSet-ExecutionPolicy\b|\bStart-Process\b|\bFormat-Volume\b|\bClear-Disk\b"; reason = "system-changing commands are not allowed in phase commands" },
+    @{ pattern = "(?i)file://"; reason = "file:// source indirection is not allowed in phase commands" }
+  )
+  foreach ($rule in $blockedPatterns) {
+    if ($Command -match $rule.pattern) {
+      throw "Command safety gate blocked command: $($rule.reason). Command: $Command"
+    }
+  }
+
+  $rootFull = [System.IO.Path]::GetFullPath($Root).TrimEnd("\")
+  $absolutePathMatches = [regex]::Matches($Command, "(?i)([A-Z]:\\[^`"'\s]+)")
+  foreach ($match in $absolutePathMatches) {
+    $candidate = [string]$match.Groups[1].Value
+    try {
+      $full = [System.IO.Path]::GetFullPath($candidate).TrimEnd("\")
+      if (-not $full.StartsWith($rootFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Configured phase commands may not reference absolute paths outside the project root: $candidate"
+      }
+    }
+    catch {
+      throw $_
+    }
+  }
+}
+
+function Validate-ArtifactSizeBudget {
+  param(
+    [string]$Root,
+    [string[]]$Artifacts,
+    [int]$MaxBytes,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+  if ($MaxBytes -lt 1) {
+    throw "Artifact size budget must be greater than zero."
+  }
+  foreach ($rel in @($Artifacts)) {
+    if ($rel -match "[\*\?]") {
+      continue
+    }
+    $normalizedRel = ConvertTo-RelativeContractPath -Path $rel
+    if ($normalizedRel -like "episode/*") {
+      continue
+    }
+    $path = Join-Path $Root $rel
+    Ensure-File $path
+    $ext = [System.IO.Path]::GetExtension($path).ToLowerInvariant()
+    if ($ext -notin @(".md",".json",".txt",".yaml",".yml",".csv")) {
+      continue
+    }
+    $size = (Get-Item -LiteralPath $path).Length
+    if ($size -gt $MaxBytes) {
+      throw "Artifact size budget exceeded for '$rel' ($size bytes > $MaxBytes). Split the artifact or move bulky evidence to a bounded summary."
+    }
+  }
+}
+
 function Ensure-Any {
   param([string[]]$Patterns, [string]$BasePath)
   foreach ($pattern in $Patterns) {
@@ -550,7 +694,7 @@ function Validate-PhaseEvidenceFile {
 
   $required = @(
     "run_id","step_id","phase","execution_claim_mode","artifact_gate_passed",
-    "dictionary_check_enabled","started_at","finished_at","status","output_artifacts","artifact_hashes","notes"
+    "dictionary_check_enabled","started_at","finished_at","status","output_artifacts","artifact_hashes","contract_hashes","notes"
   )
   foreach ($k in $required) {
     if (-not ($obj.PSObject.Properties.Name -contains $k)) {
@@ -569,6 +713,12 @@ function Validate-PhaseEvidenceFile {
   }
   if ($obj.status -eq "completed" -and $obj.artifact_hashes.Count -lt 1) {
     throw "Completed phase evidence must include artifact_hashes: $Path"
+  }
+  if ($obj.status -eq "completed" -and $obj.contract_hashes.Count -lt 1) {
+    throw "Completed phase evidence must include contract_hashes: $Path"
+  }
+  if ($obj.status -eq "completed") {
+    Validate-ContractHashRecords -Root $Root -Phase ([string]$obj.phase) -Records @($obj.contract_hashes) -SourcePath $Path
   }
   if ($obj.status -eq "completed") {
     $artifactPaths = @($obj.output_artifacts | ForEach-Object { [string]$_ })
@@ -603,7 +753,8 @@ function Invoke-DictionaryCheck {
     [string]$Root,
     [string]$RunId,
     [object]$Config,
-    [bool]$Enabled
+    [bool]$Enabled,
+    [bool]$CommandSafetyEnabled
   )
 
   if (-not $Enabled) {
@@ -649,6 +800,7 @@ function Invoke-DictionaryCheck {
   }
 
   Write-Host "[runner] dictionary-check: $cmd"
+  Validate-CommandSafety -Command $cmd -Root $Root -Enabled $CommandSafetyEnabled
   Invoke-Expression $cmd
   if ($LASTEXITCODE -ne 0) {
     throw "Dictionary check failed (exit=$LASTEXITCODE): $cmd"
@@ -826,7 +978,7 @@ function Validate-AgentCompliance {
   $schemaPath = Join-Path $Root "runtime/agent-compliance.schema.json"
   Ensure-File $schemaPath
   $schemaRaw = Read-Utf8 -Path $schemaPath
-  foreach ($schemaToken in @("artifact_hashes","agent_statuses","phase_authority","completed_at","additionalProperties")) {
+  foreach ($schemaToken in @("artifact_hashes","contract_hashes","agent_statuses","phase_authority","completed_at","additionalProperties")) {
     if ($schemaRaw -notmatch [regex]::Escape($schemaToken)) {
       throw "Agent compliance schema missing required token '$schemaToken': $schemaPath"
     }
@@ -836,7 +988,7 @@ function Validate-AgentCompliance {
   Ensure-File $path
   $obj = Read-Utf8 -Path $Path | ConvertFrom-Json
 
-  $requiredFields = @("run_id","phase","required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","agent_statuses","phase_authority","completed_at","contract_status","missing_items")
+  $requiredFields = @("run_id","phase","required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","contract_hashes","agent_statuses","phase_authority","completed_at","contract_status","missing_items")
   $allowedFields = $requiredFields + @("generation_boundary","creative_authority","research_boundary")
   foreach ($prop in $obj.PSObject.Properties.Name) {
     if ($allowedFields -notcontains $prop) {
@@ -853,12 +1005,12 @@ function Validate-AgentCompliance {
       throw "Agent compliance field '$field' must be a non-empty string: $path"
     }
   }
-  foreach ($field in @("required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","agent_statuses","missing_items")) {
+  foreach ($field in @("required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","contract_hashes","agent_statuses","missing_items")) {
     $items = @($obj.$field)
     if ($null -eq $obj.$field) {
       throw "Agent compliance field '$field' must be an array: $path"
     }
-    if ($field -in @("required_agents","agents_executed","output_artifacts","artifact_hashes","agent_statuses") -and $items.Count -lt 1) {
+    if ($field -in @("required_agents","agents_executed","output_artifacts","artifact_hashes","contract_hashes","agent_statuses") -and $items.Count -lt 1) {
       throw "Agent compliance field '$field' must not be empty: $path"
     }
   }
@@ -899,6 +1051,7 @@ function Validate-AgentCompliance {
   $registry = Get-AgentRegistry -Root $Root
   $statusContract = Get-AgentStatusContract -Root $Root
   $phaseContract = Get-PhaseContract -Root $Root -Phase $Phase
+  Validate-ContractHashRecords -Root $Root -Phase $Phase -Records @($obj.contract_hashes) -SourcePath $path
   foreach ($agent in @($phaseContract.required_agents)) {
     if (@($obj.required_agents) -notcontains $agent) {
       throw "Agent compliance required_agents omits phase-contract required agent '$agent' for phase '$Phase'."
@@ -1860,6 +2013,28 @@ if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Na
   }
 }
 
+$enableCommandSafety = $true
+if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "enable_command_safety")) {
+  if ($cfg.quality_flags.enable_command_safety -eq $false) {
+    $enableCommandSafety = $false
+  }
+}
+
+$enableArtifactSizeBudget = $true
+if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "enable_artifact_size_budget")) {
+  if ($cfg.quality_flags.enable_artifact_size_budget -eq $false) {
+    $enableArtifactSizeBudget = $false
+  }
+}
+
+$maxTextArtifactBytes = 1500000
+if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "max_text_artifact_bytes")) {
+  $parsedArtifactBudget = 0
+  if ([int]::TryParse([string]$cfg.quality_flags.max_text_artifact_bytes, [ref]$parsedArtifactBudget) -and $parsedArtifactBudget -ge 10000) {
+    $maxTextArtifactBytes = $parsedArtifactBudget
+  }
+}
+
 $negativePatterns = @("(?i)TL;DR","(?im)^\\s*Ozet\\s*:","(?im)^\\s*Summary\\s*:","\\[TODO\\]","(?i)lorem ipsum")
 if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "forbidden_content_patterns")) {
   $customPatterns = @($cfg.quality_flags.forbidden_content_patterns)
@@ -1896,6 +2071,9 @@ Write-Host "[runner] enforce_phase_contracts: $enforcePhaseContracts"
 Write-Host "[runner] enable_negative_enforcement: $enableNegativeEnforcement"
 Write-Host "[runner] enable_text_quality_gates: $enableTextQualityGates"
 Write-Host "[runner] require_executed_claims_for_critical_phases: $requireExecutedClaimsForCriticalPhases"
+Write-Host "[runner] enable_command_safety: $enableCommandSafety"
+Write-Host "[runner] enable_artifact_size_budget: $enableArtifactSizeBudget"
+Write-Host "[runner] max_text_artifact_bytes: $maxTextArtifactBytes"
 
 Validate-AgentGovernanceCatalog -Root $ProjectRoot
 Save-RunSummary -Path $summaryPath -Summary $summary
@@ -1930,11 +2108,16 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     execution_claim_mode = $null
     message = $null
   }
+  $contractHashes = @()
 
   try {
     Write-Host ""
     Write-Host "=== PHASE: $phase ==="
-    Write-RunJournalEvent -Path $runJournalPath -RunId $runId -Phase $phase -StepId $stepId -EventType "phase.started" -Metadata ([ordered]@{ mode = $effectiveMode })
+    $contractHashes = @(Get-ContractHashRecords -Root $ProjectRoot -Phase $phase)
+    Write-RunJournalEvent -Path $runJournalPath -RunId $runId -Phase $phase -StepId $stepId -EventType "phase.started" -Metadata ([ordered]@{
+      mode = $effectiveMode
+      contract_hashes = $contractHashes
+    })
 
     $phaseClaimMode = "simulated"
     if ($configuredClaimMode) {
@@ -1966,6 +2149,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
         throw "Missing command for phase '$phase'. Set phase_commands.$phase or adapter.command_template in runner-config.json"
       }
       $step.command = $cmd
+      Validate-CommandSafety -Command $cmd -Root $ProjectRoot -Enabled $enableCommandSafety
       Write-Host "[runner] executing: $cmd"
       Invoke-Expression $cmd
       if ($LASTEXITCODE -ne 0) {
@@ -1982,7 +2166,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
 
     Ensure-UserApproval -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $requireUserApprovals
     Validate-PhaseArtifacts -Phase $phase -Root $ProjectRoot
-    Invoke-DictionaryCheck -Phase $phase -Root $ProjectRoot -RunId $runId -Config $cfg -Enabled $dictionaryCheckEnabled
+    Invoke-DictionaryCheck -Phase $phase -Root $ProjectRoot -RunId $runId -Config $cfg -Enabled $dictionaryCheckEnabled -CommandSafetyEnabled $enableCommandSafety
 
     if ($requireExecutedClaimsForCriticalPhases -and $phase -in @("create","polish","rewrite","export") -and $phaseClaimMode -ne "executed") {
       throw "Phase '$phase' requires execution_claim_mode=executed. Configure command mode and real phase commands."
@@ -1990,6 +2174,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
 
     Validate-DocxContentMatch -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     $artifacts = Get-PhaseOutputArtifacts -Phase $phase -Root $ProjectRoot
+    Validate-ArtifactSizeBudget -Root $ProjectRoot -Artifacts $artifacts -MaxBytes $maxTextArtifactBytes -Enabled $enableArtifactSizeBudget
     $artifactHashes = @(Get-ArtifactHashRecords -Root $ProjectRoot -Artifacts $artifacts)
     Validate-PhaseContracts -Root $ProjectRoot -Phase $phase -Artifacts $artifacts -Enabled $enforcePhaseContracts
     Validate-AgentCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts -Artifacts $artifacts
@@ -2015,6 +2200,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       executed_command = $step.command
       output_artifacts = $artifacts
       artifact_hashes = $artifactHashes
+      contract_hashes = $contractHashes
       notes = @("artifact gate passed")
     }
     Save-PhaseEvidence -Path $evidencePath -Evidence $evidence
@@ -2024,6 +2210,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     Write-RunJournalEvent -Path $runJournalPath -RunId $runId -Phase $phase -StepId $stepId -EventType "phase.completed" -Metadata ([ordered]@{
       execution_claim_mode = $phaseClaimMode
       output_artifacts = $artifacts
+      contract_hashes = $contractHashes
     })
 
     $step.evidence_path = $evidencePath
@@ -2049,6 +2236,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       executed_command = $step.command
       output_artifacts = @()
       artifact_hashes = @()
+      contract_hashes = $contractHashes
       notes = @($_.Exception.Message)
     }
     Save-PhaseEvidence -Path $failedEvidencePath -Evidence $failedEvidence

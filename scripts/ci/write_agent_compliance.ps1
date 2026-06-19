@@ -63,6 +63,26 @@ function Get-FileSha256 {
   }
 }
 
+function Get-ContractHashRecords {
+  param([string]$Root, [string]$PhaseName)
+
+  $contractFiles = @(
+    "runtime/agent-registry.json",
+    "runtime/agent-status-contract.json",
+    ("runtime/phase-contracts/{0}.json" -f $PhaseName)
+  )
+  $records = @()
+  foreach ($rel in $contractFiles) {
+    $path = Join-Path $Root $rel
+    Ensure-File $path
+    $records += [ordered]@{
+      path = $rel
+      sha256 = Get-FileSha256 -Path $path
+    }
+  }
+  return $records
+}
+
 function Normalize-List {
   param([string[]]$Values)
   $out = @()
@@ -150,6 +170,7 @@ $payload = [ordered]@{
   loaded_state_files = $LoadedStateFiles
   output_artifacts = $OutputArtifacts
   artifact_hashes = $artifactHashes
+  contract_hashes = @(Get-ContractHashRecords -Root $ProjectRoot -PhaseName $Phase)
   agent_statuses = $agentStatusRecords
   phase_authority = $PhaseAuthority
   completed_at = (Get-Date).ToString("o")

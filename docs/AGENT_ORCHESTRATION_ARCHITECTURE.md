@@ -121,6 +121,14 @@ The manifest must include:
 
 The runner rejects `PASS` if any required agent status is not `completed`.
 
+Each manifest also carries `contract_hashes` for:
+
+- `runtime/agent-registry.json`
+- `runtime/agent-status-contract.json`
+- the active `runtime/phase-contracts/{phase}.json`
+
+If any governance contract changes, an old manifest cannot be replayed as a fresh success.
+
 ## DeerFlow Adaptation Boundary
 
 The project adapts DeerFlow's useful control ideas:
@@ -129,6 +137,8 @@ The project adapts DeerFlow's useful control ideas:
 - structured statuses;
 - fail-closed guardrails;
 - event journal;
+- contract/catalog hash stamping;
+- command and output-budget guardrails;
 - phase/tool permission boundaries.
 
 It does not copy DeerFlow as a full FastAPI/LangGraph/Next.js platform. `kit_hub` remains a focused book-production pipeline.

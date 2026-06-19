@@ -21,6 +21,7 @@ The runner validates:
 - output artifacts are listed as concrete files;
 - every output artifact exists and has a matching SHA-256 entry in `artifact_hashes`;
 - artifact hashes match the actual file bytes at validation time;
+- `contract_hashes` match the current agent registry, status contract, and phase contract;
 - every required agent has an `agent_statuses` entry;
 - every required agent status is `completed`;
 - required agents, references, and loaded state files satisfy `runtime/phase-contracts/{phase}.json`;
@@ -43,7 +44,7 @@ powershell -ExecutionPolicy Bypass -File scripts/ide_phase_prompt.ps1 -Phase cre
 
 The prompt tells the IDE agent which files and agents are mandatory.
 
-Use `scripts/ci/write_agent_compliance.ps1` to write the manifest. It computes artifact hashes and prevents wildcard artifact paths.
+Use `scripts/ci/write_agent_compliance.ps1` to write the manifest. It computes artifact hashes and contract hashes, then prevents wildcard artifact paths.
 
 ## Real LLM Adapter Mode
 
@@ -65,3 +66,9 @@ runtime/runs/{run_id}/run-journal.jsonl
 ```
 
 Use `scripts/ci/validate_agent_governance.ps1` to verify that the registry, status contract, and phase contracts agree.
+
+## Command and Output Guardrails
+
+Command-mode phases pass a fail-closed command safety gate before execution. Nested `Invoke-Expression`, destructive deletion, destructive git cleanup, remote-download-to-shell patterns, system-changing commands, `file://` indirection, and absolute paths outside the project root are blocked.
+
+Text, Markdown, JSON, YAML, and CSV artifacts also pass a bounded-size gate. This stops an agent from hiding unreviewable bulk output inside evidence files instead of writing the required structured artifacts.

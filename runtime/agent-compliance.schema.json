@@ -12,6 +12,7 @@
     "loaded_state_files",
     "output_artifacts",
     "artifact_hashes",
+    "contract_hashes",
     "agent_statuses",
     "phase_authority",
     "completed_at",
@@ -61,6 +62,32 @@
         "required": ["path", "sha256"],
         "properties": {
           "path": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "contract_hashes": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "enum": [
+              "runtime/agent-registry.json",
+              "runtime/agent-status-contract.json",
+              "runtime/phase-contracts/propose.json",
+              "runtime/phase-contracts/design-big.json",
+              "runtime/phase-contracts/design-small.json",
+              "runtime/phase-contracts/create.json",
+              "runtime/phase-contracts/polish.json",
+              "runtime/phase-contracts/rewrite.json",
+              "runtime/phase-contracts/export.json"
+            ]
+          },
           "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
         }
       }
