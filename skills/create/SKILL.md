@@ -110,6 +110,26 @@ Rule:
 - Do not accept `PASS` if create target contract metrics are missing in verifier report.
 - If any mandatory artifact is missing, stop with explicit artifact-missing error.
 
+## Longform Progression State Contract
+Every created chapter must update `revision/_state/chapter-summaries.json` with:
+- `id`
+- `summary`
+- `previous_chapter_result`
+- `new_event`
+- `new_information`
+- `irreversible_change`
+- `next_causal_link`
+- `state_updates`
+
+The next chapter's `previous_chapter_result` must connect to the previous chapter's `next_causal_link`. Repeating the same event, summary, or irreversible change is a hard failure.
+
+## Macro Continuity Audit Contract
+Read `revision/_state/volume-plan.json.audit_schedule`. When generated chapters reach a scheduled marker such as `EP010`, emit:
+- `revision/_workspace/macro-continuity-audit_EP010.json`
+- `revision/_workspace/macro-continuity-audit_EP010.md`
+
+The JSON must include `run_id`, `through_chapter`, `verdict`, `checked_ledgers`, `open_risks`, and `required_fixes`. `verdict` must be `PASS` before the run can continue, and `checked_ledgers` must include every longform state ledger.
+
 ## Outputs
 - `episode/epNNN.md` (legacy storage path for chapter NNN)
 - workspace reports under `{work_dir}/_workspace/`

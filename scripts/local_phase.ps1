@@ -1161,12 +1161,28 @@ run_id: $RunId
 Her bölüm için IDE ajanı/provider şu alanları doldurmalıdır:
 - Okur başlığı
 - Sahne amacı
+- Önceki bölüm sonucu
+- Yeni olay
 - Yeni bilgi
 - Karakter değişimi
+- Geri dönülmez değişim
 - Kapanış sonucu
 - Bir sonraki bölüme neden olan bağ
+- Güncellenen state dosyaları
 
-Tekrarlanan bölüm kurulumu, EP kodu ve teknik sahne etiketi kullanıcı çıktısına giremez.
+Her yazılan bölüm `revision/_state/chapter-summaries.json` içinde şu alanları güncellemelidir:
+- id
+- summary
+- previous_chapter_result
+- new_event
+- new_information
+- irreversible_change
+- next_causal_link
+- state_updates
+
+`revision/_state/volume-plan.json` içindeki audit_schedule hangi bölüme ulaştıysa, `revision/_workspace/macro-continuity-audit_EPxxx.json` ve `.md` dosyaları VERDICT: PASS ile üretilmeden pipeline devam edemez.
+
+Tekrarlanan bölüm kurulumu, EP kodu, sahne etiketi, yayın kontrol notu ve test notu kullanıcı çıktısına giremez.
 "@
   Write-Utf8 -Path (Join-Path $design "04_character-detail_$range.md") -Content "# Karakter Detayları $range`n`nrun_id: $RunId`n`nKarakter bilgi sınırları, arzular, korkular ve bölüm sonu değişimleri burada somutlaştırılmalıdır.`n"
   Write-Utf8 -Path (Join-Path $design "05_plot-detail_$range.md") -Content "# Plot Detayları $range`n`nrun_id: $RunId`n`nHer bölüm önceki bölümün sonucu olarak başlamalı ve yeni sonuç üretmelidir.`n"
@@ -1253,6 +1269,7 @@ function Invoke-Export {
     block_reasons = @()
   })
   Write-Utf8 -Path (Join-Path $work "10_export-validator_report_$rangeLabel.md") -Content "# Export Validator`n`nrun_id: $RunId`n`nVERDICT: READY_WITH_PUBLICATION_REVIEW`n"
+  Write-Utf8 -Path (Join-Path $work "10_docx-reader-clean_report_$rangeLabel.md") -Content "# DOCX Reader Clean`n`nrun_id: $RunId`n`nVERDICT: PASS`nReview notes, control metadata, and publication blocker notes are kept outside the reader-facing DOCX.`n"
 
   $docxPath = Join-Path $export "$projectName`_$rangeLabel.docx"
   New-Docx -OutputPath $docxPath -Title $projectName -Paragraphs $paragraphs.ToArray()
@@ -1292,7 +1309,7 @@ function Invoke-Export {
     docx_sha256 = Get-FileSha256 -Path $docxPath
     output_docx_path = "revision/export/$projectName`_$rangeLabel.docx"
   })
-  Write-AgentCompliance -PhaseName "export" -RequiredAgents @("export-approval-gate", "export-validator", "front-matter-editor", "cover-designer", "publication-compliance-checker", "final-proofreader", "book-exporter") -RequiredReferences @("skills/export-word/SKILL.md", "skills/polish/references/publication-metadata-checklist.md", "skills/polish/references/isbn-kunye-bandrol-checklist.md", "skills/export-word/references/docx-style-profile-template.md") -LoadedStateFiles @("runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/style-profile.json", "revision/_state/llm-adapter-contract.json", "runtime/approvals/export-approval.json") -OutputArtifacts @("revision/_workspace/10_export-word_manifest_$rangeLabel.json", $styleProfileRel, "revision/_workspace/10_export-validator_verdict_$rangeLabel.json", "revision/_workspace/11_front-matter_report.md", "revision/_workspace/13_final-proofreader_report_$rangeLabel.md", "revision/_workspace/14_publication-compliance_verdict_$rangeLabel.json", "revision/_workspace/14_publication-compliance_report_$rangeLabel.md", "revision/export/$projectName`_$rangeLabel.docx")
+  Write-AgentCompliance -PhaseName "export" -RequiredAgents @("export-approval-gate", "export-validator", "front-matter-editor", "cover-designer", "publication-compliance-checker", "final-proofreader", "book-exporter") -RequiredReferences @("skills/export-word/SKILL.md", "skills/polish/references/publication-metadata-checklist.md", "skills/polish/references/isbn-kunye-bandrol-checklist.md", "skills/export-word/references/docx-style-profile-template.md") -LoadedStateFiles @("runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/style-profile.json", "revision/_state/llm-adapter-contract.json", "runtime/approvals/export-approval.json") -OutputArtifacts @("revision/_workspace/10_export-word_manifest_$rangeLabel.json", $styleProfileRel, "revision/_workspace/10_export-validator_verdict_$rangeLabel.json", "revision/_workspace/10_docx-reader-clean_report_$rangeLabel.md", "revision/_workspace/11_front-matter_report.md", "revision/_workspace/13_final-proofreader_report_$rangeLabel.md", "revision/_workspace/14_publication-compliance_verdict_$rangeLabel.json", "revision/_workspace/14_publication-compliance_report_$rangeLabel.md", "revision/export/$projectName`_$rangeLabel.docx")
 }
 
 Push-Location $ProjectRoot

@@ -83,6 +83,7 @@ Export book text to `.docx` only after explicit user approval and pre-export val
 - Do not claim bandrol completion, ministry approval, ISBN assignment, or publisher approval from local export.
 - Do not call `READY_WITH_PUBLICATION_REVIEW` output print-ready; call it publisher-review-ready only.
 - Do not export without a DOCX style profile artifact that records delivery profile, page size, margins, typography, paragraph indentation, and line spacing.
+- Do not put publication review notes, validator verdicts, run IDs, step IDs, blocker lists, test labels, or ISBN/bandrol review warnings inside the reader-facing DOCX. Put them only in `revision/_workspace/` reports.
 
 ## Outputs
 - `{WORK_DIR}/export/{project_name}_EP{RANGE}.docx`
@@ -95,6 +96,7 @@ Export book text to `.docx` only after explicit user approval and pre-export val
 - `{WORK_DIR}/_workspace/10_export-validator_report_EP{RANGE}.md`
 - `{WORK_DIR}/_workspace/10_export-validator_verdict_EP{RANGE}.json`
 - `{WORK_DIR}/_workspace/10_docx-style-profile_EP{RANGE}.json`
+- `{WORK_DIR}/_workspace/10_docx-reader-clean_report_EP{RANGE}.md`
 - `{WORK_DIR}/_workspace/10_export-word_report_EP{RANGE}.md`
 - `{WORK_DIR}/_workspace/10_export-word_manifest_EP{RANGE}.json`
 

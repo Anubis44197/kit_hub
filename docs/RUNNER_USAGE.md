@@ -181,7 +181,11 @@ If missing, the run fails immediately with a clear message.
 
 When `quality_flags.enable_text_quality_gates=true`, `create`, `polish`, and `rewrite` are blocked if the generated chapters contain reader-facing technical labels, encoding corruption, short chapter bodies, repeated lines, repeated paragraph openings, invalid dialogue ratio, or weak show-dont-tell balance.
 
-Longform continuity gates also compare chapters against each other. The run fails if chapters are too similar, if chapter openings repeat, if `revision/_state/chapter-summaries.json` contains duplicated summaries, if a chapter lacks `new_information`, if `irreversible_change` is missing/repeated, or if `plot-ledger.json` lacks a cause-effect entry for each generated chapter.
+Longform continuity gates also compare chapters against each other. The run fails if chapters are too similar, if chapter openings repeat, if `revision/_state/chapter-summaries.json` contains duplicated summaries, if a chapter lacks `previous_chapter_result`, `new_event`, `new_information`, `irreversible_change`, `next_causal_link`, or `state_updates`, or if `plot-ledger.json` lacks a cause-effect entry for each generated chapter.
+
+When the written chapters reach a marker in `revision/_state/volume-plan.json.audit_schedule`, the runner also requires `revision/_workspace/macro-continuity-audit_EPxxx.json` and `.md` with `VERDICT: PASS`.
+
+For `export`, the runner verifies the reader-facing DOCX does not contain validator text, run IDs, review verdicts, publication blocker notes, ISBN/bandrol review notes, or test labels. Those belong in workspace reports, not in the manuscript.
 
 Relevant config keys:
 

@@ -461,6 +461,7 @@ function Validate-PhaseArtifacts {
       Ensure-Any -Patterns @(
         "revision/_workspace/10_export-word_manifest_EP*.json",
         "revision/_workspace/10_docx-style-profile_EP*.json",
+        "revision/_workspace/10_docx-reader-clean_report_EP*.md",
         "revision/_workspace/*export-word*manifest*.json",
         "revision/_workspace/*export-manifest*.json"
       ) -BasePath $Root
@@ -522,10 +523,10 @@ function Get-PhaseOutputArtifacts {
       $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md")
     }
     "create" {
-      $patterns = @("episode/ep*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_state/*.json")
+      $patterns = @("episode/ep*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
     }
     "polish" {
-      $patterns = @("episode/ep*.md","revision/_workspace/*revision-reviewer*EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/10_tdk-dictionary-check_polish.json","revision/_state/*.json")
+      $patterns = @("episode/ep*.md","revision/_workspace/*revision-reviewer*EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/10_tdk-dictionary-check_polish.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
     }
     "rewrite" {
       $patterns = @(
@@ -534,6 +535,8 @@ function Get-PhaseOutputArtifacts {
         "revision/_workspace/04_quality-verifier_verdict_EP*.md",
         "revision/_workspace/08_tdk-polisher_issues_EP*.json",
         "revision/_workspace/10_tdk-dictionary-check_rewrite.json",
+        "revision/_workspace/macro-continuity-audit_EP*.json",
+        "revision/_workspace/macro-continuity-audit_EP*.md",
         "revision/_state/*.json"
       )
     }
@@ -543,6 +546,7 @@ function Get-PhaseOutputArtifacts {
         "revision/_workspace/*export-validator*verdict*.json",
         "revision/_workspace/*export-content-match*",
         "revision/_workspace/*docx-style-profile*",
+        "revision/_workspace/*docx-reader-clean*",
         "revision/_workspace/11_front-matter*",
         "revision/_workspace/12_cover-design*",
         "revision/_workspace/13_final-proofreader*",
@@ -1475,6 +1479,55 @@ function Validate-DocxContentMatch {
   Write-Utf8Bom -Path $reportPath -Content $report
 }
 
+function Validate-DocxReaderClean {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled -or $Phase -ne "export") {
+    return
+  }
+
+  $manifestPath = Resolve-ExportManifestPath -Root $Root
+  $manifest = Read-Utf8 -Path $manifestPath | ConvertFrom-Json
+  if (-not ($manifest.PSObject.Properties.Name -contains "output_docx_path")) {
+    throw "DOCX reader-clean gate failed: export manifest missing output_docx_path."
+  }
+
+  $docxPath = Resolve-ProjectPath -Root $Root -Path ([string]$manifest.output_docx_path)
+  $docxText = Get-DocxText -DocxPath $docxPath
+  $blockedPatterns = @(
+    "(?i)\bpublication\s+compliance\b",
+    "(?i)\bfront\s+matter\s+report\b",
+    "(?i)\bexport\s+validator\b",
+    "(?i)\bfinal\s+proofreader\b",
+    "(?i)\bVERDICT\s*:",
+    "(?i)\bREVIEW_REQUIRED\b",
+    "(?i)\bREADY_WITH_PUBLICATION_REVIEW\b",
+    "(?i)\bBLOCKED\b",
+    "(?i)\bblock_reasons\b",
+    "(?i)\bprint_ready\b",
+    "(?i)\brun_id\s*:",
+    "(?i)\bstep_id\s*:",
+    "(?i)ISBN.*(missing|eksik|not_assigned|placeholder|review)",
+    "(?i)bandrol.*(external|eksik|review)",
+    "(?i)yayı[nm]\s+not",
+    "(?i)yayin\s+not",
+    "(?i)inceleme\s+not",
+    "(?i)test\s+dosya"
+  )
+  foreach ($pattern in $blockedPatterns) {
+    if ($docxText -match $pattern) {
+      throw "DOCX reader-clean gate failed: reader-facing DOCX contains review/control note pattern '$pattern'. Move review notes to revision/_workspace artifacts."
+    }
+  }
+
+  $reportPath = Join-Path $Root "revision/_workspace/10_docx-reader-clean_report.md"
+  Write-Utf8Bom -Path $reportPath -Content "# DOCX Reader Clean`n`nVERDICT: PASS`n`nReview notes and publication-control metadata were not found in the reader-facing DOCX.`n"
+}
+
 function Validate-DocxLayoutProfile {
   param(
     [string]$Root,
@@ -1980,9 +2033,29 @@ function Validate-CrossChapterProgression {
     $summary = Read-Utf8 -Path $summaryPath | ConvertFrom-Json
     $chapters = @($summary.chapters)
     if ($chapters.Count -ge 2) {
+      foreach ($chapter in $chapters) {
+        foreach ($field in @("id","summary","previous_chapter_result","new_event","new_information","irreversible_change","next_causal_link","state_updates")) {
+          if (-not ($chapter.PSObject.Properties.Name -contains $field)) {
+            throw "Cross-chapter progression gate failed: chapter-summaries.json entry missing '$field'."
+          }
+        }
+        foreach ($field in @("previous_chapter_result","new_event","irreversible_change","next_causal_link")) {
+          if (-not ([string]$chapter.$field).Trim()) {
+            throw "Cross-chapter progression gate failed: $($chapter.id) has empty '$field'."
+          }
+        }
+        $stateUpdates = @($chapter.state_updates)
+        if ($stateUpdates.Count -lt 1) {
+          throw "Cross-chapter progression gate failed: $($chapter.id) must declare state_updates."
+        }
+      }
       $uniqueSummaries = @($chapters | ForEach-Object { [string]$_.summary } | Sort-Object -Unique)
       if ($uniqueSummaries.Count -lt $chapters.Count) {
         throw "Cross-chapter progression gate failed: chapter summaries are duplicated."
+      }
+      $uniqueEvents = @($chapters | ForEach-Object { [string]$_.new_event } | Where-Object { $_.Trim() -ne "" } | Sort-Object -Unique)
+      if ($uniqueEvents.Count -lt $chapters.Count) {
+        throw "Cross-chapter progression gate failed: every chapter must record a unique new_event."
       }
       $uniqueChanges = @($chapters | ForEach-Object { [string]$_.irreversible_change } | Where-Object { $_.Trim() -ne "" } | Sort-Object -Unique)
       if ($uniqueChanges.Count -lt $chapters.Count) {
@@ -1992,6 +2065,16 @@ function Validate-CrossChapterProgression {
         $newInfo = @($chapter.new_information)
         if ($newInfo.Count -lt 1) {
           throw "Cross-chapter progression gate failed: $($chapter.id) missing new_information in chapter-summaries.json."
+        }
+      }
+      for ($idx = 1; $idx -lt $chapters.Count; $idx++) {
+        $prev = $chapters[$idx - 1]
+        $current = $chapters[$idx]
+        $expected = [string]$prev.next_causal_link
+        $actual = [string]$current.previous_chapter_result
+        $linkSimilarity = Get-JaccardSimilarity -A $expected -B $actual
+        if ($linkSimilarity -lt 0.12) {
+          throw "Cross-chapter progression gate failed: $($current.id) previous_chapter_result does not connect to previous next_causal_link."
         }
       }
     }
@@ -2255,6 +2338,84 @@ if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Na
   }
 }
 
+function Get-EpisodeNumberFromName {
+  param([string]$Name)
+  $m = [regex]::Match($Name, "(?i)ep(\d{3})")
+  if ($m.Success) { return [int]$m.Groups[1].Value }
+  return 0
+}
+
+function Validate-MacroContinuityAudits {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled) {
+    return
+  }
+  if ($Phase -notin @("create","polish","rewrite","export")) {
+    return
+  }
+
+  $episodeDir = Join-Path $Root "episode"
+  if (-not (Test-Path -LiteralPath $episodeDir -PathType Container)) {
+    return
+  }
+  $episodes = @(Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File -ErrorAction SilentlyContinue | Sort-Object Name)
+  if ($episodes.Count -lt 1) {
+    return
+  }
+
+  $maxEpisode = 0
+  foreach ($ep in $episodes) {
+    $n = Get-EpisodeNumberFromName -Name $ep.Name
+    if ($n -gt $maxEpisode) { $maxEpisode = $n }
+  }
+
+  $volumePlanPath = Join-Path $Root "revision/_state/volume-plan.json"
+  Ensure-File $volumePlanPath
+  $volumePlan = Read-Utf8 -Path $volumePlanPath | ConvertFrom-Json
+  if (-not ($volumePlan.PSObject.Properties.Name -contains "audit_schedule")) {
+    throw "Macro continuity audit gate failed: volume-plan.json missing audit_schedule."
+  }
+
+  foreach ($marker in @($volumePlan.audit_schedule)) {
+    $markerText = [string]$marker
+    $markerNumber = Get-EpisodeNumberFromName -Name $markerText
+    if ($markerNumber -lt 1 -or $markerNumber -gt $maxEpisode) {
+      continue
+    }
+
+    $jsonPath = Join-Path $Root ("revision/_workspace/macro-continuity-audit_{0}.json" -f $markerText)
+    $reportPath = Join-Path $Root ("revision/_workspace/macro-continuity-audit_{0}.md" -f $markerText)
+    Ensure-File $jsonPath
+    Ensure-File $reportPath
+    $audit = Read-Utf8 -Path $jsonPath | ConvertFrom-Json
+    foreach ($field in @("run_id","through_chapter","verdict","checked_ledgers","open_risks","required_fixes")) {
+      if (-not ($audit.PSObject.Properties.Name -contains $field)) {
+        throw "Macro continuity audit gate failed: $jsonPath missing '$field'."
+      }
+    }
+    if ([string]$audit.through_chapter -ne $markerText) {
+      throw "Macro continuity audit gate failed: $jsonPath through_chapter must be $markerText."
+    }
+    if ($audit.verdict -ne "PASS") {
+      throw "Macro continuity audit gate failed: $jsonPath verdict must be PASS before continuing."
+    }
+    foreach ($ledger in @("character-state.json","plot-ledger.json","chapter-summaries.json","continuity-ledger.json","world-state.json","relationship-graph.json","knowledge-graph.json","promise-payoff-ledger.json","timeline.json","theme-ledger.json")) {
+      if (@($audit.checked_ledgers) -notcontains $ledger) {
+        throw "Macro continuity audit gate failed: $jsonPath checked_ledgers missing $ledger."
+      }
+    }
+    $reportRaw = Read-Utf8 -Path $reportPath
+    if ($reportRaw -notmatch "(?i)\bVERDICT\b.*\bPASS\b") {
+      throw "Macro continuity audit report missing VERDICT: PASS: $reportPath"
+    }
+  }
+}
+
 $enableCommandSafety = $true
 if ($cfg -and $cfg.quality_flags -and ($cfg.quality_flags.PSObject.Properties.Name -contains "enable_command_safety")) {
   if ($cfg.quality_flags.enable_command_safety -eq $false) {
@@ -2416,6 +2577,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     }
 
     Validate-DocxContentMatch -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
+    Validate-DocxReaderClean -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-DocxLayoutProfile -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     $artifacts = Get-PhaseOutputArtifacts -Phase $phase -Root $ProjectRoot
     Validate-ArtifactSizeBudget -Root $ProjectRoot -Artifacts $artifacts -MaxBytes $maxTextArtifactBytes -Enabled $enableArtifactSizeBudget
@@ -2424,6 +2586,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     Validate-AgentCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts -Artifacts $artifacts
     Validate-LongformState -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-StateReducers -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
+    Validate-MacroContinuityAudits -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-PublicationCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Assert-NoForbiddenPatterns -Root $ProjectRoot -Phase $phase -Patterns $negativePatterns -Enabled $enableNegativeEnforcement
     Validate-EpisodeTextQuality -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $enableTextQualityGates
