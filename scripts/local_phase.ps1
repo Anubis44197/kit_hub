@@ -485,6 +485,43 @@ function Get-RequiredCoverMatter {
   return $files
 }
 
+function Assert-ReaderArtifactClean {
+  param([string]$Path, [string]$Label, [int]$MinCharacters = 20)
+  Ensure-File -Path $Path -Message "Export blocked: missing $Label at $(Get-RelativePath -Path $Path)."
+  $raw = (Read-Utf8 -Path $Path).Trim()
+  if ($raw.Length -lt $MinCharacters) {
+    throw "Export blocked: $Label is too short or empty: $(Get-RelativePath -Path $Path)"
+  }
+  foreach ($pattern in @("(?i)\bTODO\b","(?i)\bFIXME\b","(?i)\bVERDICT\s*:","(?i)\brun_id\s*:","(?i)\bstep_id\s*:","(?i)\bREVIEW_REQUIRED\b","(?i)\bpublication\s+compliance\b","(?i)\btest\s+dosya")) {
+    if ($raw -match $pattern) {
+      throw "Export blocked: $Label contains review/control marker '$pattern': $(Get-RelativePath -Path $Path)"
+    }
+  }
+}
+
+function Assert-PublicationMetadataClean {
+  param([string]$Path)
+  Ensure-File -Path $Path -Message "Export blocked: missing publication metadata at $(Get-RelativePath -Path $Path)."
+  $metadata = Read-Json -Path $Path
+  foreach ($field in @("title","author_or_editor","copyright_owner","publication_year","format","metadata_status")) {
+    if (-not ($metadata.PSObject.Properties.Name -contains $field)) {
+      throw "Export blocked: publication metadata missing '$field'."
+    }
+  }
+  $status = [string]$metadata.metadata_status
+  if ($status -notin @("draft_user_review","publisher_review_required","final_publisher_supplied")) {
+    throw "Export blocked: publication metadata_status must be draft_user_review, publisher_review_required, or final_publisher_supplied."
+  }
+  foreach ($field in @("isbn","barcode","publisher")) {
+    if ($metadata.PSObject.Properties.Name -contains $field) {
+      $value = ([string]$metadata.$field).Trim()
+      if ($value -match "(?i)^(fake|placeholder|todo|tbd|123|000|isbn)$") {
+        throw "Export blocked: publication metadata contains fake or placeholder $field."
+      }
+    }
+  }
+}
+
 function Convert-MarkdownToParagraphs {
   param([string]$Path)
   $paragraphs = New-Object System.Collections.Generic.List[string]
@@ -1368,6 +1405,13 @@ function Invoke-Export {
 
   $front = Get-RequiredFrontMatter
   $cover = Get-RequiredCoverMatter
+  Assert-ReaderArtifactClean -Path $front.title_page -Label "title page"
+  Assert-ReaderArtifactClean -Path $front.copyright_page -Label "copyright page"
+  Assert-ReaderArtifactClean -Path $front.preface -Label "preface"
+  Assert-PublicationMetadataClean -Path $front.metadata
+  Assert-ReaderArtifactClean -Path $cover.brief -Label "cover brief"
+  Assert-ReaderArtifactClean -Path $cover.front_prompt -Label "cover front prompt"
+  Assert-ReaderArtifactClean -Path $cover.back_cover_copy -Label "back cover copy"
   $work = Join-Path $ProjectRoot "revision/_workspace"
   $export = Join-Path $ProjectRoot "revision/export"
   Ensure-Dir $work
@@ -1453,12 +1497,32 @@ function Invoke-Export {
     source_mode = "existing_artifacts_only"
     source_files = @($chapters | ForEach-Object { "episode/$($_.Name)" })
     source_hashes = $sourceHashes
+    style_profile = "runtime/layout-profile.json"
     approval_artifact = "runtime/approvals/export-approval.json"
     front_matter_files = @($front.Keys | ForEach-Object { Get-RelativePath -Path $front[$_] })
     cover_design_manifest = Get-RelativePath -Path $cover.manifest
     cover_files = @($cover.Keys | ForEach-Object { Get-RelativePath -Path $cover[$_] })
     docx_style_profile = $styleProfileRel
+    delivery_profiles = $docxStyle.delivery_profiles
+    page_layout = [ordered]@{
+      width_mm = $docxStyle.width_mm
+      height_mm = $docxStyle.height_mm
+      margin_top_mm = $docxStyle.margin_top_mm
+      margin_bottom_mm = $docxStyle.margin_bottom_mm
+      margin_inside_mm = $docxStyle.margin_inside_mm
+      margin_outside_mm = $docxStyle.margin_outside_mm
+    }
+    typography = [ordered]@{
+      font_family = $docxStyle.font_family
+      font_size_pt = $docxStyle.font_size_pt
+      line_spacing = $docxStyle.line_spacing
+      paragraph_first_line_indent_cm = $docxStyle.paragraph_first_line_indent_cm
+      paragraph_spacing_after_pt = $docxStyle.paragraph_spacing_after_pt
+      justification = $docxStyle.justification
+    }
     publication_compliance_verdict = "revision/_workspace/14_publication-compliance_verdict_$rangeLabel.json"
+    blocked = $false
+    block_reasons = @()
     local_adapter_boundary = "No manuscript, preface, or cover copy was invented during export."
     docx_sha256 = Get-FileSha256 -Path $docxPath
     output_docx_path = "revision/export/$projectName`_$rangeLabel.docx"

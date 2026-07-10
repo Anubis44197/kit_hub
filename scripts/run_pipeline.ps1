@@ -1362,6 +1362,26 @@ function Validate-PublicationCompliance {
     throw "Publication compliance verdict is missing."
   }
 
+  $metadataPath = Join-Path $Root "revision/_workspace/11_front-matter_publication-metadata.json"
+  Ensure-File $metadataPath
+  $metadata = Read-Utf8 -Path $metadataPath | ConvertFrom-Json
+  foreach ($field in @("title","author_or_editor","copyright_owner","publication_year","format","metadata_status")) {
+    if (-not ($metadata.PSObject.Properties.Name -contains $field)) {
+      throw "Publication metadata missing '$field': $metadataPath"
+    }
+  }
+  if ([string]$metadata.metadata_status -notin @("draft_user_review","publisher_review_required","final_publisher_supplied")) {
+    throw "Publication metadata has invalid metadata_status: $metadataPath"
+  }
+  foreach ($field in @("isbn","barcode","publisher")) {
+    if ($metadata.PSObject.Properties.Name -contains $field) {
+      $value = ([string]$metadata.$field).Trim()
+      if ($value -match "(?i)^(fake|placeholder|todo|tbd|123|000|isbn)$") {
+        throw "Publication metadata contains fake or placeholder $field."
+      }
+    }
+  }
+
   foreach ($file in $verdicts) {
     $obj = Read-Utf8 -Path $file.FullName | ConvertFrom-Json
     foreach ($field in @("run_id","step_id","verdict","print_ready","metadata_placeholders","isbn_status","barcode_status","kunye_status","bandrol_external","block_reasons")) {
@@ -1561,6 +1581,62 @@ function Validate-DocxReaderClean {
 
   $reportPath = Join-Path $Root "revision/_workspace/10_docx-reader-clean_report.md"
   Write-Utf8Bom -Path $reportPath -Content "# DOCX Reader Clean`n`nVERDICT: PASS`n`nReview notes and publication-control metadata were not found in the reader-facing DOCX.`n"
+}
+
+function Validate-ExportManifestContract {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled -or $Phase -ne "export") {
+    return
+  }
+
+  $manifestPath = Resolve-ExportManifestPath -Root $Root
+  $manifest = Read-Utf8 -Path $manifestPath | ConvertFrom-Json
+  foreach ($field in @("project_name","episode_range","source_mode","source_files","source_hashes","style_profile","docx_style_profile","delivery_profiles","page_layout","typography","approval_artifact","front_matter_files","cover_design_manifest","cover_files","publication_compliance_verdict","blocked","block_reasons","output_docx_path","docx_sha256")) {
+    if (-not ($manifest.PSObject.Properties.Name -contains $field)) {
+      throw "Export manifest contract failed: missing '$field'."
+    }
+  }
+  if ($manifest.blocked -eq $true) {
+    throw "Export manifest contract failed: blocked export cannot be treated as completed."
+  }
+  if (@($manifest.source_files).Count -lt 1) {
+    throw "Export manifest contract failed: source_files is empty."
+  }
+  if (@($manifest.front_matter_files).Count -lt 5) {
+    throw "Export manifest contract failed: front_matter_files must include title, copyright, preface, toc, and metadata artifacts."
+  }
+  foreach ($rel in @($manifest.front_matter_files + $manifest.cover_files + @($manifest.cover_design_manifest, $manifest.publication_compliance_verdict, $manifest.output_docx_path, $manifest.docx_style_profile))) {
+    if (-not [string]$rel) { continue }
+    Ensure-File (Resolve-ProjectPath -Root $Root -Path ([string]$rel))
+  }
+  foreach ($hashRecord in @($manifest.source_hashes)) {
+    foreach ($field in @("path","sha256")) {
+      if (-not ($hashRecord.PSObject.Properties.Name -contains $field) -or -not ([string]$hashRecord.$field).Trim()) {
+        throw "Export manifest contract failed: source_hashes entry missing '$field'."
+      }
+    }
+    if ([string]$hashRecord.sha256 -notmatch "^[a-f0-9]{64}$") {
+      throw "Export manifest contract failed: invalid sha256 for source '$($hashRecord.path)'."
+    }
+  }
+  if (-not ($manifest.delivery_profiles.PSObject.Properties.Name -contains "publisher_submission") -or -not ($manifest.delivery_profiles.PSObject.Properties.Name -contains "print_preview")) {
+    throw "Export manifest contract failed: delivery_profiles must declare publisher_submission and print_preview."
+  }
+  foreach ($field in @("width_mm","height_mm","margin_top_mm","margin_bottom_mm","margin_inside_mm","margin_outside_mm")) {
+    if (-not ($manifest.page_layout.PSObject.Properties.Name -contains $field)) {
+      throw "Export manifest contract failed: page_layout missing '$field'."
+    }
+  }
+  foreach ($field in @("font_family","font_size_pt","line_spacing","paragraph_first_line_indent_cm","justification")) {
+    if (-not ($manifest.typography.PSObject.Properties.Name -contains $field)) {
+      throw "Export manifest contract failed: typography missing '$field'."
+    }
+  }
 }
 
 function Validate-DocxLayoutProfile {
@@ -2740,6 +2816,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       throw "Phase '$phase' requires execution_claim_mode=executed. Configure command mode and real phase commands."
     }
 
+    Validate-ExportManifestContract -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-DocxContentMatch -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-DocxReaderClean -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-DocxLayoutProfile -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
