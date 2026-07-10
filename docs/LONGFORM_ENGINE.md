@@ -16,17 +16,38 @@ All longform runs must keep these files under `revision/_state/`:
 - `plot-ledger.json`: main dramatic question, open/closed threads, cause-effect chain, final promises.
 - `chapter-summaries.json`: compact chapter-by-chapter memory for context recovery.
 - `continuity-ledger.json`: timeline, locations, object state, and continuity violations.
+- `world-state.json`: locations, time rules, objects, institutions, and world constraints.
+- `relationship-graph.json`: character relationship nodes, edges, and change log.
+- `knowledge-graph.json`: who knows what, when they learned it, and what remains secret.
+- `promise-payoff-ledger.json`: planted clues/questions, expected payoff, paid promises, and abandoned promises.
+- `timeline.json`: chronological order and chapter time map.
+- `theme-ledger.json`: primary theme, motifs, and theme progression.
+- `volume-plan.json`: scale tier, page/word/chapter targets, act map, batch size, and macro audit schedule.
 - `style-profile.json`: narration, tense, dialogue style, rhythm, print layout, and forbidden style failures.
 
 ## Generation Policy
 
 - Writing cannot start immediately after a simple prompt. `design-big` first produces the book, chapter, and layout plans, then `design-small` is blocked until `runtime/approvals/book-plan-approval.json` is approved by the user.
 - Generate in small batches, preferably 1-3 chapters at a time.
+- Batch size is scale-aware: short work may allow 3 chapters per batch; long 300-500+ page novels should usually write 1 chapter per batch.
 - Before each chapter, load the longform state files and the current chapter plan.
-- After each chapter, update character state, plot ledger, chapter summary, and continuity ledger.
+- After each chapter, update character state, plot ledger, chapter summary, continuity ledger, world state, relationship graph, knowledge graph, promise/payoff ledger, timeline, and theme ledger.
 - Never let a character use information that is absent from `character-state.json`.
+- Never let a character use information that is absent from `knowledge-graph.json`.
 - Never close a plot thread unless `plot-ledger.json` records the closure.
+- Never introduce a clue, question, prophecy, secret, or motif without an entry in `promise-payoff-ledger.json`.
 - Never change narration, tense, or dialogue style unless `style-profile.json` is deliberately updated.
+
+## Scale-Aware Planning
+
+The user may ask for 10 pages, 270 pages, 390 pages, 500 pages, or another length. The system must not use a fixed chapter model.
+
+- `short_form`: up to 20 pages, compact state, 1 act, audit every 3 chapters.
+- `novella_or_short_book`: 21-120 pages, 3 acts, audit every 5 chapters.
+- `standard_novel`: 121-300 pages, 4 acts, audit every 8 chapters.
+- `epic_longform`: 301+ pages, 5 acts, usually 1 chapter per batch, audit every 10 chapters.
+
+`volume-plan.json` is the source of truth for scale tier, target pages, target words, target chapters, batch size, and macro continuity audit schedule.
 
 ## Long Book Targets
 
@@ -60,6 +81,10 @@ For `create`, `polish`, and `rewrite`, the runner also blocks outputs that look 
 - Duplicate chapter summaries in `revision/_state/chapter-summaries.json` are rejected.
 - Every chapter summary must record `new_information` and a unique `irreversible_change`.
 - `plot-ledger.json` must keep a non-repeating cause-effect chain for all generated chapters.
+- `knowledge-graph.json` must prevent characters from acting on unknown information.
+- `promise-payoff-ledger.json` must prevent forgotten clues and unresolved planted promises.
+- `timeline.json` must prevent time-order contradictions.
+- `relationship-graph.json` must prevent sudden relationship changes without a causing chapter.
 - Repeated paragraph openings inside the same episode are rejected.
 - Duplicate-line ratio is checked so repeated dialogue or transition text cannot pass as a finished chapter.
 

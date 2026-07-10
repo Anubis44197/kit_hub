@@ -368,6 +368,13 @@ function Validate-PhaseArtifacts {
         "revision/_state/plot-ledger.json",
         "revision/_state/chapter-summaries.json",
         "revision/_state/continuity-ledger.json",
+        "revision/_state/world-state.json",
+        "revision/_state/relationship-graph.json",
+        "revision/_state/knowledge-graph.json",
+        "revision/_state/promise-payoff-ledger.json",
+        "revision/_state/timeline.json",
+        "revision/_state/theme-ledger.json",
+        "revision/_state/volume-plan.json",
         "revision/_state/style-profile.json",
         "revision/_state/writing-type-profile.json",
         "revision/_state/genre-structure-template.json",
@@ -409,6 +416,13 @@ function Validate-PhaseArtifacts {
         "revision/_state/plot-ledger.json",
         "revision/_state/chapter-summaries.json",
         "revision/_state/continuity-ledger.json",
+        "revision/_state/world-state.json",
+        "revision/_state/relationship-graph.json",
+        "revision/_state/knowledge-graph.json",
+        "revision/_state/promise-payoff-ledger.json",
+        "revision/_state/timeline.json",
+        "revision/_state/theme-ledger.json",
+        "revision/_state/volume-plan.json",
         "revision/_state/style-profile.json",
         "revision/_state/longform-plan.json",
         "revision/_state/book-plan.json",
@@ -1401,6 +1415,13 @@ function Validate-LongformState {
     "plot-ledger.json",
     "chapter-summaries.json",
     "continuity-ledger.json",
+    "world-state.json",
+    "relationship-graph.json",
+    "knowledge-graph.json",
+    "promise-payoff-ledger.json",
+    "timeline.json",
+    "theme-ledger.json",
+    "volume-plan.json",
     "style-profile.json",
     "writing-type-profile.json",
     "genre-structure-template.json",
@@ -1433,7 +1454,7 @@ function Validate-LongformState {
   }
 
   $plan = Read-Utf8 -Path (Join-Path $stateDir "longform-plan.json") | ConvertFrom-Json
-  foreach ($field in @("target_pages","target_words","target_chapters","chapters","required_state_files")) {
+  foreach ($field in @("target_pages","target_words","target_chapters","chapters","required_state_files","scale_tier","structure_model","max_chapters_per_batch","audit_interval_chapters","continuity_model")) {
     if (-not ($plan.PSObject.Properties.Name -contains $field)) {
       throw "Longform plan missing '$field'."
     }
@@ -1447,9 +1468,20 @@ function Validate-LongformState {
   if (-not ($plan.PSObject.Properties.Name -contains "required_state_files") -or @($plan.required_state_files).Count -lt 3) {
     throw "Longform plan must declare required_state_files for continuity and planning gates."
   }
+  foreach ($requiredStateRel in @("revision/_state/world-state.json","revision/_state/relationship-graph.json","revision/_state/knowledge-graph.json","revision/_state/promise-payoff-ledger.json","revision/_state/timeline.json","revision/_state/theme-ledger.json","revision/_state/volume-plan.json")) {
+    if (@($plan.required_state_files) -notcontains $requiredStateRel) {
+      throw "Longform plan required_state_files missing '$requiredStateRel'."
+    }
+  }
+  if ([int]$plan.max_chapters_per_batch -lt 1 -or [int]$plan.max_chapters_per_batch -gt 3) {
+    throw "Longform plan max_chapters_per_batch must be between 1 and 3."
+  }
+  if ([int]$plan.audit_interval_chapters -lt 1) {
+    throw "Longform plan audit_interval_chapters must be positive."
+  }
 
   $bookPlan = Read-Utf8 -Path (Join-Path $stateDir "book-plan.json") | ConvertFrom-Json
-  foreach ($field in @("schema_version","run_id","plan_id","source_prompt","approved_story_option","title_working","writing_type","genre","theme","premise","narrative_pov","tense","characters","plot_arc","chapter_count","approval_required")) {
+  foreach ($field in @("schema_version","run_id","plan_id","source_prompt","approved_story_option","title_working","writing_type","genre","theme","premise","scale_tier","target_pages","target_words","narrative_pov","tense","characters","plot_arc","chapter_count","max_chapters_per_batch","audit_interval_chapters","approval_required")) {
     if (-not ($bookPlan.PSObject.Properties.Name -contains $field)) {
       throw "book-plan.json missing '$field'."
     }
@@ -1459,6 +1491,9 @@ function Validate-LongformState {
   }
   if ([int]$bookPlan.chapter_count -ne [int]$plan.target_chapters) {
     throw "book-plan.json chapter_count must match longform-plan target_chapters."
+  }
+  if ([int]$bookPlan.target_pages -ne [int]$plan.target_pages -or [int]$bookPlan.target_words -ne [int]$plan.target_words) {
+    throw "book-plan.json page/word targets must match longform-plan."
   }
   if (@($bookPlan.characters).Count -lt 1) {
     throw "book-plan.json must include at least one planned character before writing starts."
@@ -1504,7 +1539,7 @@ function Validate-LongformState {
   }
 
   $layoutPlan = Read-Utf8 -Path (Join-Path $stateDir "layout-plan.json") | ConvertFrom-Json
-  foreach ($field in @("schema_version","run_id","delivery_profiles","trim_size","width_mm","height_mm","margin_top_mm","margin_bottom_mm","margin_inside_mm","margin_outside_mm","font_family","font_size_pt","line_spacing","paragraph_first_line_indent_cm","words_per_page_estimate","target_pages","target_words","target_chapters","front_matter_pages_estimate","back_matter_pages_estimate","chapter_start_policy")) {
+  foreach ($field in @("schema_version","run_id","delivery_profiles","trim_size","width_mm","height_mm","margin_top_mm","margin_bottom_mm","margin_inside_mm","margin_outside_mm","font_family","font_size_pt","line_spacing","paragraph_first_line_indent_cm","words_per_page_estimate","target_pages","target_words","target_chapters","scale_tier","max_chapters_per_batch","audit_interval_chapters","front_matter_pages_estimate","back_matter_pages_estimate","chapter_start_policy")) {
     if (-not ($layoutPlan.PSObject.Properties.Name -contains $field)) {
       throw "layout-plan.json missing '$field'."
     }
@@ -1565,6 +1600,52 @@ function Validate-LongformState {
     if (-not ($style.PSObject.Properties.Name -contains $field)) {
       throw "style-profile.json missing '$field'."
     }
+  }
+
+  $worldState = Read-Utf8 -Path (Join-Path $stateDir "world-state.json") | ConvertFrom-Json
+  foreach ($field in @("locations","time_rules","objects","world_constraints")) {
+    if (-not ($worldState.PSObject.Properties.Name -contains $field)) {
+      throw "world-state.json missing '$field'."
+    }
+  }
+  $relationshipGraph = Read-Utf8 -Path (Join-Path $stateDir "relationship-graph.json") | ConvertFrom-Json
+  foreach ($field in @("nodes","edges","change_log","rule")) {
+    if (-not ($relationshipGraph.PSObject.Properties.Name -contains $field)) {
+      throw "relationship-graph.json missing '$field'."
+    }
+  }
+  $knowledgeGraph = Read-Utf8 -Path (Join-Path $stateDir "knowledge-graph.json") | ConvertFrom-Json
+  foreach ($field in @("character_knowledge","secrets","rule")) {
+    if (-not ($knowledgeGraph.PSObject.Properties.Name -contains $field)) {
+      throw "knowledge-graph.json missing '$field'."
+    }
+  }
+  $promiseLedger = Read-Utf8 -Path (Join-Path $stateDir "promise-payoff-ledger.json") | ConvertFrom-Json
+  foreach ($field in @("open_promises","paid_promises","abandoned_promises","rule")) {
+    if (-not ($promiseLedger.PSObject.Properties.Name -contains $field)) {
+      throw "promise-payoff-ledger.json missing '$field'."
+    }
+  }
+  $timeline = Read-Utf8 -Path (Join-Path $stateDir "timeline.json") | ConvertFrom-Json
+  foreach ($field in @("chronology","chapter_time_map","rule")) {
+    if (-not ($timeline.PSObject.Properties.Name -contains $field)) {
+      throw "timeline.json missing '$field'."
+    }
+  }
+  $themeLedger = Read-Utf8 -Path (Join-Path $stateDir "theme-ledger.json") | ConvertFrom-Json
+  foreach ($field in @("primary_theme","motifs","theme_progression","rule")) {
+    if (-not ($themeLedger.PSObject.Properties.Name -contains $field)) {
+      throw "theme-ledger.json missing '$field'."
+    }
+  }
+  $volumePlan = Read-Utf8 -Path (Join-Path $stateDir "volume-plan.json") | ConvertFrom-Json
+  foreach ($field in @("scale_tier","target_pages","target_words","target_chapters","words_per_page_estimate","words_per_chapter","max_chapters_per_batch","audit_interval_chapters","acts","audit_schedule","rule")) {
+    if (-not ($volumePlan.PSObject.Properties.Name -contains $field)) {
+      throw "volume-plan.json missing '$field'."
+    }
+  }
+  if ([int]$volumePlan.target_pages -ne [int]$plan.target_pages -or [int]$volumePlan.target_chapters -ne [int]$plan.target_chapters) {
+    throw "volume-plan.json targets must match longform-plan."
   }
 
   $writingProfile = Read-Utf8 -Path (Join-Path $stateDir "writing-type-profile.json") | ConvertFrom-Json

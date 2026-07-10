@@ -3,7 +3,7 @@
   "phase": "design-small",
   "required_agents": ["episode-architect", "continuity-bridge"],
   "required_references": ["skills/design-small/SKILL.md", "skills/polish/references/handoff-contract.md"],
-  "required_state_files": ["runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/continuity-ledger.json", "runtime/approvals/book-plan-approval.json"],
+  "required_state_files": ["runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "runtime/approvals/book-plan-approval.json"],
   "required_approvals": ["runtime/approvals/book-plan-approval.json"],
   "allowed_write_roots": ["design", "revision/_state", "runtime/agent-compliance"],
   "allowed_output_patterns": ["design/*scene_plan*.md", "design/*_character-detail_*.md", "design/*_plot-detail_*.md", "revision/_state/*.json"],
