@@ -41,6 +41,15 @@ function Get-ObjectString {
   return ""
 }
 
+function Get-ObjectStringAny {
+  param([object]$Obj, [string[]]$Fields)
+  foreach ($field in $Fields) {
+    $value = Get-ObjectString -Obj $Obj -Field $field
+    if ($value.Trim()) { return $value }
+  }
+  return ""
+}
+
 function Get-CharacterAliases {
   param([string]$Name)
   $titleWords = @("Doktor","Dr","Madam","Bay","Bayan","Hanım","Hanim","Bey")
@@ -64,6 +73,15 @@ $characterState = Read-StateJson -Name "character-state.json"
 $plotLedger = Read-StateJson -Name "plot-ledger.json"
 $chapterSummaries = Read-StateJson -Name "chapter-summaries.json"
 $continuityLedger = Read-StateJson -Name "continuity-ledger.json"
+$writingProfile = Read-StateJson -Name "writing-type-profile.json"
+$structureTemplate = Read-StateJson -Name "genre-structure-template.json"
+$claimLedger = Read-StateJson -Name "claim-ledger.json"
+$sourceLedger = Read-StateJson -Name "source-ledger.json"
+$termGlossary = Read-StateJson -Name "term-glossary.json"
+$argumentLedger = Read-StateJson -Name "argument-ledger.json"
+$writingType = if ($bookPlan.PSObject.Properties.Name -contains "writing_type") { [string]$bookPlan.writing_type } else { "" }
+$fictionWritingTypes = @("novel","story","novella","children_book","young_adult")
+$nonfictionWritingTypes = @("essay","memoir","biography","research_book","self_help","business_book","academic")
 $relationshipGraphPath = Join-Path $ProjectRoot "revision/_state/relationship-graph.json"
 $relationshipGraph = $null
 if (Test-Path -LiteralPath $relationshipGraphPath -PathType Leaf) {
@@ -86,7 +104,7 @@ if ([int]$bookPlan.chapter_count -ne [int]$longformPlan.target_chapters) {
 
 $bookCharacterNames = @($bookPlan.characters | ForEach-Object { Get-ObjectString -Obj $_ -Field "name" })
 Assert-UniqueStrings -Values $bookCharacterNames -Label "book-plan character names"
-if ($bookCharacterNames.Count -lt 1) {
+if (($fictionWritingTypes -contains $writingType) -and $bookCharacterNames.Count -lt 1) {
   throw "State reducer conflict: book-plan has no characters."
 }
 
@@ -107,7 +125,7 @@ foreach ($name in $stateCharacterNames) {
 }
 
 if ($relationshipGraph -and ($relationshipGraph.PSObject.Properties.Name -contains "nodes")) {
-  $graphCharacterNames = @($relationshipGraph.nodes | ForEach-Object { Get-ObjectString -Obj $_ -Field "name" })
+  $graphCharacterNames = @($relationshipGraph.nodes | ForEach-Object { Get-ObjectStringAny -Obj $_ -Fields @("name","label") } | Where-Object { $_.Trim() })
   Assert-UniqueStrings -Values $graphCharacterNames -Label "relationship-graph character names"
   foreach ($name in $bookCharacterNames) {
     if ($graphCharacterNames -notcontains $name) {
@@ -117,6 +135,49 @@ if ($relationshipGraph -and ($relationshipGraph.PSObject.Properties.Name -contai
   foreach ($name in $graphCharacterNames) {
     if ($bookCharacterNames -notcontains $name) {
       throw "State reducer conflict: relationship-graph contains unplanned character '$name'."
+    }
+  }
+}
+
+foreach ($field in @("writing_type","structure_model","continuity_policy","completion_criteria")) {
+  if (-not ($writingProfile.PSObject.Properties.Name -contains $field) -or -not ([string]$writingProfile.$field).Trim()) {
+    throw "State reducer conflict: writing-type-profile.json missing concrete '$field'."
+  }
+}
+$supportedWritingTypes = @("novel","story","novella","children_book","young_adult","essay","memoir","biography","research_book","self_help","business_book","academic")
+if ($supportedWritingTypes -notcontains ([string]$writingProfile.writing_type)) {
+  throw "State reducer conflict: unsupported writing_type '$($writingProfile.writing_type)'."
+}
+if ([string]$bookPlan.writing_type -ne [string]$writingProfile.writing_type) {
+  throw "State reducer conflict: book-plan writing_type does not match writing-type-profile."
+}
+
+if (-not ($structureTemplate.PSObject.Properties.Name -contains "mandatory_ledgers")) {
+  throw "State reducer conflict: genre-structure-template.json missing mandatory_ledgers."
+}
+$mandatoryLedgers = @($structureTemplate.mandatory_ledgers | ForEach-Object { [string]$_ })
+foreach ($ledger in @("chapter-summaries.json","continuity-ledger.json")) {
+  if ($mandatoryLedgers -notcontains $ledger) {
+    throw "State reducer conflict: mandatory_ledgers missing '$ledger'."
+  }
+}
+
+if ($nonfictionWritingTypes -contains ([string]$writingProfile.writing_type)) {
+  foreach ($ledger in @("claim-ledger.json","source-ledger.json","term-glossary.json","argument-ledger.json")) {
+    if ($mandatoryLedgers -notcontains $ledger) {
+      throw "State reducer conflict: nonfiction profile missing mandatory ledger '$ledger'."
+    }
+  }
+}
+foreach ($pair in @(
+  @{ name = "claim-ledger.json"; obj = $claimLedger; fields = @("claims","unsupported_claims","rule") },
+  @{ name = "source-ledger.json"; obj = $sourceLedger; fields = @("sources","missing_sources","rule") },
+  @{ name = "term-glossary.json"; obj = $termGlossary; fields = @("terms","rule") },
+  @{ name = "argument-ledger.json"; obj = $argumentLedger; fields = @("chapter_arguments","counterarguments","rule") }
+)) {
+  foreach ($field in $pair.fields) {
+    if (-not ($pair.obj.PSObject.Properties.Name -contains $field)) {
+      throw "State reducer conflict: $($pair.name) missing '$field'."
     }
   }
 }
@@ -136,15 +197,17 @@ foreach ($chapter in $chapters) {
       throw "State reducer conflict: chapter entry missing '$field'."
     }
   }
-  if ($chapter.PSObject.Properties.Name -contains "character_focus") {
-    $focus = Get-ObjectString -Obj $chapter -Field "character_focus"
+  if (($fictionWritingTypes -contains $writingType) -and $chapter.PSObject.Properties.Name -contains "character_focus") {
+    $focus = [string]($chapter.character_focus -join " ")
     $allowedAliases = @()
     foreach ($name in $bookCharacterNames) { $allowedAliases += Get-CharacterAliases -Name $name }
-    foreach ($token in ($focus -split ",")) {
-      $clean = $token.Trim()
-      if ($clean -and $allowedAliases -notcontains $clean) {
-        throw "State reducer conflict: chapter character_focus references unknown character '$clean'."
-      }
+    $mentionsKnownCharacter = $false
+    foreach ($alias in $allowedAliases) {
+      if ($focus -match "(?<!\p{L})$([regex]::Escape($alias))(?!\p{L})") { $mentionsKnownCharacter = $true }
+    }
+    $genericFocus = $focus -match "(?i)(ana karakter|başkarakter|baskarakter|protagonist|karakter)"
+    if (-not $mentionsKnownCharacter -and -not $genericFocus -and $focus -match "\b[A-ZÇĞİÖŞÜ][a-zçğıöşü]{2,}\b") {
+      throw "State reducer conflict: chapter character_focus appears to name a character but does not match planned characters."
     }
   }
 }

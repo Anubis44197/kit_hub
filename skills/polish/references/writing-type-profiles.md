@@ -26,12 +26,24 @@ This reference defines the supported production profiles. Every run must choose 
 ## Mandatory Profile Fields
 Each active profile must define:
 - `writing_type`
+- `genre`
 - `target_reader`
 - `structure_model`
 - `voice_model`
 - `evidence_policy`
 - `continuity_policy`
 - `completion_criteria`
+
+## Canonical Type Rules
+- Do not use `user_defined`, `other`, `book`, or a free-text Turkish label as `writing_type`.
+- Use one canonical value: `novel`, `story`, `novella`, `children_book`, `young_adult`, `essay`, `memoir`, `biography`, `research_book`, `self_help`, `business_book`, or `academic`.
+- Put mystery, thriller, historical, fantasy, science fiction, romance, literary, and similar labels in `genre`.
+- `book-plan.json.writing_type` and `writing-type-profile.json.writing_type` must match exactly.
+
+## Type-Specific Ledger Rules
+- Fiction profiles require character, plot, world, relationship, knowledge, timeline, theme, continuity, promise/payoff, and chapter-summary ledgers.
+- Nonfiction profiles require claim, source, term glossary, argument, continuity, and chapter-summary ledgers.
+- Hybrid projects must satisfy both fiction and nonfiction ledger groups.
 
 ## Completion Rule
 No export is ready unless the selected profile has a matching structure template and quality scorecard.

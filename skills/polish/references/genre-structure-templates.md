@@ -43,3 +43,20 @@ These templates prevent long manuscripts from losing shape.
 - Fiction: character state, plot ledger, continuity ledger, style profile, chapter summaries.
 - Nonfiction: claim ledger, source ledger, term glossary, chapter argument summaries.
 - Hybrid works: both ledger groups apply.
+
+## Longform Memory Rules
+- Any book plan must declare `memory_strategy`, `chapter_state_update_contract`, and `reader_progression_policy`.
+- Every generated chapter must add a unique `new_event`, `new_information`, `irreversible_change`, and `next_causal_link` to `chapter-summaries.json`.
+- Long manuscripts must use an audit schedule; the writer cannot generate unlimited chapters in one pass.
+- For large works, state ledgers are the source of truth, not the previous prose alone.
+
+## Supported Structure Families
+- `single_turn_story_arc`: short story or compact fiction.
+- `controlled_subplot_novella`: novella or short novel with limited subplots.
+- `four_act_longform_novel`: sustained novel with opening, complication, consequence, and resolution.
+- `clue_escalation_reveal_novel`: mystery, thriller, agent, or detective fiction with clue/payoff control.
+- `period_consistency_historical_arc`: historical fiction with period and anachronism control.
+- `thesis_counterargument_synthesis`: essay.
+- `chronological_life_arc`: biography.
+- `memoir_reflection_arc`: memoir.
+- `claim_source_argument_book`: research or argument-led nonfiction.

@@ -26,6 +26,7 @@ This phase never writes manuscript chapters. It turns the user's actual request 
 ## Hard Rules
 - Do not use placeholder language such as `plan_required`, `to_be_confirmed`, `TBD`, `TODO`, or "fill in later".
 - Every character entry must include concrete role, name, desire, fear, and arc.
+- If the user specifies a character count, the plan must preserve that count or explicitly ask the user to reduce it before writing starts.
 - Every plot arc must include concrete opening promise, inciting incident, midpoint turn, climax, and resolution.
 - Every chapter plan entry must include reader-facing title, purpose, events, character focus, continuity promises, and target words.
 - Layout targets must align with target pages, target words, target chapters, trim size, font, and words-per-page estimate.
@@ -52,3 +53,7 @@ This phase never writes manuscript chapters. It turns the user's actual request 
 - `revision/_state/genre-structure-template.json`
 - `revision/_state/editorial-quality-scorecard.json`
 - `revision/_state/llm-adapter-contract.json`
+- `revision/_state/claim-ledger.json`
+- `revision/_state/source-ledger.json`
+- `revision/_state/term-glossary.json`
+- `revision/_state/argument-ledger.json`

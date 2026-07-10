@@ -1594,7 +1594,11 @@ function Validate-LongformState {
     "writing-type-profile.json",
     "genre-structure-template.json",
     "editorial-quality-scorecard.json",
-    "llm-adapter-contract.json"
+    "llm-adapter-contract.json",
+    "claim-ledger.json",
+    "source-ledger.json",
+    "term-glossary.json",
+    "argument-ledger.json"
   )
   foreach ($name in $required) {
     Ensure-File (Join-Path $stateDir $name)
@@ -1636,7 +1640,7 @@ function Validate-LongformState {
   if (-not ($plan.PSObject.Properties.Name -contains "required_state_files") -or @($plan.required_state_files).Count -lt 3) {
     throw "Longform plan must declare required_state_files for continuity and planning gates."
   }
-  foreach ($requiredStateRel in @("revision/_state/world-state.json","revision/_state/relationship-graph.json","revision/_state/knowledge-graph.json","revision/_state/promise-payoff-ledger.json","revision/_state/timeline.json","revision/_state/theme-ledger.json","revision/_state/volume-plan.json")) {
+  foreach ($requiredStateRel in @("revision/_state/world-state.json","revision/_state/relationship-graph.json","revision/_state/knowledge-graph.json","revision/_state/promise-payoff-ledger.json","revision/_state/timeline.json","revision/_state/theme-ledger.json","revision/_state/volume-plan.json","revision/_state/claim-ledger.json","revision/_state/source-ledger.json","revision/_state/term-glossary.json","revision/_state/argument-ledger.json")) {
     if (@($plan.required_state_files) -notcontains $requiredStateRel) {
       throw "Longform plan required_state_files missing '$requiredStateRel'."
     }
@@ -1646,6 +1650,16 @@ function Validate-LongformState {
   }
   if ([int]$plan.audit_interval_chapters -lt 1) {
     throw "Longform plan audit_interval_chapters must be positive."
+  }
+  foreach ($field in @("memory_strategy","chapter_state_update_contract","reader_progression_policy")) {
+    if (-not ($plan.PSObject.Properties.Name -contains $field)) {
+      throw "Longform plan missing '$field' for long-book continuity memory."
+    }
+  }
+  foreach ($stateUpdateName in @("chapter-summaries","character-state","plot-ledger","continuity-ledger","world-state","relationship-graph","knowledge-graph","promise-payoff-ledger","timeline","theme-ledger")) {
+    if (@($plan.chapter_state_update_contract) -notcontains $stateUpdateName) {
+      throw "Longform plan chapter_state_update_contract missing '$stateUpdateName'."
+    }
   }
 
   $bookPlan = Read-Utf8 -Path (Join-Path $stateDir "book-plan.json") | ConvertFrom-Json
@@ -1680,7 +1694,10 @@ function Validate-LongformState {
   if ([int]$bookPlan.target_pages -ne [int]$plan.target_pages -or [int]$bookPlan.target_words -ne [int]$plan.target_words) {
     throw "book-plan.json page/word targets must match longform-plan."
   }
-  if (@($bookPlan.characters).Count -lt 1) {
+  $planWritingType = [string]$bookPlan.writing_type
+  $fictionWritingTypes = @("novel","story","novella","children_book","young_adult")
+  $nonfictionWritingTypes = @("essay","memoir","biography","research_book","self_help","business_book","academic")
+  if (($fictionWritingTypes -contains $planWritingType) -and @($bookPlan.characters).Count -lt 1) {
     throw "book-plan.json must include at least one planned character before writing starts."
   }
   foreach ($characterPlan in @($bookPlan.characters)) {
@@ -1690,9 +1707,19 @@ function Validate-LongformState {
       }
     }
   }
-  foreach ($arcField in @("opening_promise","inciting_incident","midpoint_turn","climax","resolution")) {
-    if (-not ($bookPlan.plot_arc.PSObject.Properties.Name -contains $arcField) -or -not ([string]$bookPlan.plot_arc.$arcField).Trim()) {
-      throw "book-plan.json plot_arc missing concrete '$arcField'."
+  if ($nonfictionWritingTypes -contains $planWritingType) {
+    $argumentArc = if ($bookPlan.PSObject.Properties.Name -contains "argument_arc") { $bookPlan.argument_arc } else { $bookPlan.plot_arc }
+    foreach ($arcField in @("opening_promise","inciting_incident","midpoint_turn","climax","resolution")) {
+      if (-not ($argumentArc.PSObject.Properties.Name -contains $arcField) -or -not ([string]$argumentArc.$arcField).Trim()) {
+        throw "book-plan.json argument_arc/plot_arc missing concrete '$arcField'."
+      }
+    }
+  }
+  else {
+    foreach ($arcField in @("opening_promise","inciting_incident","midpoint_turn","climax","resolution")) {
+      if (-not ($bookPlan.plot_arc.PSObject.Properties.Name -contains $arcField) -or -not ([string]$bookPlan.plot_arc.$arcField).Trim()) {
+        throw "book-plan.json plot_arc missing concrete '$arcField'."
+      }
     }
   }
 
@@ -1753,6 +1780,14 @@ function Validate-LongformState {
   $allowed = [Math]::Max(1000.0, [double]$layoutPlan.target_words * 0.18)
   if ($delta -gt $allowed) {
     throw "layout-plan.json page/word targets are inconsistent; adjust target_pages, target_words, or words_per_page_estimate."
+  }
+  foreach ($field in @("front_matter","back_matter","page_numbering","chapter_title_policy","publisher_submission_label")) {
+    if (-not ($layoutPlan.PSObject.Properties.Name -contains $field)) {
+      throw "layout-plan.json missing publication layout field '$field'."
+    }
+  }
+  if ([string]$layoutPlan.chapter_title_policy -notmatch "(?i)reader|okur|no_ep|technical|scene|sahne") {
+    throw "layout-plan.json chapter_title_policy must explicitly forbid technical reader-facing labels."
   }
 
   if ($Phase -in @("design-small","create","polish","rewrite","export")) {
@@ -1839,11 +1874,36 @@ function Validate-LongformState {
       throw "writing-type-profile.json missing '$field'."
     }
   }
+  $supportedWritingTypes = @("novel","story","novella","children_book","young_adult","essay","memoir","biography","research_book","self_help","business_book","academic")
+  $activeWritingType = [string]$writingProfile.writing_type
+  if ($supportedWritingTypes -notcontains $activeWritingType) {
+    throw "writing-type-profile.json writing_type '$activeWritingType' is not supported or is not canonical."
+  }
+  if ([string]$bookPlan.writing_type -ne $activeWritingType) {
+    throw "book-plan.json writing_type must match writing-type-profile.json writing_type."
+  }
+  if ([string]$writingProfile.target_reader -match "(?i)user_defined|to_be_confirmed|placeholder|tbd") {
+    throw "writing-type-profile.json target_reader must be concrete before writing starts."
+  }
 
   $structureTemplate = Read-Utf8 -Path (Join-Path $stateDir "genre-structure-template.json") | ConvertFrom-Json
   foreach ($field in @("template_id","acts","chapter_rules","mandatory_ledgers")) {
     if (-not ($structureTemplate.PSObject.Properties.Name -contains $field)) {
       throw "genre-structure-template.json missing '$field'."
+    }
+  }
+  $fictionTypes = @("novel","story","novella","children_book","young_adult")
+  $nonfictionTypes = @("essay","memoir","biography","research_book","self_help","business_book","academic")
+  $requiredTypeLedgers = @("chapter-summaries.json","continuity-ledger.json")
+  if ($fictionTypes -contains $activeWritingType) {
+    $requiredTypeLedgers += @("character-state.json","plot-ledger.json","world-state.json","relationship-graph.json","knowledge-graph.json","promise-payoff-ledger.json","timeline.json","theme-ledger.json")
+  }
+  if ($nonfictionTypes -contains $activeWritingType) {
+    $requiredTypeLedgers += @("claim-ledger.json","source-ledger.json","term-glossary.json","argument-ledger.json")
+  }
+  foreach ($ledgerName in $requiredTypeLedgers) {
+    if (@($structureTemplate.mandatory_ledgers) -notcontains $ledgerName) {
+      throw "genre-structure-template.json mandatory_ledgers missing type-required '$ledgerName'."
     }
   }
 
@@ -1853,11 +1913,24 @@ function Validate-LongformState {
       throw "editorial-quality-scorecard.json missing '$field'."
     }
   }
+  foreach ($axis in @("type-fit","publication-readiness")) {
+    if (@($scorecard.axes) -notcontains $axis) {
+      throw "editorial-quality-scorecard.json axes missing '$axis'."
+    }
+  }
+  if ($nonfictionTypes -contains $activeWritingType -and @($scorecard.axes) -notcontains "character_or_argument_depth") {
+    throw "editorial-quality-scorecard.json axes missing nonfiction argument-depth axis."
+  }
 
   $adapterContract = Read-Utf8 -Path (Join-Path $stateDir "llm-adapter-contract.json") | ConvertFrom-Json
   foreach ($field in @("adapter_contract","max_chapters_per_batch","required_input_state","required_output_state")) {
     if (-not ($adapterContract.PSObject.Properties.Name -contains $field)) {
       throw "llm-adapter-contract.json missing '$field'."
+    }
+  }
+  foreach ($requiredOutputRel in @("revision/_state/chapter-summaries.json","revision/_state/character-state.json","revision/_state/plot-ledger.json","revision/_state/continuity-ledger.json","revision/_state/claim-ledger.json","revision/_state/source-ledger.json","revision/_state/term-glossary.json","revision/_state/argument-ledger.json")) {
+    if (@($adapterContract.required_output_state) -notcontains $requiredOutputRel) {
+      throw "llm-adapter-contract.json required_output_state missing '$requiredOutputRel'."
     }
   }
 
@@ -2320,6 +2393,7 @@ if ($fromIdx -lt 0 -or $toIdx -lt 0 -or $fromIdx -gt $toIdx) {
   throw "Invalid phase range: $FromPhase -> $ToPhase"
 }
 
+$ProjectRoot = [System.IO.Path]::GetFullPath($ProjectRoot)
 $runtimeDir = Join-Path $ProjectRoot "runtime"
 if (-not $ConfigPath) {
   $ConfigPath = Join-Path $runtimeDir "runner-config.json"

@@ -18,6 +18,11 @@ The DOCX export must be ready for editor review and print/e-book conversion.
 - explicit delivery profile: `publisher_submission` or `print_preview`
 - explicit page setup in millimeters and Word twips
 - Word paragraph styles for body, chapter title, front matter, and TOC text
+- explicit front matter plan
+- explicit back matter plan
+- explicit page numbering policy
+- explicit chapter-title policy forbidding technical EP/scene labels
+- explicit publisher-submission label when ISBN, barcode, kunye, or bandrol are not externally complete
 - body text justified unless the selected publisher profile says otherwise
 - body font, size, line spacing, paragraph spacing, and first-line indentation must come from `runtime/layout-profile.json`
 - no mojibake
@@ -38,3 +43,4 @@ The export validator must confirm:
 - manifest references existing files
 - front matter and cover brief exist
 - professional writing profile and quality scorecard exist
+- layout plan includes front matter, back matter, page numbering, chapter title policy, and publisher-submission label
