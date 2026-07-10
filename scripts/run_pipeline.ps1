@@ -909,6 +909,14 @@ function Ensure-UserApproval {
     Validate-BookBriefApproval -Root $Root -Approval $obj -ApprovalRel $rel
   }
   if ($Phase -eq "design-big") {
+    $briefApprovalRel = "runtime/approvals/book-brief-approval.json"
+    $briefApprovalPath = Join-Path $Root $briefApprovalRel
+    Ensure-File $briefApprovalPath
+    $briefApproval = Read-Utf8 -Path $briefApprovalPath | ConvertFrom-Json
+    if (-not ($briefApproval.PSObject.Properties.Name -contains "approved") -or $briefApproval.approved -ne $true) {
+      throw "Design-big blocked: $briefApprovalRel must be approved before story design."
+    }
+    Validate-BookBriefApproval -Root $Root -Approval $briefApproval -ApprovalRel $briefApprovalRel
     $selected = Get-StringFieldValue -Object $obj -Field "selected_option"
     if ($selected -notin @("1","2","3")) {
       throw "Story choice approval blocked: $rel must include selected_option 1, 2, or 3 before design-big."
@@ -930,9 +938,14 @@ function Get-StringFieldValue {
 function Test-AnsweredField {
   param([object]$Primary, [object]$Fallback, [string]$Field)
   $value = Get-StringFieldValue -Object $Primary -Field $Field
-  if ($value) { return $true }
+  if ($value) {
+    if ($value -match "(?i)^\s*(ask_user|ask user|to_be_confirmed|tbd|todo|unknown|bilinmiyor|sorulacak)\s*$") { return $false }
+    return $true
+  }
   $fallbackValue = Get-StringFieldValue -Object $Fallback -Field $Field
-  return [bool]$fallbackValue
+  if (-not $fallbackValue) { return $false }
+  if ($fallbackValue -match "(?i)^\s*(ask_user|ask user|to_be_confirmed|tbd|todo|unknown|bilinmiyor|sorulacak)\s*$") { return $false }
+  return $true
 }
 
 function Validate-BookBriefApproval {
@@ -987,6 +1000,7 @@ function Validate-BookPlanApproval {
   foreach ($rel in @("revision/_state/book-plan.json","revision/_state/chapter-plan.json","revision/_state/layout-plan.json","revision/_state/longform-plan.json","revision/_state/volume-plan.json")) {
     Ensure-File (Join-Path $Root $rel)
   }
+  $bookPlan = Read-JsonFile -Path (Join-Path $Root "revision/_state/book-plan.json")
   $plan = Read-JsonFile -Path (Join-Path $Root "revision/_state/longform-plan.json")
   foreach ($field in @("target_pages","target_words","target_chapters","max_chapters_per_batch","audit_interval_chapters","continuity_model")) {
     if (-not ($plan.PSObject.Properties.Name -contains $field)) {
@@ -1006,6 +1020,16 @@ function Validate-BookPlanApproval {
       if ([int]$Approval.accepted_targets.$field -ne [int]$plan.$field) {
         throw "Book plan approval blocked: accepted_targets.$field does not match longform-plan.json."
       }
+    }
+  }
+  if ($Approval.PSObject.Properties.Name -contains "accepted_writing_type" -and $Approval.accepted_writing_type) {
+    if ([string]$Approval.accepted_writing_type -ne [string]$bookPlan.writing_type) {
+      throw "Book plan approval blocked: accepted_writing_type does not match book-plan.json."
+    }
+  }
+  if ($Approval.PSObject.Properties.Name -contains "accepted_genre" -and $Approval.accepted_genre) {
+    if ([string]$Approval.accepted_genre -ne [string]$bookPlan.genre) {
+      throw "Book plan approval blocked: accepted_genre does not match book-plan.json."
     }
   }
 }

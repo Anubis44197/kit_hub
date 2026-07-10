@@ -106,8 +106,44 @@ function Get-BookSeed {
   return $raw
 }
 
+function Get-BriefAnswerValue {
+  param([string]$Field)
+  $approvalPath = Join-Path $ProjectRoot "runtime/approvals/book-brief-approval.json"
+  if (Test-Path -LiteralPath $approvalPath -PathType Leaf) {
+    try {
+      $approval = Read-Json -Path $approvalPath
+      if ($approval.PSObject.Properties.Name -contains "accepted_answers" -and $approval.accepted_answers -and ($approval.accepted_answers.PSObject.Properties.Name -contains $Field)) {
+        $value = ([string]$approval.accepted_answers.$Field).Trim()
+        if ($value) { return $value }
+      }
+    }
+    catch {}
+  }
+  $briefPath = Join-Path $ProjectRoot "runtime/book-brief.json"
+  if (Test-Path -LiteralPath $briefPath -PathType Leaf) {
+    try {
+      $brief = Read-Json -Path $briefPath
+      if ($brief.PSObject.Properties.Name -contains "answers" -and $brief.answers -and ($brief.answers.PSObject.Properties.Name -contains $Field)) {
+        $value = ([string]$brief.answers.$Field).Trim()
+        if ($value) { return $value }
+      }
+    }
+    catch {}
+  }
+  return ""
+}
+
+function Get-DesignSeed {
+  $parts = @((Get-BookSeed))
+  foreach ($field in @("writing_type","genre","target_length","target_pages","target_reader","character_policy","setting_period","pov_tense","style_tone","boundaries","publication_package")) {
+    $value = Get-BriefAnswerValue -Field $field
+    if ($value) { $parts += ("{0}: {1}" -f $field, $value) }
+  }
+  return ($parts -join "`n")
+}
+
 function Get-RequestedChapterCount {
-  $raw = Get-BookSeed
+  $raw = Get-DesignSeed
   $m = [regex]::Match($raw, "(?i)(\d+)\s*(bölüm|bolum|chapter|chapters)")
   if ($m.Success) {
     $count = [int]$m.Groups[1].Value
@@ -117,7 +153,7 @@ function Get-RequestedChapterCount {
 }
 
 function Get-RequestedPageCount {
-  $raw = Get-BookSeed
+  $raw = Get-DesignSeed
   $m = [regex]::Match($raw, "(?i)(\d+)\s*(sayfa|page|pages)")
   if ($m.Success) {
     $count = [int]$m.Groups[1].Value
@@ -148,7 +184,7 @@ function Get-RequestedPageCount {
 }
 
 function Get-RequestedCharacterCount {
-  $raw = Get-BookSeed
+  $raw = Get-DesignSeed
   $m = [regex]::Match($raw, "(?i)(\d+)\s*(karakter|character|characters)")
   if ($m.Success) {
     $count = [int]$m.Groups[1].Value
@@ -251,6 +287,35 @@ function Get-WritingTypeProfileFromSeed {
   elseif ($s -match "gizem|polisiye|thriller|gerilim|ajan|casus") { $genre = "mystery_thriller"; if ($type -eq "novel") { $structure = "clue_escalation_reveal_novel" } }
   elseif ($s -match "romantik|romance") { $genre = "romance"; if ($type -eq "novel") { $structure = "relationship_beat_romance" } }
   elseif ($s -match "tarih|tarihsel|historical|1930|1940|osmanlı|osmanli|cumhuriyet") { $genre = "historical_fiction"; if ($type -eq "novel") { $structure = "period_consistency_historical_arc" } }
+
+  $explicitType = (Get-BriefAnswerValue -Field "writing_type").ToLowerInvariant()
+  $canonicalTypes = @("novel","story","novella","children_book","young_adult","essay","memoir","biography","research_book","self_help","business_book","academic")
+  $typeAliases = @{
+    "roman" = "novel"
+    "hikaye" = "story"
+    "hikâye" = "story"
+    "oyku" = "story"
+    "öykü" = "story"
+    "kisa roman" = "novella"
+    "kısa roman" = "novella"
+    "deneme" = "essay"
+    "ani" = "memoir"
+    "anı" = "memoir"
+    "biyografi" = "biography"
+    "arastirma kitabi" = "research_book"
+    "araştırma kitabı" = "research_book"
+    "cocuk kitabi" = "children_book"
+    "çocuk kitabı" = "children_book"
+  }
+  if ($canonicalTypes -contains $explicitType) {
+    $type = $explicitType
+  }
+  elseif ($typeAliases.ContainsKey($explicitType)) {
+    $type = $typeAliases[$explicitType]
+  }
+  if ($type -eq "novel" -and $structure -in @("thesis_counterargument_synthesis","chronological_life_arc","memoir_reflection_arc","claim_source_argument_book","formal_academic_argument","framework_case_application","promise_exercise_application")) {
+    $structure = "four_act_longform_novel"
+  }
 
   return [ordered]@{
     writing_type = $type
@@ -828,7 +893,7 @@ function Invoke-Intake {
 }
 
 function Invoke-DesignBig {
-  $seed = Get-BookSeed
+  $seed = Get-DesignSeed
   Ensure-Approved -RelativePath "runtime/approvals/book-brief-approval.json" -GateName "Book brief approval" | Out-Null
   $choice = Get-StoryChoice
   $projectName = Get-CleanTitleFromText -Text $seed
