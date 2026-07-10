@@ -38,6 +38,7 @@ Summary: `kit_hub` is not only a content panel. It is an extended production eng
 - Runtime-compatible plugin structure (`agents/`, `skills/`, `.claude-plugin/`)
 - Turkish-first quality model with mandatory TDK and layout gates
 - Approval-gated Word export pipeline with front matter and cover brief requirements
+- Publisher-submission and print-preview delivery profiles with DOCX page/style validation
 
 ## What This Repository Is Not
 - Not a classic web application (`npm start` / API server)
@@ -214,6 +215,7 @@ The user must approve the brief before `propose` can continue. This locks writin
 | Export approval missing (`approval=false`) | Export blocked with `E_EXPORT_APPROVAL` |
 | Approval granted (`approval=true`) | Export proceeds through validator/manifests |
 | DOCX integrity check | Must pass structural verification (`verify_docx_integrity.ps1`) |
+| DOCX layout/profile check | Must pass style and page setup verification (`verify_docx_layout_profile.ps1`) |
 | DOCX content match check | Exported DOCX text must contain snippets from current `episode/ep*.md` files; stale copied DOCX files are blocked |
 
 ## Local Validation

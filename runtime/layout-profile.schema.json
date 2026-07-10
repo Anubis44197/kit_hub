@@ -3,7 +3,7 @@
   "title": "Layout Profile",
   "type": "object",
   "additionalProperties": true,
-  "required": ["schema_version", "run_id", "profile_status", "print_target", "trim_size", "font_family", "body_font_size_pt", "line_spacing", "front_matter", "cover"],
+  "required": ["schema_version", "run_id", "profile_status", "print_target", "trim_size", "font_family", "body_font_size_pt", "line_spacing", "delivery_profiles", "page_setup", "typography", "front_matter", "cover"],
   "properties": {
     "schema_version": { "type": "string" },
     "run_id": { "type": "string", "minLength": 1 },
@@ -13,6 +13,21 @@
     "font_family": { "type": "string" },
     "body_font_size_pt": { "type": "number" },
     "line_spacing": { "type": "number" },
+    "delivery_profiles": {
+      "type": "object",
+      "required": ["publisher_submission", "print_preview"],
+      "additionalProperties": true
+    },
+    "page_setup": {
+      "type": "object",
+      "required": ["trim_size", "width_mm", "height_mm", "margin_top_mm", "margin_bottom_mm", "margin_inside_mm", "margin_outside_mm"],
+      "additionalProperties": true
+    },
+    "typography": {
+      "type": "object",
+      "required": ["body_style", "chapter_title_style", "paragraph_first_line_indent_cm", "paragraph_spacing_after_pt", "justification"],
+      "additionalProperties": true
+    },
     "front_matter": { "type": "object" },
     "cover": { "type": "object" }
   }

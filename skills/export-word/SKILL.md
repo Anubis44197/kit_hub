@@ -63,7 +63,8 @@ Export book text to `.docx` only after explicit user approval and pre-export val
 5. Cover package brief (`cover-designer`) [mandatory for complete book package]
 6. Publication metadata compliance (`publication-compliance-checker`) [mandatory before print-ready claim]
 7. DOCX build (`book-exporter`)
-8. Export summary report
+8. DOCX layout/profile verification (`verify_docx_layout_profile.ps1`) [mandatory for publisher-grade output]
+9. Export summary report
 
 ## Source Priority
 - If `book_mode.enabled=true`, source text must come from:
@@ -80,6 +81,8 @@ Export book text to `.docx` only after explicit user approval and pre-export val
 - Do not mark the book package print-ready unless publication-compliance verdict is `READY`.
 - Do not invent ISBN, publisher, author identity, copyright owner, barcode, or final cover artwork.
 - Do not claim bandrol completion, ministry approval, ISBN assignment, or publisher approval from local export.
+- Do not call `READY_WITH_PUBLICATION_REVIEW` output print-ready; call it publisher-review-ready only.
+- Do not export without a DOCX style profile artifact that records delivery profile, page size, margins, typography, paragraph indentation, and line spacing.
 
 ## Outputs
 - `{WORK_DIR}/export/{project_name}_EP{RANGE}.docx`
@@ -91,6 +94,7 @@ Export book text to `.docx` only after explicit user approval and pre-export val
 - `{WORK_DIR}/_workspace/14_publication-compliance_verdict_EP{RANGE}.json`
 - `{WORK_DIR}/_workspace/10_export-validator_report_EP{RANGE}.md`
 - `{WORK_DIR}/_workspace/10_export-validator_verdict_EP{RANGE}.json`
+- `{WORK_DIR}/_workspace/10_docx-style-profile_EP{RANGE}.json`
 - `{WORK_DIR}/_workspace/10_export-word_report_EP{RANGE}.md`
 - `{WORK_DIR}/_workspace/10_export-word_manifest_EP{RANGE}.json`
 
@@ -117,6 +121,10 @@ Export book text to `.docx` only after explicit user approval and pre-export val
 - `source_mode` (`book_mode` | `tdk_only`)
 - `source_files`
 - `style_profile`
+- `docx_style_profile`
+- `delivery_profiles`
+- `page_layout`
+- `typography`
 - `approval_artifact`
 - `front_matter_files`
 - `cover_design_manifest`
@@ -134,6 +142,8 @@ The summary report must include:
 - export-validator verdict
 - source mode and source files
 - applied style profile name
+- delivery profile status: publisher submission, print preview, or both
+- page setup status: trim size, page dimensions, margins, font, line spacing, indentation
 - front matter status
 - cover brief status
 - publication metadata / ISBN / kunye compliance status

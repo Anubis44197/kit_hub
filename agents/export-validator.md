@@ -31,6 +31,8 @@ You are the hard validation gate before DOCX build.
 2. TDK `critical` issue count must be `0`.
 3. If `book_mode.enabled=true`, layout `critical` issue count must be `0`.
 4. Style profile must define page size, margins, typography, and dialogue style.
+4a. Style profile must define both `publisher_submission` and `print_preview` delivery profile decisions.
+4b. Exported DOCX must include Word styles and section page setup that match the style profile.
 5. Selected range metadata must be valid (no malformed EP tokens).
 6. If complete-book front matter is enabled, title page, copyright page, preface, and TOC artifacts must exist or be explicitly blocked.
 7. If cover brief is required, cover design manifest and back-cover copy must exist.
@@ -39,6 +41,7 @@ You are the hard validation gate before DOCX build.
 10. Reports/manifests must satisfy PII redaction policy.
 11. Publication compliance must not contain fake ISBN, fake barcode, fake publisher, fake copyright owner, or fake official approval.
 12. Print-ready export requires publication compliance verdict `READY`; otherwise export may be review-ready only.
+13. Publisher-review-ready export may pass with `READY_WITH_PUBLICATION_REVIEW`, but only if missing official metadata is explicit and no fake ISBN/barcode/bandrol/publisher data exists.
 
 ## Verdicts
 - `READY`
@@ -56,6 +59,7 @@ You are the hard validation gate before DOCX build.
 - `E_PII_POLICY`: redaction policy violation in export artifacts.
 - `E_PUBLICATION_METADATA`: publication metadata is incomplete or inconsistent.
 - `E_FAKE_OFFICIAL_METADATA`: invented ISBN, barcode, publisher, copyright owner, or approval detected.
+- `E_DOCX_LAYOUT_PROFILE`: exported DOCX does not match the required page/style profile.
 
 ## Required Outputs
 - `{WORK_DIR}/_workspace/10_export-validator_report_EP{RANGE}.md`
@@ -69,6 +73,8 @@ You are the hard validation gate before DOCX build.
 - `critical_tdk_count`
 - `critical_layout_count`
 - `style_profile_valid`
+- `docx_layout_profile_valid`
+- `delivery_profiles_valid`
 - `front_matter_valid`
 - `cover_brief_valid`
 - `script_policy_valid`

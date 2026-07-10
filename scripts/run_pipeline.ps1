@@ -445,6 +445,7 @@ function Validate-PhaseArtifacts {
     "export" {
       Ensure-Any -Patterns @(
         "revision/_workspace/10_export-word_manifest_EP*.json",
+        "revision/_workspace/10_docx-style-profile_EP*.json",
         "revision/_workspace/*export-word*manifest*.json",
         "revision/_workspace/*export-manifest*.json"
       ) -BasePath $Root
@@ -526,6 +527,7 @@ function Get-PhaseOutputArtifacts {
         "revision/_workspace/*export*manifest*.json",
         "revision/_workspace/*export-validator*verdict*.json",
         "revision/_workspace/*export-content-match*",
+        "revision/_workspace/*docx-style-profile*",
         "revision/_workspace/11_front-matter*",
         "revision/_workspace/12_cover-design*",
         "revision/_workspace/13_final-proofreader*",
@@ -1355,6 +1357,26 @@ function Validate-DocxContentMatch {
   Write-Utf8Bom -Path $reportPath -Content $report
 }
 
+function Validate-DocxLayoutProfile {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled -or $Phase -ne "export") {
+    return
+  }
+
+  $manifestPath = Resolve-ExportManifestPath -Root $Root
+  $scriptPath = Join-Path $Root "scripts/ci/verify_docx_layout_profile.ps1"
+  Ensure-File $scriptPath
+  & powershell -ExecutionPolicy Bypass -File $scriptPath -ProjectRoot $Root -ManifestPath (Get-RelativePathSafe -BasePath $Root -TargetPath $manifestPath)
+  if ($LASTEXITCODE -ne 0) {
+    throw "DOCX layout profile gate failed with exit code $LASTEXITCODE."
+  }
+}
+
 function Validate-LongformState {
   param(
     [string]$Root,
@@ -1482,9 +1504,22 @@ function Validate-LongformState {
   }
 
   $layoutPlan = Read-Utf8 -Path (Join-Path $stateDir "layout-plan.json") | ConvertFrom-Json
-  foreach ($field in @("schema_version","run_id","trim_size","font_family","font_size_pt","line_spacing","paragraph_first_line_indent_cm","words_per_page_estimate","target_pages","target_words","target_chapters","front_matter_pages_estimate","back_matter_pages_estimate","chapter_start_policy")) {
+  foreach ($field in @("schema_version","run_id","delivery_profiles","trim_size","width_mm","height_mm","margin_top_mm","margin_bottom_mm","margin_inside_mm","margin_outside_mm","font_family","font_size_pt","line_spacing","paragraph_first_line_indent_cm","words_per_page_estimate","target_pages","target_words","target_chapters","front_matter_pages_estimate","back_matter_pages_estimate","chapter_start_policy")) {
     if (-not ($layoutPlan.PSObject.Properties.Name -contains $field)) {
       throw "layout-plan.json missing '$field'."
+    }
+  }
+  foreach ($profileField in @("publisher_submission","print_preview")) {
+    if (-not ($layoutPlan.delivery_profiles.PSObject.Properties.Name -contains $profileField)) {
+      throw "layout-plan.json delivery_profiles missing '$profileField'."
+    }
+  }
+  if ([double]$layoutPlan.width_mm -lt 100 -or [double]$layoutPlan.height_mm -lt 140) {
+    throw "layout-plan.json page size is too small for a professional book layout."
+  }
+  foreach ($marginField in @("margin_top_mm","margin_bottom_mm","margin_inside_mm","margin_outside_mm")) {
+    if ([double]$layoutPlan.$marginField -lt 10 -or [double]$layoutPlan.$marginField -gt 40) {
+      throw "layout-plan.json $marginField must be between 10 and 40 mm."
     }
   }
   if ([int]$layoutPlan.target_pages -ne [int]$plan.target_pages -or [int]$layoutPlan.target_words -ne [int]$plan.target_words -or [int]$layoutPlan.target_chapters -ne [int]$plan.target_chapters) {
@@ -2195,6 +2230,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     }
 
     Validate-DocxContentMatch -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
+    Validate-DocxLayoutProfile -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     $artifacts = Get-PhaseOutputArtifacts -Phase $phase -Root $ProjectRoot
     Validate-ArtifactSizeBudget -Root $ProjectRoot -Artifacts $artifacts -MaxBytes $maxTextArtifactBytes -Enabled $enableArtifactSizeBudget
     $artifactHashes = @(Get-ArtifactHashRecords -Root $ProjectRoot -Artifacts $artifacts)

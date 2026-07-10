@@ -120,7 +120,8 @@ function Get-CleanTitleFromText {
   param([string]$Text)
   $line = (($Text -split "\r?\n") | Where-Object { $_.Trim() -and $_ -notmatch "^\s*#" } | Select-Object -First 1)
   if (-not $line) { $line = $Text }
-  $line = ($line -replace "(?i)^\s*\d+\s*(bölüm|bolum|chapter|chapters)\s*[:\-]?\s*", "").Trim()
+  $line = ($line -replace "(?i)^\s*\d+\s*(bölümlük|bolumluk|bölüm|bolum|chapter|chapters)\s*[:\-]?\s*", "").Trim()
+  $line = ($line -replace "(?i)^\s*(roman|hikaye|öykü|oyku|novella|deneme|biyografi)\s*[:\-]?\s*", "").Trim()
   $words = @($line -split "\s+" | Where-Object { $_.Trim() } | Select-Object -First 5)
   if ($words.Count -lt 1) { return "Adsiz Kitap" }
   $title = ($words -join " ").Trim(" .,:;")
@@ -297,8 +298,68 @@ function Assert-ManuscriptClean {
   }
 }
 
+function Convert-MmToTwip {
+  param([double]$Mm)
+  return [int][Math]::Round($Mm * 56.6929133858)
+}
+
+function Convert-CmToTwip {
+  param([double]$Cm)
+  return [int][Math]::Round($Cm * 566.929133858)
+}
+
+function Get-DocxStyleProfile {
+  $profilePath = Join-Path $ProjectRoot "runtime/layout-profile.json"
+  Ensure-File -Path $profilePath -Message "Export blocked: missing runtime/layout-profile.json for DOCX style profile."
+  $profile = Read-Json -Path $profilePath
+  $pageSetup = if ($profile.PSObject.Properties.Name -contains "page_setup") { $profile.page_setup } else { $null }
+  $typography = if ($profile.PSObject.Properties.Name -contains "typography") { $profile.typography } else { $null }
+
+  $widthMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "width_mm")) { [double]$pageSetup.width_mm } else { 148.0 }
+  $heightMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "height_mm")) { [double]$pageSetup.height_mm } else { 210.0 }
+  $topMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "margin_top_mm")) { [double]$pageSetup.margin_top_mm } else { 20.0 }
+  $bottomMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "margin_bottom_mm")) { [double]$pageSetup.margin_bottom_mm } else { 20.0 }
+  $insideMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "margin_inside_mm")) { [double]$pageSetup.margin_inside_mm } else { 18.0 }
+  $outsideMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "margin_outside_mm")) { [double]$pageSetup.margin_outside_mm } else { 18.0 }
+
+  $fontFamily = if ($profile.font_family) { [string]$profile.font_family } else { "Times New Roman" }
+  $fontSizePt = if ($profile.body_font_size_pt) { [double]$profile.body_font_size_pt } else { 11.0 }
+  $lineSpacing = if ($profile.line_spacing) { [double]$profile.line_spacing } else { 1.15 }
+  $indentCm = if ($typography -and ($typography.PSObject.Properties.Name -contains "paragraph_first_line_indent_cm")) { [double]$typography.paragraph_first_line_indent_cm } else { 0.6 }
+  $spacingAfterPt = if ($typography -and ($typography.PSObject.Properties.Name -contains "paragraph_spacing_after_pt")) { [double]$typography.paragraph_spacing_after_pt } else { 0.0 }
+  $justification = if ($typography -and ($typography.PSObject.Properties.Name -contains "justification")) { [string]$typography.justification } else { "both" }
+
+  return [ordered]@{
+    delivery_profiles = if ($profile.PSObject.Properties.Name -contains "delivery_profiles") { $profile.delivery_profiles } else { [ordered]@{ publisher_submission = [ordered]@{ enabled = $true }; print_preview = [ordered]@{ enabled = $true } } }
+    trim_size = if ($profile.trim_size) { [string]$profile.trim_size } else { "A5" }
+    width_mm = $widthMm
+    height_mm = $heightMm
+    margin_top_mm = $topMm
+    margin_bottom_mm = $bottomMm
+    margin_inside_mm = $insideMm
+    margin_outside_mm = $outsideMm
+    page_width_twip = Convert-MmToTwip $widthMm
+    page_height_twip = Convert-MmToTwip $heightMm
+    margin_top_twip = Convert-MmToTwip $topMm
+    margin_bottom_twip = Convert-MmToTwip $bottomMm
+    margin_left_twip = Convert-MmToTwip $insideMm
+    margin_right_twip = Convert-MmToTwip $outsideMm
+    font_family = $fontFamily
+    font_size_pt = $fontSizePt
+    font_size_half_points = [int][Math]::Round($fontSizePt * 2)
+    line_spacing = $lineSpacing
+    line_spacing_twip = [int][Math]::Round(240 * $lineSpacing)
+    paragraph_first_line_indent_cm = $indentCm
+    paragraph_first_line_indent_twip = Convert-CmToTwip $indentCm
+    paragraph_spacing_after_pt = $spacingAfterPt
+    paragraph_spacing_after_twip = [int][Math]::Round($spacingAfterPt * 20)
+    justification = $justification
+  }
+}
+
 function New-Docx {
   param([string]$OutputPath, [string]$Title, [string[]]$Paragraphs)
+  $style = Get-DocxStyleProfile
 
   $tmp = Join-Path $ProjectRoot "revision/_docx_tmp"
   if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Recurse -Force }
@@ -312,6 +373,7 @@ function New-Docx {
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
   <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
   <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
 </Types>
@@ -324,17 +386,57 @@ function New-Docx {
   <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
 </Relationships>
 '@
+  Write-Utf8 -Path (Join-Path $tmp "word/styles.xml") -Content @"
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault>
+      <w:rPr><w:rFonts w:ascii="$($style.font_family)" w:hAnsi="$($style.font_family)" w:cs="$($style.font_family)"/><w:sz w:val="$($style.font_size_half_points)"/></w:rPr>
+    </w:rPrDefault>
+    <w:pPrDefault>
+      <w:pPr><w:jc w:val="$($style.justification)"/><w:spacing w:line="$($style.line_spacing_twip)" w:lineRule="auto" w:after="$($style.paragraph_spacing_after_twip)"/><w:ind w:firstLine="$($style.paragraph_first_line_indent_twip)"/></w:pPr>
+    </w:pPrDefault>
+  </w:docDefaults>
+  <w:style w:type="paragraph" w:default="1" w:styleId="KitHubBody">
+    <w:name w:val="KitHub Body"/>
+    <w:pPr><w:jc w:val="$($style.justification)"/><w:spacing w:line="$($style.line_spacing_twip)" w:lineRule="auto" w:after="$($style.paragraph_spacing_after_twip)"/><w:ind w:firstLine="$($style.paragraph_first_line_indent_twip)"/></w:pPr>
+    <w:rPr><w:rFonts w:ascii="$($style.font_family)" w:hAnsi="$($style.font_family)" w:cs="$($style.font_family)"/><w:sz w:val="$($style.font_size_half_points)"/></w:rPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="KitHubChapterTitle">
+    <w:name w:val="KitHub Chapter Title"/>
+    <w:basedOn w:val="KitHubBody"/>
+    <w:pPr><w:keepNext/><w:pageBreakBefore/><w:jc w:val="center"/><w:spacing w:before="360" w:after="240"/><w:ind w:firstLine="0"/></w:pPr>
+    <w:rPr><w:b/><w:rFonts w:ascii="$($style.font_family)" w:hAnsi="$($style.font_family)" w:cs="$($style.font_family)"/><w:sz w:val="28"/></w:rPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="KitHubFrontMatter">
+    <w:name w:val="KitHub Front Matter"/>
+    <w:basedOn w:val="KitHubBody"/>
+    <w:pPr><w:jc w:val="center"/><w:spacing w:after="120"/><w:ind w:firstLine="0"/></w:pPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="KitHubToc">
+    <w:name w:val="KitHub TOC"/>
+    <w:basedOn w:val="KitHubBody"/>
+    <w:pPr><w:jc w:val="left"/><w:spacing w:after="80"/><w:ind w:firstLine="0"/></w:pPr>
+  </w:style>
+</w:styles>
+"@
   $body = New-Object System.Collections.Generic.List[string]
+  $index = 0
   foreach ($p in $Paragraphs) {
+    $index++
     $safe = [System.Security.SecurityElement]::Escape($p)
-    $body.Add("<w:p><w:r><w:t xml:space=""preserve"">$safe</w:t></w:r></w:p>")
+    $styleId = "KitHubBody"
+    if ($index -eq 1) { $styleId = "KitHubFrontMatter" }
+    elseif ($p -eq "İçindekiler") { $styleId = "KitHubChapterTitle" }
+    elseif ($p.Length -le 80 -and $p -notmatch "[\.;:!?]$" -and $p -notmatch "\s{2,}") { $styleId = "KitHubChapterTitle" }
+    $body.Add("<w:p><w:pPr><w:pStyle w:val=""$styleId""/></w:pPr><w:r><w:t xml:space=""preserve"">$safe</w:t></w:r></w:p>")
   }
   Write-Utf8 -Path (Join-Path $tmp "word/document.xml") -Content @"
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:body>
     $($body -join [Environment]::NewLine)
-    <w:sectPr><w:pgSz w:w="4195" w:h="5953"/><w:pgMar w:top="1134" w:right="1021" w:bottom="1134" w:left="1021"/></w:sectPr>
+    <w:sectPr><w:pgSz w:w="$($style.page_width_twip)" w:h="$($style.page_height_twip)"/><w:pgMar w:top="$($style.margin_top_twip)" w:right="$($style.margin_right_twip)" w:bottom="$($style.margin_bottom_twip)" w:left="$($style.margin_left_twip)" w:gutter="0"/></w:sectPr>
   </w:body>
 </w:document>
 "@
@@ -472,6 +574,41 @@ function Invoke-Intake {
     paragraph_alignment = "justified"
     paragraph_spacing_policy = "no_blank_line_between_body_paragraphs"
     chapter_start_policy = "new_page"
+    delivery_profiles = [ordered]@{
+      publisher_submission = [ordered]@{
+        enabled = $true
+        purpose = "clean Word file for editor/publisher review"
+        decoration = "minimal"
+        page_numbers = "omit_or_editor_added"
+        print_ready_claim_allowed = $false
+      }
+      print_preview = [ordered]@{
+        enabled = $true
+        purpose = "A5 book-like proof for reading and layout inspection"
+        chapter_start = "new_page"
+        page_numbers = "allowed_when_encoded"
+        print_ready_claim_allowed = $false
+      }
+    }
+    page_setup = [ordered]@{
+      trim_size = "A5"
+      width_mm = 148
+      height_mm = 210
+      margin_top_mm = 20
+      margin_bottom_mm = 20
+      margin_inside_mm = 18
+      margin_outside_mm = 18
+      source_note = "Publisher-specific rules override this default profile."
+    }
+    typography = [ordered]@{
+      body_style = "KitHubBody"
+      chapter_title_style = "KitHubChapterTitle"
+      front_matter_style = "KitHubFrontMatter"
+      toc_style = "KitHubToc"
+      paragraph_first_line_indent_cm = 0.6
+      paragraph_spacing_after_pt = 0
+      justification = "both"
+    }
     front_matter = [ordered]@{
       title_page = "ask_user_or_required_for_print"
       copyright_page = "ask_user_or_required_for_print"
@@ -688,7 +825,17 @@ plan_id: $planId
     schema_version = "1.0.0"
     run_id = $RunId
     plan_id = $planId
+    delivery_profiles = [ordered]@{
+      publisher_submission = [ordered]@{ enabled = $true; file_role = "editorial_review_docx"; print_ready_claim_allowed = $false }
+      print_preview = [ordered]@{ enabled = $true; file_role = "reader_layout_proof"; print_ready_claim_allowed = $false }
+    }
     trim_size = "A5"
+    width_mm = 148
+    height_mm = 210
+    margin_top_mm = 20
+    margin_bottom_mm = 20
+    margin_inside_mm = 18
+    margin_outside_mm = 18
     font_family = "Times New Roman"
     font_size_pt = 11
     line_spacing = 1.15
@@ -897,6 +1044,19 @@ function Invoke-Export {
 
   $docxPath = Join-Path $export "$projectName`_$rangeLabel.docx"
   New-Docx -OutputPath $docxPath -Title $projectName -Paragraphs $paragraphs.ToArray()
+  $docxStyle = Get-DocxStyleProfile
+  $styleProfileRel = "revision/_workspace/10_docx-style-profile_$rangeLabel.json"
+  Write-Json -Path (Join-Path $ProjectRoot $styleProfileRel) -Value ([ordered]@{
+    run_id = $RunId
+    episode_range = $rangeLabel
+    source = "runtime/layout-profile.json"
+    style_profile = $docxStyle
+    docx_contract = "publisher_submission_and_print_preview_review"
+    print_ready_claim = $false
+    publisher_submission_ready = $true
+    print_preview_ready = $true
+    note = "Publisher-specific final rules, ISBN, barcode, bandrol, final imprint, and final cover artwork remain external review tasks."
+  })
   $sourceHashes = @()
   foreach ($ch in $chapters) {
     $sourceHashes += [ordered]@{
@@ -914,12 +1074,13 @@ function Invoke-Export {
     front_matter_files = @($front.Keys | ForEach-Object { Get-RelativePath -Path $front[$_] })
     cover_design_manifest = Get-RelativePath -Path $cover.manifest
     cover_files = @($cover.Keys | ForEach-Object { Get-RelativePath -Path $cover[$_] })
+    docx_style_profile = $styleProfileRel
     publication_compliance_verdict = "revision/_workspace/14_publication-compliance_verdict_$rangeLabel.json"
     local_adapter_boundary = "No manuscript, preface, or cover copy was invented during export."
     docx_sha256 = Get-FileSha256 -Path $docxPath
     output_docx_path = "revision/export/$projectName`_$rangeLabel.docx"
   })
-  Write-AgentCompliance -PhaseName "export" -RequiredAgents @("export-approval-gate", "export-validator", "front-matter-editor", "cover-designer", "publication-compliance-checker", "final-proofreader", "book-exporter") -RequiredReferences @("skills/export-word/SKILL.md", "skills/polish/references/publication-metadata-checklist.md", "skills/polish/references/isbn-kunye-bandrol-checklist.md", "skills/export-word/references/docx-style-profile-template.md") -LoadedStateFiles @("runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/style-profile.json", "revision/_state/llm-adapter-contract.json", "runtime/approvals/export-approval.json") -OutputArtifacts @("revision/_workspace/10_export-word_manifest_$rangeLabel.json", "revision/_workspace/10_export-validator_verdict_$rangeLabel.json", "revision/_workspace/11_front-matter_report.md", "revision/_workspace/13_final-proofreader_report_$rangeLabel.md", "revision/_workspace/14_publication-compliance_verdict_$rangeLabel.json", "revision/_workspace/14_publication-compliance_report_$rangeLabel.md", "revision/export/$projectName`_$rangeLabel.docx")
+  Write-AgentCompliance -PhaseName "export" -RequiredAgents @("export-approval-gate", "export-validator", "front-matter-editor", "cover-designer", "publication-compliance-checker", "final-proofreader", "book-exporter") -RequiredReferences @("skills/export-word/SKILL.md", "skills/polish/references/publication-metadata-checklist.md", "skills/polish/references/isbn-kunye-bandrol-checklist.md", "skills/export-word/references/docx-style-profile-template.md") -LoadedStateFiles @("runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/style-profile.json", "revision/_state/llm-adapter-contract.json", "runtime/approvals/export-approval.json") -OutputArtifacts @("revision/_workspace/10_export-word_manifest_$rangeLabel.json", $styleProfileRel, "revision/_workspace/10_export-validator_verdict_$rangeLabel.json", "revision/_workspace/11_front-matter_report.md", "revision/_workspace/13_final-proofreader_report_$rangeLabel.md", "revision/_workspace/14_publication-compliance_verdict_$rangeLabel.json", "revision/_workspace/14_publication-compliance_report_$rangeLabel.md", "revision/export/$projectName`_$rangeLabel.docx")
 }
 
 Push-Location $ProjectRoot

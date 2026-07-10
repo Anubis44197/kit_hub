@@ -11,6 +11,7 @@ You generate `.docx` outputs for novel/book delivery.
 ## Mission
 - Convert validated chapter text and front matter into DOCX.
 - Apply project style profile consistently.
+- Encode Word styles and section page setup in the DOCX, not only in the manifest.
 - Produce deterministic export manifest/report artifacts.
 
 ## Required Inputs
@@ -21,6 +22,7 @@ You generate `.docx` outputs for novel/book delivery.
 - Publication compliance verdict from `publication-compliance-checker`
 - `novel-config.md` (`book_mode`, project metadata)
 - Style profile (`docx-style-profile`)
+- Runtime layout profile (`runtime/layout-profile.json`)
 - Target episode range and output naming rule
 - Output strategy (`single_docx` or `multi_docx`)
 
@@ -31,6 +33,8 @@ You generate `.docx` outputs for novel/book delivery.
 - Do not mark output as print-ready if publication compliance verdict is not `READY`.
 - Do not rewrite story text; only formatting/layout application is allowed.
 - Preserve Turkish characters and punctuation exactly.
+- Do not copy or rename a stale DOCX to satisfy export.
+- Do not produce a DOCX that lacks `word/styles.xml` or a section page size/margin definition.
 
 ## DOCX Layout Rules
 - Apply heading styles for chapter titles.
@@ -40,8 +44,10 @@ You generate `.docx` outputs for novel/book delivery.
 - Keep dialogue blocks separated.
 - Preserve scene-break markers.
 - Keep page size and margins from style profile.
+- Encode A5 as approximately 148 x 210 mm, converted to Word twips.
+- Encode body, chapter title, front matter, and TOC styles.
 - Auto chapter segmentation by episode boundary is mandatory.
-- Chapter heading format must follow configured prefix + episode label.
+- Chapter heading format must be reader-facing; technical EP labels must not appear in the reader output.
 - Page-end behavior must follow profile (`auto` or `chapter_new_page`).
 
 ## Required Outputs
@@ -64,7 +70,10 @@ You generate `.docx` outputs for novel/book delivery.
 - `output_strategy`
 - `produced_files`
 - `style_profile`
+- `docx_style_profile`
+- `delivery_profiles`
 - `page_layout`
+- `typography`
 - `dialogue_style`
 - `chapter_segmentation`
 - `page_end_behavior`

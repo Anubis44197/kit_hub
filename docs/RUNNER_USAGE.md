@@ -210,6 +210,7 @@ When `quality_flags.require_user_approvals=true` (default), these gates are mand
 - `create` requires `runtime/approvals/design-freeze.json` with `approved=true`
 - `rewrite` requires `runtime/approvals/rewrite-approval.json` with `approved=true`
 - `export` requires `runtime/approvals/export-approval.json` with `approved=true`
+- `export` requires a DOCX style profile manifest and verifies that the DOCX contains Word styles plus page size/margins matching that profile.
 
 Without approval, phase is blocked.
 
