@@ -39,3 +39,18 @@ Prevent the model from writing from a vague prompt. The system must ask question
 
 ## Hard Gate
 `runtime/approvals/book-brief-approval.json` must remain `approved=false` until the user accepts the brief and layout profile. Later phases must fail if the brief approval is missing.
+
+Approval is valid only when the brief contains structured question IDs and filled/accepted answers. The required answer set is:
+- writing type
+- premise
+- target length or target pages
+- target reader
+- genre or explicit permission for the system to propose genre
+- character policy
+- setting/period
+- point of view and tense
+- style/tone
+- boundaries
+- publication package
+
+If the user gives only a simple topic, ask these questions first. If the user says the system may choose an item, record that delegation in `runtime/book-brief.json` before approval.

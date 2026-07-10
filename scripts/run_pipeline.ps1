@@ -360,6 +360,7 @@ function Validate-PhaseArtifacts {
         "design/04_book_plan.md",
         "design/05_chapter_plan.md",
         "design/06_layout_plan.md",
+        "runtime/approvals/book-plan-approval.json",
         "revision/_state/book-plan.json",
         "revision/_state/chapter-plan.json",
         "revision/_state/layout-plan.json",
@@ -515,7 +516,7 @@ function Get-PhaseOutputArtifacts {
       $patterns = @("_workspace/01_proposals*.md","*_proposal.md","runtime/approvals/story-choice.json")
     }
     "design-big" {
-      $patterns = @("novel-config.md","design/*_bootstrap.md","design/02_character_core.md","design/*_character*.md","design/03_macro_plot_hooks.md","design/*plot*hook*.md","design/04_book_plan.md","design/05_chapter_plan.md","design/06_layout_plan.md","revision/_state/*.json")
+      $patterns = @("novel-config.md","design/*_bootstrap.md","design/02_character_core.md","design/*_character*.md","design/03_macro_plot_hooks.md","design/*plot*hook*.md","design/04_book_plan.md","design/05_chapter_plan.md","design/06_layout_plan.md","runtime/approvals/book-plan-approval.json","revision/_state/*.json")
     }
     "design-small" {
       $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md")
@@ -888,6 +889,109 @@ function Ensure-UserApproval {
   }
   if ($obj.approved -ne $true) {
     throw "Phase '$Phase' is BLOCKED by approval gate: $rel"
+  }
+  if ($Phase -eq "propose") {
+    Validate-BookBriefApproval -Root $Root -Approval $obj -ApprovalRel $rel
+  }
+  if ($Phase -eq "design-big") {
+    $selected = Get-StringFieldValue -Object $obj -Field "selected_option"
+    if ($selected -notin @("1","2","3")) {
+      throw "Story choice approval blocked: $rel must include selected_option 1, 2, or 3 before design-big."
+    }
+  }
+  if ($Phase -eq "design-small") {
+    Validate-BookPlanApproval -Root $Root -Approval $obj -ApprovalRel $rel
+  }
+}
+
+function Get-StringFieldValue {
+  param([object]$Object, [string]$Field)
+  if ($Object -and ($Object.PSObject.Properties.Name -contains $Field)) {
+    return ([string]$Object.$Field).Trim()
+  }
+  return ""
+}
+
+function Test-AnsweredField {
+  param([object]$Primary, [object]$Fallback, [string]$Field)
+  $value = Get-StringFieldValue -Object $Primary -Field $Field
+  if ($value) { return $true }
+  $fallbackValue = Get-StringFieldValue -Object $Fallback -Field $Field
+  return [bool]$fallbackValue
+}
+
+function Validate-BookBriefApproval {
+  param([string]$Root, [object]$Approval, [string]$ApprovalRel)
+
+  $briefRel = "runtime/book-brief.json"
+  $dnaRel = "runtime/book-dna.json"
+  $layoutRel = "runtime/layout-profile.json"
+  $brief = Read-JsonFile -Path (Join-Path $Root $briefRel)
+  $dna = Read-JsonFile -Path (Join-Path $Root $dnaRel)
+  $layout = Read-JsonFile -Path (Join-Path $Root $layoutRel)
+
+  foreach ($field in @("required_user_questions","answers","approval_requirements","intake_policy")) {
+    if (-not ($brief.PSObject.Properties.Name -contains $field)) {
+      throw "Book brief approval blocked: $briefRel missing '$field'. Run intake again with the current contract."
+    }
+  }
+  if (@($brief.required_user_questions).Count -lt 8) {
+    throw "Book brief approval blocked: $briefRel must contain the full intake question set."
+  }
+
+  $acceptedAnswers = $null
+  if ($Approval.PSObject.Properties.Name -contains "accepted_answers") {
+    $acceptedAnswers = $Approval.accepted_answers
+  }
+  $answers = $brief.answers
+  foreach ($field in @("writing_type","premise","target_reader","genre","character_policy","setting_period","pov_tense","style_tone","publication_package")) {
+    if (-not (Test-AnsweredField -Primary $acceptedAnswers -Fallback $answers -Field $field)) {
+      throw "Book brief approval blocked: required intake answer '$field' is empty. Fill runtime/book-brief.json answers or $ApprovalRel accepted_answers before approving."
+    }
+  }
+
+  $targetLengthAnswered = (Test-AnsweredField -Primary $acceptedAnswers -Fallback $answers -Field "target_length") -or (Test-AnsweredField -Primary $acceptedAnswers -Fallback $answers -Field "target_pages")
+  if (-not $targetLengthAnswered) {
+    throw "Book brief approval blocked: target_length or target_pages must be answered before planning."
+  }
+
+  if (-not ($dna.PSObject.Properties.Name -contains "locked_answers_required")) {
+    throw "Book brief approval blocked: $dnaRel missing locked_answers_required."
+  }
+  if (-not ($dna.PSObject.Properties.Name -contains "plan_before_writing_policy")) {
+    throw "Book brief approval blocked: $dnaRel missing plan_before_writing_policy."
+  }
+  if (-not ($layout.PSObject.Properties.Name -contains "front_matter") -or -not ($layout.PSObject.Properties.Name -contains "cover") -or -not ($layout.PSObject.Properties.Name -contains "page_setup")) {
+    throw "Book brief approval blocked: $layoutRel must declare front_matter, cover, and page_setup."
+  }
+}
+
+function Validate-BookPlanApproval {
+  param([string]$Root, [object]$Approval, [string]$ApprovalRel)
+
+  foreach ($rel in @("revision/_state/book-plan.json","revision/_state/chapter-plan.json","revision/_state/layout-plan.json","revision/_state/longform-plan.json","revision/_state/volume-plan.json")) {
+    Ensure-File (Join-Path $Root $rel)
+  }
+  $plan = Read-JsonFile -Path (Join-Path $Root "revision/_state/longform-plan.json")
+  foreach ($field in @("target_pages","target_words","target_chapters","max_chapters_per_batch","audit_interval_chapters","continuity_model")) {
+    if (-not ($plan.PSObject.Properties.Name -contains $field)) {
+      throw "Book plan approval blocked: longform-plan.json missing '$field'."
+    }
+  }
+  $acceptedPlanSummary = Get-StringFieldValue -Object $Approval -Field "accepted_plan_summary"
+  $acceptedTargets = $Approval.PSObject.Properties.Name -contains "accepted_targets"
+  if (-not $acceptedPlanSummary -and -not $acceptedTargets) {
+    throw "Book plan approval blocked: $ApprovalRel must include accepted_plan_summary or accepted_targets so the user approval is tied to the visible plan."
+  }
+  if ($acceptedTargets) {
+    foreach ($field in @("target_pages","target_words","target_chapters")) {
+      if (-not ($Approval.accepted_targets.PSObject.Properties.Name -contains $field)) {
+        throw "Book plan approval blocked: accepted_targets missing '$field'."
+      }
+      if ([int]$Approval.accepted_targets.$field -ne [int]$plan.$field) {
+        throw "Book plan approval blocked: accepted_targets.$field does not match longform-plan.json."
+      }
+    }
   }
 }
 
@@ -2256,6 +2360,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       mode = $effectiveMode
       contract_hashes = $contractHashes
     })
+    Ensure-UserApproval -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $requireUserApprovals
 
     $phaseClaimMode = "simulated"
     if ($configuredClaimMode) {

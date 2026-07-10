@@ -3,14 +3,33 @@
   "title": "Book Brief",
   "type": "object",
   "additionalProperties": true,
-  "required": ["schema_version", "run_id", "source_prompt", "brief_status", "writing_intent", "required_user_questions", "approval_required"],
+  "required": ["schema_version", "run_id", "source_prompt", "brief_status", "intake_policy", "writing_intent", "required_user_questions", "answers", "approval_requirements", "approval_required"],
   "properties": {
     "schema_version": { "type": "string" },
     "run_id": { "type": "string", "minLength": 1 },
     "source_prompt": { "type": "string", "minLength": 1 },
     "brief_status": { "type": "string", "enum": ["QUESTIONS_PENDING", "USER_APPROVED", "BLOCKED"] },
+    "intake_policy": { "type": "string", "minLength": 1 },
     "writing_intent": { "type": "object" },
-    "required_user_questions": { "type": "array", "minItems": 1 },
+    "required_user_questions": {
+      "type": "array",
+      "minItems": 8,
+      "items": {
+        "type": "object",
+        "required": ["id", "question", "required", "answer_required_for_approval"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "question": { "type": "string", "minLength": 1 },
+          "required": { "type": "boolean" },
+          "answer_required_for_approval": { "type": "boolean" }
+        }
+      }
+    },
+    "answers": {
+      "type": "object",
+      "required": ["writing_type", "premise", "target_length", "target_reader", "genre", "character_policy", "setting_period", "pov_tense", "style_tone", "boundaries", "publication_package"]
+    },
+    "approval_requirements": { "type": "array", "minItems": 1 },
     "approval_required": { "type": "string", "const": "runtime/approvals/book-brief-approval.json" }
   }
 }

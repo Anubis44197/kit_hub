@@ -130,9 +130,9 @@ You do not need to give this repository an API key. If your IDE already has an a
 3. Create `runtime/book-request.md` yourself and write only the user's actual book request into it. The repository does not ship a default topic file.
 4. Start the gated pipeline:
    - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase intake -ToPhase export`
-5. After `intake`, answer or accept the questions/options in `runtime/book-brief.json`, `runtime/book-dna.json`, and `runtime/layout-profile.json`; set `runtime/approvals/book-brief-approval.json` to `approved=true` only when the writing brief and page/layout package are acceptable.
+5. After `intake`, answer or accept the questions/options in `runtime/book-brief.json`, `runtime/book-dna.json`, and `runtime/layout-profile.json`; set `runtime/approvals/book-brief-approval.json` to `approved=true` only when the writing brief and page/layout package are acceptable. `approved=true` is not enough by itself: the brief must include accepted answers for writing type, target length/pages, target reader, genre, character policy, style/tone, and publication package.
 6. After `propose`, choose one story direction in `runtime/approvals/story-choice.json` by setting `selected_option` and `approved=true`.
-7. After `design-big`, review `design/04_book_plan.md`, `design/05_chapter_plan.md`, `design/06_layout_plan.md`, and the matching `revision/_state/book-plan.json`, `revision/_state/chapter-plan.json`, `revision/_state/layout-plan.json`; set `runtime/approvals/book-plan-approval.json` to `approved=true` only if the plan is acceptable.
+7. After `design-big`, review `design/04_book_plan.md`, `design/05_chapter_plan.md`, `design/06_layout_plan.md`, and the matching `revision/_state/book-plan.json`, `revision/_state/chapter-plan.json`, `revision/_state/layout-plan.json`, and `revision/_state/volume-plan.json`; set `runtime/approvals/book-plan-approval.json` to `approved=true` only if the plan, page target, chapter target, continuity model, and layout are acceptable.
 7. When the runner pauses, ask your IDE agent to complete the current phase.
 8. Optional phase prompt helper:
    - `powershell -ExecutionPolicy Bypass -File scripts/ide_phase_prompt.ps1 -Phase create`
@@ -203,6 +203,8 @@ Writing must not start from a vague prompt. `intake` creates:
 - `runtime/approvals/book-brief-approval.json`
 
 The user must approve the brief before `propose` can continue. This locks writing type, genre/category, target reader, target pages/chapters/words, character policy, setting, point of view, style, source requirements, front matter, cover package, and print layout.
+
+The runner rejects a fake brief approval. The brief must contain structured `required_user_questions`, filled `answers`, and approval requirements. If the user has not specified length, the intake answer must explicitly say the system may choose or suggest the length; otherwise planning is blocked.
 
 ## Export and Approval Model
 | Stage | Result |

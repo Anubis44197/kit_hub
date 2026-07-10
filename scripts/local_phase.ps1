@@ -123,6 +123,27 @@ function Get-RequestedPageCount {
     $count = [int]$m.Groups[1].Value
     if ($count -ge 1 -and $count -le 1000) { return $count }
   }
+  $briefPath = Join-Path $ProjectRoot "runtime/book-brief.json"
+  if (Test-Path -LiteralPath $briefPath -PathType Leaf) {
+    try {
+      $brief = Read-Json -Path $briefPath
+      if ($brief.PSObject.Properties.Name -contains "answers" -and $brief.answers) {
+        foreach ($field in @("target_pages","target_length")) {
+          if ($brief.answers.PSObject.Properties.Name -contains $field) {
+            $value = [string]$brief.answers.$field
+            $answerMatch = [regex]::Match($value, "(?i)(\d+)\s*(sayfa|page|pages)?")
+            if ($answerMatch.Success) {
+              $count = [int]$answerMatch.Groups[1].Value
+              if ($count -ge 1 -and $count -le 1000) { return $count }
+            }
+          }
+        }
+      }
+    }
+    catch {
+      return 0
+    }
+  }
   return 0
 }
 
@@ -603,6 +624,7 @@ function Invoke-Intake {
     run_id = $RunId
     source_prompt = $seed
     brief_status = "QUESTIONS_PENDING"
+    intake_policy = "Do not propose, plan, write, polish, rewrite, or export until required_user_questions are answered or explicitly accepted by the user."
     writing_intent = [ordered]@{
       writing_type = "ask_user"
       genre = "ask_user_or_suggest"
@@ -612,16 +634,45 @@ function Invoke-Intake {
       target_chapters = "derive_after_target_pages"
     }
     required_user_questions = @(
-      "Ne yazmak istiyorsunuz: roman, hikaye, novella, deneme, biyografi, ani, arastirma kitabi, cocuk kitabi veya baska bir tur mu?",
-      "Ana konu veya tek cumlelik fikir nedir?",
-      "Hedef uzunluk nedir: sayfa, kelime veya bolum sayisi?",
-      "Hedef okur kim?",
-      "Karakterleri siz mi vereceksiniz, yoksa sistem 2-3 karakter onerisi sunsun mu?",
-      "Mekan, donem ve gercek bilgi/kaynak gereksinimi var mi?",
-      "Bakis acisi ve anlatim zamani tercihiniz var mi?",
-      "Uslup nasil olsun: sade, edebi, yogun betimlemeli, hizli tempolu, akademik veya baska?",
-      "Istenmeyen konu, sahne, final veya anlatim bicimi var mi?",
-      "Onsoz, icindekiler, kapak briefi, arka kapak yazisi ve basili kitap dizgisi isteniyor mu?"
+      [ordered]@{ id = "writing_type"; question = "Ne yazmak istiyorsunuz: roman, hikaye, novella, deneme, biyografi, ani, arastirma kitabi, cocuk kitabi veya baska bir tur mu?"; required = $true; answer_required_for_approval = $true },
+      [ordered]@{ id = "premise"; question = "Ana konu veya tek cumlelik fikir nedir?"; required = $true; answer_required_for_approval = $true },
+      [ordered]@{ id = "target_length"; question = "Hedef uzunluk nedir: sayfa, kelime veya bolum sayisi? Ornek: 10 sayfa, 270 sayfa, 500 sayfa."; required = $true; answer_required_for_approval = $true },
+      [ordered]@{ id = "target_reader"; question = "Hedef okur kim?"; required = $true; answer_required_for_approval = $true },
+      [ordered]@{ id = "genre"; question = "Tur/alt tur nedir veya sistem hangi turleri onersin?"; required = $true; answer_required_for_approval = $true },
+      [ordered]@{ id = "character_policy"; question = "Karakterleri siz mi vereceksiniz, yoksa sistem karakter onerisi sunsun mu?"; required = $true; answer_required_for_approval = $true },
+      [ordered]@{ id = "setting_period"; question = "Mekan, donem ve gercek bilgi/kaynak gereksinimi var mi?"; required = $true; answer_required_for_approval = $true },
+      [ordered]@{ id = "pov_tense"; question = "Bakis acisi ve anlatim zamani tercihiniz var mi?"; required = $true; answer_required_for_approval = $true },
+      [ordered]@{ id = "style_tone"; question = "Uslup nasil olsun: sade, edebi, yogun betimlemeli, hizli tempolu, akademik veya baska?"; required = $true; answer_required_for_approval = $true },
+      [ordered]@{ id = "boundaries"; question = "Istenmeyen konu, sahne, final veya anlatim bicimi var mi?"; required = $true; answer_required_for_approval = $true },
+      [ordered]@{ id = "publication_package"; question = "Onsoz, icindekiler, kapak briefi, arka kapak yazisi ve basili kitap dizgisi isteniyor mu?"; required = $true; answer_required_for_approval = $true }
+    )
+    answers = [ordered]@{
+      writing_type = ""
+      premise = $seed
+      target_length = ""
+      target_pages = ""
+      target_reader = ""
+      genre = ""
+      character_policy = ""
+      setting_period = ""
+      pov_tense = ""
+      style_tone = ""
+      boundaries = ""
+      publication_package = ""
+    }
+    suggested_defaults = [ordered]@{
+      target_length = "Ask the user; do not assume. If the user says 'sen sec', choose a length and record that approval."
+      publication_package = "publisher_submission_docx, print_preview_docx, title page, copyright placeholder, preface optional, table of contents, cover brief, back cover copy"
+      layout = "A5, Times New Roman 11 pt, 1.15 line spacing, justified, first-line indent, chapter starts on new page"
+    }
+    approval_requirements = @(
+      "answers.writing_type must be filled",
+      "answers.target_length or answers.target_pages must be filled",
+      "answers.target_reader must be filled",
+      "answers.genre must be filled or explicitly delegated to the system",
+      "answers.character_policy must be filled",
+      "answers.style_tone must be filled",
+      "answers.publication_package must be filled"
     )
     llm_suggestion_policy = "If the user leaves fields blank, propose options and ask for approval; do not silently decide."
     approval_required = "runtime/approvals/book-brief-approval.json"
@@ -634,9 +685,11 @@ function Invoke-Intake {
     source_prompt = $seed
     continuity_policy = "No chapter writing before approved brief, approved book plan, and approved layout profile."
     required_locks = @("writing_type", "genre", "target_length", "pov", "tense", "character_policy", "setting_policy", "style_policy", "source_policy", "front_matter_policy", "cover_policy")
+    locked_answers_required = @("writing_type", "premise", "target_length", "target_reader", "genre", "character_policy", "setting_period", "pov_tense", "style_tone", "boundaries", "publication_package")
     user_supplied_characters = @()
     proposed_characters_allowed = $true
     factual_source_policy = "Biografi, arastirma, tarih, saglik, hukuk, teknik ve gercek kisi/kurum anlatilarinda kaynak artefakti olmadan dogruluk iddiasi kurulamaz."
+    plan_before_writing_policy = "The system must present story direction, book plan, chapter plan, continuity model, and layout plan for user approval before any manuscript text is created."
   })
 
   Write-Json -Path (Join-Path $ProjectRoot "runtime/layout-profile.json") -Value ([ordered]@{
@@ -711,6 +764,11 @@ function Invoke-Intake {
       approved = $false
       approved_by = ""
       approved_at = ""
+      accepted_answers = [ordered]@{}
+      accepted_target_pages = $null
+      accepted_writing_type = ""
+      accepted_publication_package = ""
+      plan_required_next = "propose then design-big; no manuscript before book-plan-approval.json and design-freeze.json"
       note = "Set approved=true only after the user answers or accepts the intake questions/options in runtime/book-brief.json, runtime/book-dna.json, and runtime/layout-profile.json."
     })
   }
@@ -1041,7 +1099,7 @@ longform:
   target_chapters: $targetChapters
   generation_strategy: "approval_gated_chunked_chapter_state"
   state_dir: "revision/_state/"
-  max_chapters_per_generation_batch: 3
+  max_chapters_per_generation_batch: $maxChaptersPerBatch
   required_plan_approval: "runtime/approvals/book-plan-approval.json"
   plan_state_files:
     - "revision/_state/book-plan.json"
@@ -1049,7 +1107,35 @@ longform:
     - "revision/_state/layout-plan.json"
 "@
 
-  Write-AgentCompliance -PhaseName "design-big" -RequiredAgents @("concept-builder", "character-architect", "plot-hook-engineer", "book-structure-optimizer") -RequiredReferences @("skills/design-big/SKILL.md", "skills/polish/references/llm-agent-compliance-policy.md") -LoadedStateFiles @("runtime/book-request.md", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "runtime/approvals/story-choice.json") -OutputArtifacts @("novel-config.md", "design/01_concept_bootstrap.md", "design/02_character_core.md", "design/03_macro_plot_hooks.md", "design/04_book_plan.md", "design/05_chapter_plan.md", "design/06_layout_plan.md", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/style-profile.json", "revision/_state/writing-type-profile.json", "revision/_state/genre-structure-template.json", "revision/_state/editorial-quality-scorecard.json", "revision/_state/llm-adapter-contract.json")
+  $planApprovalPath = Join-Path $ProjectRoot "runtime/approvals/book-plan-approval.json"
+  Write-Json -Path $planApprovalPath -Value ([ordered]@{
+    title = "Book Plan Approval"
+    approved = $false
+    approved_by = ""
+    approved_at = ""
+    approved_plan_run_id = $RunId
+    accepted_plan_summary = ""
+    accepted_targets = [ordered]@{
+      target_pages = $targetPages
+      target_words = $targetWords
+      target_chapters = $targetChapters
+      scale_tier = $scaleTier
+      max_chapters_per_batch = $maxChaptersPerBatch
+      audit_interval_chapters = $auditIntervalChapters
+    }
+    reviewed_files = @(
+      "design/04_book_plan.md",
+      "design/05_chapter_plan.md",
+      "design/06_layout_plan.md",
+      "revision/_state/book-plan.json",
+      "revision/_state/chapter-plan.json",
+      "revision/_state/layout-plan.json",
+      "revision/_state/volume-plan.json"
+    )
+    note = "Set approved=true only after the user reviews and accepts the visible book plan, chapter flow, continuity model, and layout/page targets. A new design-big run resets this approval."
+  })
+
+  Write-AgentCompliance -PhaseName "design-big" -RequiredAgents @("concept-builder", "character-architect", "plot-hook-engineer", "book-structure-optimizer") -RequiredReferences @("skills/design-big/SKILL.md", "skills/polish/references/llm-agent-compliance-policy.md") -LoadedStateFiles @("runtime/book-request.md", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "runtime/approvals/story-choice.json") -OutputArtifacts @("novel-config.md", "design/01_concept_bootstrap.md", "design/02_character_core.md", "design/03_macro_plot_hooks.md", "design/04_book_plan.md", "design/05_chapter_plan.md", "design/06_layout_plan.md", "runtime/approvals/book-plan-approval.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/style-profile.json", "revision/_state/writing-type-profile.json", "revision/_state/genre-structure-template.json", "revision/_state/editorial-quality-scorecard.json", "revision/_state/llm-adapter-contract.json")
 }
 
 function Invoke-DesignSmall {

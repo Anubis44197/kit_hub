@@ -35,6 +35,7 @@ switch ($Phase) {
     Write-Host "- runtime/book-dna.json"
     Write-Host "- runtime/layout-profile.json"
     Write-Host "- runtime/approvals/book-brief-approval.json with approved=false until the user accepts the brief"
+    Write-Host "The brief must include structured question IDs and answers for writing type, target length/pages, reader, genre, character policy, setting, POV/tense, style, boundaries, and publication package."
   }
   "propose" {
     Write-Host "Goal: expand runtime/book-request.md into book proposals."
@@ -52,6 +53,7 @@ switch ($Phase) {
     Write-Host "- design/04_book_plan.md"
     Write-Host "- design/05_chapter_plan.md"
     Write-Host "- design/06_layout_plan.md"
+    Write-Host "- runtime/approvals/book-plan-approval.json with accepted_targets and approved=false until the user accepts the visible plan"
     Write-Host "- revision/_state/book-plan.json"
     Write-Host "- revision/_state/chapter-plan.json"
     Write-Host "- revision/_state/layout-plan.json"

@@ -205,14 +205,16 @@ Relevant config keys:
 ## 5.1) Approval Gates (Hard)
 
 When `quality_flags.require_user_approvals=true` (default), these gates are mandatory:
+- `propose` requires `runtime/approvals/book-brief-approval.json` with `approved=true` plus answered/accepted intake fields for writing type, premise, target length/pages, target reader, genre, character policy, setting/period, point of view/tense, style/tone, and publication package
 - `design-big` requires `runtime/approvals/story-choice.json` with `approved=true` and a chosen `selected_option`
-- `design-small` requires `runtime/approvals/book-plan-approval.json` with `approved=true` after the user reviews the generated book, chapter, and layout plans
+- `design-small` requires `runtime/approvals/book-plan-approval.json` with `approved=true` after the user reviews the generated book, chapter, layout, volume, and continuity plans
 - `create` requires `runtime/approvals/design-freeze.json` with `approved=true`
 - `rewrite` requires `runtime/approvals/rewrite-approval.json` with `approved=true`
 - `export` requires `runtime/approvals/export-approval.json` with `approved=true`
 - `export` requires a DOCX style profile manifest and verifies that the DOCX contains Word styles plus page size/margins matching that profile.
 
 Without approval, phase is blocked.
+With empty or placeholder approval, phase is also blocked. The approval must be tied to the visible brief or plan artifacts, not merely flip a boolean.
 
 `design-big` must produce:
 - `design/04_book_plan.md`
