@@ -450,6 +450,7 @@ function Validate-PhaseArtifacts {
       ) -BasePath $Root
       Ensure-Any -Patterns @(
         "revision/_workspace/10_export-validator_verdict_EP*.json",
+        "revision/_workspace/10_export-validator_report_EP*.md",
         "revision/_workspace/*export-validator*verdict*.json",
         "revision/_workspace/*export-validator*.md"
       ) -BasePath $Root
@@ -461,6 +462,11 @@ function Validate-PhaseArtifacts {
       Ensure-Any -Patterns @(
         "revision/_workspace/12_cover-design_manifest.json",
         "revision/_workspace/12_cover-design_brief.md"
+      ) -BasePath $Root
+      Ensure-Any -Patterns @(
+        "revision/_workspace/13_final-proofreader_report_EP*.md",
+        "revision/_workspace/*final-proofreader*report*.md",
+        "revision/_workspace/*final-proofreader*verdict*.json"
       ) -BasePath $Root
       Ensure-Any -Patterns @(
         "revision/_workspace/14_publication-compliance_verdict_EP*.json",
@@ -522,6 +528,7 @@ function Get-PhaseOutputArtifacts {
         "revision/_workspace/*export-content-match*",
         "revision/_workspace/11_front-matter*",
         "revision/_workspace/12_cover-design*",
+        "revision/_workspace/13_final-proofreader*",
         "revision/_workspace/14_publication-compliance*",
         "revision/_state/*.json",
         "revision/export/*.docx"
