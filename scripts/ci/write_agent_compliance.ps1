@@ -1,7 +1,7 @@
 param(
   [string]$ProjectRoot = (Get-Location).Path,
   [Parameter(Mandatory = $true)]
-  [ValidateSet("propose","design-big","design-small","create","polish","rewrite","export")]
+  [ValidateSet("intake","propose","design-big","design-small","create","polish","rewrite","export")]
   [string]$Phase,
   [Parameter(Mandatory = $true)]
   [string]$RunId,

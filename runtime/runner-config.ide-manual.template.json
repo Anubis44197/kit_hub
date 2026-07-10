@@ -5,6 +5,7 @@
     "command_template": ""
   },
   "phase_commands": {
+    "intake": "",
     "propose": "",
     "design-big": "",
     "design-small": "",
@@ -14,6 +15,7 @@
     "export": ""
   },
   "phase_prompts": {
+    "intake": "Use agents/brief-interviewer.md, agents/book-dna-locker.md, and agents/layout-profile-planner.md. Ask/structure the pre-writing brief and layout package before any story proposal or manuscript writing.",
     "propose": "Use agents/proposal-generator.md and write _workspace/01_proposals.md plus a *_proposal.md file.",
     "design-big": "Use concept/character/plot/book structure agents. Write novel-config.md, design/01_concept_bootstrap.md, design/02_character_core.md, design/03_macro_plot_hooks.md, design/04_book_plan.md, design/05_chapter_plan.md, design/06_layout_plan.md, and matching revision/_state plan JSON files.",
     "design-small": "After book-plan-approval.json is approved, write design/EP001-EP00N_scene_plan.md, character detail, and plot detail files for the selected chapter range.",
@@ -37,6 +39,7 @@
     "enable_artifact_size_budget": true,
     "max_text_artifact_bytes": 1500000,
     "approval_files": {
+      "propose": "runtime/approvals/book-brief-approval.json",
       "design-big": "runtime/approvals/story-choice.json",
       "design-small": "runtime/approvals/book-plan-approval.json",
       "create": "runtime/approvals/design-freeze.json",
@@ -77,6 +80,7 @@
     "The runner waits after each phase, then validates the artifacts produced by the IDE agent.",
     "No external API key is required by this repository in manual IDE mode.",
     "Because the IDE agent is external to this runner, execution_claim_mode remains simulated, but artifact gates still run.",
+    "intake must present book-brief, book-dna, and layout-profile; propose is blocked until the user approves book-brief-approval.json.",
     "design-big must present book, chapter, and layout plans; design-small is blocked until the user approves book-plan-approval.json.",
     "Agent compliance manifests must include concrete output_artifacts plus matching artifact_hashes.",
     "Agent compliance manifests must include contract_hashes for the current agent registry, status contract, and phase contract.",

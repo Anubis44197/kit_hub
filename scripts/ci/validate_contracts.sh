@@ -44,6 +44,20 @@ test -f skills/polish/references/tdk-source-assurance-chain.md
 test -f docs/STRICT_EXECUTION_POLICY.md
 test -f docs/PHASE_EVIDENCE_SCHEMA.md
 test -f docs/WORKSPACE_RETENTION_POLICY.md
+test -f agents/brief-interviewer.md
+test -f agents/book-dna-locker.md
+test -f agents/layout-profile-planner.md
+test -f skills/intake/SKILL.md
+test -f runtime/book-brief.schema.json
+test -f runtime/layout-profile.schema.json
+test -f runtime/phase-contracts/intake.json
+grep -q "book-brief-approval.json" scripts/run_pipeline.ps1
+grep -q "Invoke-Intake" scripts/local_phase.ps1
+grep -q "runtime/book-brief.json" scripts/local_phase.ps1
+grep -q "runtime/book-dna.json" scripts/local_phase.ps1
+grep -q "runtime/layout-profile.json" scripts/local_phase.ps1
+grep -q '"intake"' runtime/runner-config.template.json
+grep -q "book-brief-approval.json" runtime/runner-config.ide-manual.template.json
 grep -q "current-run.json" scripts/run_pipeline.ps1
 grep -q "Invoke-RunRetention" scripts/run_pipeline.ps1
 grep -q "Ensure-UserApproval" scripts/run_pipeline.ps1

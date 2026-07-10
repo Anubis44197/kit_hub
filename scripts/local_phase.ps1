@@ -2,7 +2,7 @@
   [Parameter(Mandatory = $true)]
   [string]$ProjectRoot,
   [Parameter(Mandatory = $true)]
-  [ValidateSet("propose","design-big","design-small","create","polish","rewrite","export")]
+  [ValidateSet("intake","propose","design-big","design-small","create","polish","rewrite","export")]
   [string]$Phase,
   [Parameter(Mandatory = $true)]
   [string]$RunId
@@ -411,11 +411,102 @@ Bu aşama roman yazmaz. Kullanıcı `runtime/approvals/story-choice.json` dosyas
     })
   }
 
-  Write-AgentCompliance -PhaseName "propose" -RequiredAgents @("proposal-generator") -RequiredReferences @("skills/propose/SKILL.md") -LoadedStateFiles @("runtime/book-request.md") -OutputArtifacts @("_workspace/01_proposals.md", "$slug`_proposal.md", "runtime/approvals/story-choice.json")
+  Write-AgentCompliance -PhaseName "propose" -RequiredAgents @("proposal-generator") -RequiredReferences @("skills/propose/SKILL.md") -LoadedStateFiles @("runtime/book-request.md", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json") -OutputArtifacts @("_workspace/01_proposals.md", "$slug`_proposal.md", "runtime/approvals/story-choice.json")
+}
+
+function Invoke-Intake {
+  $seed = Get-BookSeed
+  $approvalDir = Join-Path $ProjectRoot "runtime/approvals"
+  Ensure-Dir $approvalDir
+
+  Write-Json -Path (Join-Path $ProjectRoot "runtime/book-brief.json") -Value ([ordered]@{
+    schema_version = "1.0.0"
+    run_id = $RunId
+    source_prompt = $seed
+    brief_status = "QUESTIONS_PENDING"
+    writing_intent = [ordered]@{
+      writing_type = "ask_user"
+      genre = "ask_user_or_suggest"
+      target_reader = "ask_user"
+      target_pages = "ask_user"
+      target_words = "derive_after_target_pages"
+      target_chapters = "derive_after_target_pages"
+    }
+    required_user_questions = @(
+      "Ne yazmak istiyorsunuz: roman, hikaye, novella, deneme, biyografi, ani, arastirma kitabi, cocuk kitabi veya baska bir tur mu?",
+      "Ana konu veya tek cumlelik fikir nedir?",
+      "Hedef uzunluk nedir: sayfa, kelime veya bolum sayisi?",
+      "Hedef okur kim?",
+      "Karakterleri siz mi vereceksiniz, yoksa sistem 2-3 karakter onerisi sunsun mu?",
+      "Mekan, donem ve gercek bilgi/kaynak gereksinimi var mi?",
+      "Bakis acisi ve anlatim zamani tercihiniz var mi?",
+      "Uslup nasil olsun: sade, edebi, yogun betimlemeli, hizli tempolu, akademik veya baska?",
+      "Istenmeyen konu, sahne, final veya anlatim bicimi var mi?",
+      "Onsoz, icindekiler, kapak briefi, arka kapak yazisi ve basili kitap dizgisi isteniyor mu?"
+    )
+    llm_suggestion_policy = "If the user leaves fields blank, propose options and ask for approval; do not silently decide."
+    approval_required = "runtime/approvals/book-brief-approval.json"
+  })
+
+  Write-Json -Path (Join-Path $ProjectRoot "runtime/book-dna.json") -Value ([ordered]@{
+    schema_version = "1.0.0"
+    run_id = $RunId
+    locked = $false
+    source_prompt = $seed
+    continuity_policy = "No chapter writing before approved brief, approved book plan, and approved layout profile."
+    required_locks = @("writing_type", "genre", "target_length", "pov", "tense", "character_policy", "setting_policy", "style_policy", "source_policy", "front_matter_policy", "cover_policy")
+    user_supplied_characters = @()
+    proposed_characters_allowed = $true
+    factual_source_policy = "Biografi, arastirma, tarih, saglik, hukuk, teknik ve gercek kisi/kurum anlatilarinda kaynak artefakti olmadan dogruluk iddiasi kurulamaz."
+  })
+
+  Write-Json -Path (Join-Path $ProjectRoot "runtime/layout-profile.json") -Value ([ordered]@{
+    schema_version = "1.0.0"
+    run_id = $RunId
+    profile_status = "QUESTIONS_PENDING"
+    print_target = "A5_DOCX"
+    trim_size = "A5"
+    font_family = "Times New Roman"
+    body_font_size_pt = 11
+    line_spacing = 1.15
+    paragraph_alignment = "justified"
+    paragraph_spacing_policy = "no_blank_line_between_body_paragraphs"
+    chapter_start_policy = "new_page"
+    front_matter = [ordered]@{
+      title_page = "ask_user_or_required_for_print"
+      copyright_page = "ask_user_or_required_for_print"
+      preface = "ask_user"
+      table_of_contents = "required_for_longform"
+    }
+    cover = [ordered]@{
+      front_cover_brief = "required"
+      back_cover_copy = "required_for_book_package"
+      spine_guidance = "derive_after_page_count"
+    }
+    rule_sources = @(
+      "TDK yazim ve noktalama kurallari",
+      "Ankara Nobel kitap yazim kilavuzu: Word, Times New Roman, 11 punto, iki yana yasli metin, baslik duzeni",
+      "Publication metadata checklist: ISBN, kunye, bandrol and barcode are external/final publisher tasks"
+    )
+  })
+
+  $approvalPath = Join-Path $approvalDir "book-brief-approval.json"
+  if (-not (Test-Path -LiteralPath $approvalPath -PathType Leaf)) {
+    Write-Json -Path $approvalPath -Value ([ordered]@{
+      title = "Book Brief Approval"
+      approved = $false
+      approved_by = ""
+      approved_at = ""
+      note = "Set approved=true only after the user answers or accepts the intake questions/options in runtime/book-brief.json, runtime/book-dna.json, and runtime/layout-profile.json."
+    })
+  }
+
+  Write-AgentCompliance -PhaseName "intake" -RequiredAgents @("brief-interviewer", "book-dna-locker", "layout-profile-planner") -RequiredReferences @("skills/intake/SKILL.md", "skills/polish/references/writing-type-profiles.md", "skills/polish/references/docx-professional-style-contract.md") -LoadedStateFiles @("runtime/book-request.md") -OutputArtifacts @("runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json")
 }
 
 function Invoke-DesignBig {
   $seed = Get-BookSeed
+  Ensure-Approved -RelativePath "runtime/approvals/book-brief-approval.json" -GateName "Book brief approval" | Out-Null
   $choice = Get-StoryChoice
   $projectName = Get-CleanTitleFromText -Text $seed
   $targetChapters = Get-RequestedChapterCount
@@ -685,7 +776,7 @@ longform:
     - "revision/_state/layout-plan.json"
 "@
 
-  Write-AgentCompliance -PhaseName "design-big" -RequiredAgents @("concept-builder", "character-architect", "plot-hook-engineer", "book-structure-optimizer") -RequiredReferences @("skills/design-big/SKILL.md", "skills/polish/references/llm-agent-compliance-policy.md") -LoadedStateFiles @("runtime/book-request.md", "runtime/approvals/story-choice.json") -OutputArtifacts @("novel-config.md", "design/01_concept_bootstrap.md", "design/02_character_core.md", "design/03_macro_plot_hooks.md", "design/04_book_plan.md", "design/05_chapter_plan.md", "design/06_layout_plan.md", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/style-profile.json", "revision/_state/writing-type-profile.json", "revision/_state/genre-structure-template.json", "revision/_state/editorial-quality-scorecard.json", "revision/_state/llm-adapter-contract.json")
+  Write-AgentCompliance -PhaseName "design-big" -RequiredAgents @("concept-builder", "character-architect", "plot-hook-engineer", "book-structure-optimizer") -RequiredReferences @("skills/design-big/SKILL.md", "skills/polish/references/llm-agent-compliance-policy.md") -LoadedStateFiles @("runtime/book-request.md", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "runtime/approvals/story-choice.json") -OutputArtifacts @("novel-config.md", "design/01_concept_bootstrap.md", "design/02_character_core.md", "design/03_macro_plot_hooks.md", "design/04_book_plan.md", "design/05_chapter_plan.md", "design/06_layout_plan.md", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/style-profile.json", "revision/_state/writing-type-profile.json", "revision/_state/genre-structure-template.json", "revision/_state/editorial-quality-scorecard.json", "revision/_state/llm-adapter-contract.json")
 }
 
 function Invoke-DesignSmall {
@@ -834,6 +925,7 @@ function Invoke-Export {
 Push-Location $ProjectRoot
 try {
   switch ($Phase) {
+    "intake" { Invoke-Intake }
     "propose" { Invoke-Propose }
     "design-big" { Invoke-DesignBig }
     "design-small" { Invoke-DesignSmall }

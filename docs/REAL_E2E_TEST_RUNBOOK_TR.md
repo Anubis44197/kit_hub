@@ -28,7 +28,7 @@ Bu belge, temiz klondan baslayarak KitHub'in gercekten calisip calismadigini adi
 
 ## Asama 2 - Gate Dogrulama (Zorunlu)
 1. Propose fase testi:
-   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase propose -NoWait`
+   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase intake -ToPhase intake -NoWait`
 2. Beklenen:
    - Propose artifact yoksa FAIL vermeli.
 3. Create fase testi:

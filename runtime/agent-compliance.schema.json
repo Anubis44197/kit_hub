@@ -23,7 +23,7 @@
     "run_id": { "type": "string", "minLength": 1 },
     "phase": {
       "type": "string",
-      "enum": ["propose", "design-big", "design-small", "create", "polish", "rewrite", "export"]
+      "enum": ["intake", "propose", "design-big", "design-small", "create", "polish", "rewrite", "export"]
     },
     "required_agents": {
       "type": "array",
@@ -79,6 +79,7 @@
             "enum": [
               "runtime/agent-registry.json",
               "runtime/agent-status-contract.json",
+              "runtime/phase-contracts/intake.json",
               "runtime/phase-contracts/propose.json",
               "runtime/phase-contracts/design-big.json",
               "runtime/phase-contracts/design-small.json",

@@ -57,7 +57,7 @@ foreach ($agent in @($registry.agents)) {
   }
 }
 
-foreach ($phase in @("propose","design-big","design-small","create","polish","rewrite","export")) {
+foreach ($phase in @("intake","propose","design-big","design-small","create","polish","rewrite","export")) {
   $contractPath = Join-Path $contractsDir "$phase.json"
   $contract = Read-Json -Path $contractPath
   if ([string]$contract.phase -ne $phase) {

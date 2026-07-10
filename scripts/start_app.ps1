@@ -34,9 +34,8 @@ try {
   Write-Host "[start-app] done."
   Write-Host "1) Runtime bootstrap: OK"
   Write-Host "2) Readiness checks: OK"
-  Write-Host "3) Run pipeline: powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase export -Mode command"
+  Write-Host "3) Run pipeline: powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase intake -ToPhase export -Mode command"
 }
 finally {
   Pop-Location
 }
-

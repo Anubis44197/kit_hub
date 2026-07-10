@@ -4,7 +4,7 @@
 `scripts/run_pipeline.ps1` is a real orchestrator entrypoint for this repository.
 It executes the full phase chain with artifact-gate validation:
 
-`propose -> design-big -> design-small -> create -> polish -> rewrite -> export`
+`intake -> propose -> design-big -> design-small -> create -> polish -> rewrite -> export`
 
 Important:
 - Runner validates phase artifacts and emits run/evidence logs.
@@ -33,7 +33,7 @@ Manual mode records `execution_claim_mode=simulated`; use command mode when you 
 In manual mode, the IDE agent or human operator is responsible for creative writing. `kit_hub` checks and packages the resulting artifacts; it does not secretly call a model unless you configure that model command yourself.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase propose -ToPhase export
+powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase intake -ToPhase export
 ```
 
 Create the manual IDE config first:
@@ -102,7 +102,7 @@ Example:
 Then run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase export -Mode command
+powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase intake -ToPhase export -Mode command
 ```
 
 ## 3.1) Optional Dictionary Check Layer

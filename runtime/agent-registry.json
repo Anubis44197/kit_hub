@@ -12,6 +12,9 @@
     "Export agents may package validated manuscript files, but may not modify episode manuscript text."
   ],
   "agents": [
+    { "name": "brief-interviewer", "allowed_phases": ["intake"], "required_references": ["skills/intake/SKILL.md"], "allowed_write_roots": ["runtime", "runtime/approvals", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 30 },
+    { "name": "book-dna-locker", "allowed_phases": ["intake"], "required_references": ["skills/intake/SKILL.md", "skills/polish/references/writing-type-profiles.md"], "allowed_write_roots": ["runtime", "runtime/approvals", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 30 },
+    { "name": "layout-profile-planner", "allowed_phases": ["intake"], "required_references": ["skills/intake/SKILL.md", "skills/polish/references/docx-professional-style-contract.md", "skills/polish/references/tdk-print-submission-rules.md"], "allowed_write_roots": ["runtime", "runtime/approvals", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 30 },
     { "name": "proposal-generator", "allowed_phases": ["propose"], "required_references": ["skills/propose/SKILL.md"], "allowed_write_roots": ["_workspace", "runtime/approvals"], "timeout_seconds": 900, "max_turns": 30 },
     { "name": "concept-builder", "allowed_phases": ["design-big"], "required_references": ["skills/design-big/SKILL.md"], "allowed_write_roots": ["design", "revision/_state", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 50 },
     { "name": "character-architect", "allowed_phases": ["design-big"], "required_references": ["skills/character/SKILL.md", "skills/design-big/SKILL.md"], "allowed_write_roots": ["design", "revision/_state", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 50 },

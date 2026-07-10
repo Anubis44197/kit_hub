@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Layout Profile",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "run_id", "profile_status", "print_target", "trim_size", "font_family", "body_font_size_pt", "line_spacing", "front_matter", "cover"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "profile_status": { "type": "string", "enum": ["QUESTIONS_PENDING", "USER_APPROVED", "BLOCKED"] },
+    "print_target": { "type": "string" },
+    "trim_size": { "type": "string" },
+    "font_family": { "type": "string" },
+    "body_font_size_pt": { "type": "number" },
+    "line_spacing": { "type": "number" },
+    "front_matter": { "type": "object" },
+    "cover": { "type": "object" }
+  }
+}

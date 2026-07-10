@@ -6,7 +6,7 @@ Professional multi-agent pipeline for Turkish novel, story, and print-ready book
 This repository provides an agent + skill based writing system for end-to-end book production: idea expansion, full-book design, chapter writing, continuity control, Turkish editorial polish, front matter, cover brief, and DOCX export.
 
 Primary flow:
-`/propose -> /design-big -> /design-small -> /create -> /polish -> /rewrite -> /export-word`
+`/intake -> /propose -> /design-big -> /design-small -> /create -> /polish -> /rewrite -> /export-word`
 
 Reader-facing output is chapter/book based. Legacy internal paths may still use `episode/epNNN.md` for compatibility.
 
@@ -48,7 +48,7 @@ Summary: `kit_hub` is not only a content panel. It is an extended production eng
 ## Core Capabilities
 | Capability | Description | Main Components |
 |---|---|---|
-| Multi-Phase Writing | Structured progression from concept to export | propose/design/create/polish/rewrite/export |
+| Multi-Phase Writing | Structured progression from user brief to export | intake/propose/design/create/polish/rewrite/export |
 | Turkish Language Quality | Spelling, punctuation, grammar particles, dialogue normalization | `tdk-polisher` |
 | Book Layout Normalization | Readability-focused paragraph/dialogue page shaping | `tdk-layout-agent` |
 | Quality Gating | Contract checks before canonical writeback | `quality-verifier`, `revision-reviewer`, CI scripts |
@@ -128,9 +128,10 @@ You do not need to give this repository an API key. If your IDE already has an a
    - `Copy-Item runtime/runner-config.ide-manual.template.json runtime/runner-config.ide-manual.json -Force`
 3. Create `runtime/book-request.md` yourself and write only the user's actual book request into it. The repository does not ship a default topic file.
 4. Start the gated pipeline:
-   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase propose -ToPhase export`
-5. After `propose`, choose one story direction in `runtime/approvals/story-choice.json` by setting `selected_option` and `approved=true`.
-6. After `design-big`, review `design/04_book_plan.md`, `design/05_chapter_plan.md`, `design/06_layout_plan.md`, and the matching `revision/_state/book-plan.json`, `revision/_state/chapter-plan.json`, `revision/_state/layout-plan.json`; set `runtime/approvals/book-plan-approval.json` to `approved=true` only if the plan is acceptable.
+   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase intake -ToPhase export`
+5. After `intake`, answer or accept the questions/options in `runtime/book-brief.json`, `runtime/book-dna.json`, and `runtime/layout-profile.json`; set `runtime/approvals/book-brief-approval.json` to `approved=true` only when the writing brief and page/layout package are acceptable.
+6. After `propose`, choose one story direction in `runtime/approvals/story-choice.json` by setting `selected_option` and `approved=true`.
+7. After `design-big`, review `design/04_book_plan.md`, `design/05_chapter_plan.md`, `design/06_layout_plan.md`, and the matching `revision/_state/book-plan.json`, `revision/_state/chapter-plan.json`, `revision/_state/layout-plan.json`; set `runtime/approvals/book-plan-approval.json` to `approved=true` only if the plan is acceptable.
 7. When the runner pauses, ask your IDE agent to complete the current phase.
 8. Optional phase prompt helper:
    - `powershell -ExecutionPolicy Bypass -File scripts/ide_phase_prompt.ps1 -Phase create`
@@ -155,18 +156,20 @@ Detailed guide:
 
 ## Quick Start
 1. `/run` (single-command full pipeline)
-2. `/propose` (if you want phase-by-phase control)
-3. `/design-big`
-4. `/design-small`
-5. `/create`
-6. `/polish`
-7. `/rewrite` (only if needed)
-8. `/export-word` (requires explicit user approval)
+2. `/intake` (ask/lock book brief, writing type, page/layout, front matter, cover package)
+3. `/propose` (if you want phase-by-phase control)
+4. `/design-big`
+5. `/design-small`
+6. `/create`
+7. `/polish`
+8. `/rewrite` (only if needed)
+9. `/export-word` (requires explicit user approval)
 
 ## Command Reference
 | Command | Purpose | Output |
 |---|---|---|
 | `/run` | Launch full pipeline with hard gates | Runner summary + evidence |
+| `/intake` | Ask and lock the pre-writing brief | `book-brief`, `book-dna`, `layout-profile`, approval gate |
 | `/propose` | Generate project proposals | Candidate concepts |
 | `/design` | Router for design phases | Big/small design selection |
 | `/design-big` | Macro architecture | Concept + character + plot framework |
@@ -191,9 +194,19 @@ Detailed guide:
 | Agent/Skill Contract Language | English |
 | Encoding / Script Safety | Valid UTF-8 Turkish; mojibake and unexplained non-Turkish script usage block print-ready export |
 
+## Pre-Writing Brief Gate
+Writing must not start from a vague prompt. `intake` creates:
+- `runtime/book-brief.json`
+- `runtime/book-dna.json`
+- `runtime/layout-profile.json`
+- `runtime/approvals/book-brief-approval.json`
+
+The user must approve the brief before `propose` can continue. This locks writing type, genre/category, target reader, target pages/chapters/words, character policy, setting, point of view, style, source requirements, front matter, cover package, and print layout.
+
 ## Export and Approval Model
 | Stage | Result |
 |---|---|
+| Book brief approval missing | `propose` blocked |
 | Story choice approval missing | `design-big` blocked |
 | Book plan approval missing | `design-small` blocked |
 | Design freeze approval missing | `create` blocked |
@@ -221,7 +234,7 @@ Detailed guide:
 - Initialize runtime config:
   - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
 - Run full pipeline in IDE manual mode:
-  - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase propose -ToPhase export`
+  - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase intake -ToPhase export`
 - One-time bootstrap + run:
   - `/run`
 - Run with optional dictionary check enabled:
@@ -229,6 +242,7 @@ Detailed guide:
 - Runner writes a live pointer file:
   - `runtime/current-run.json`
 - Runner requires hard approval files (default):
+  - `runtime/approvals/book-brief-approval.json`
   - `runtime/approvals/story-choice.json`
   - `runtime/approvals/book-plan-approval.json`
   - `runtime/approvals/design-freeze.json`
@@ -298,3 +312,4 @@ For complete mapping see `docs/ARCHITECTURE_MAP.md`.
 
 ## License
 Apache-2.0
+- `book-brief-approval.json` must be approved before `propose`; this prevents the app from silently deciding writing type, target length, characters, front matter, cover, or page layout.

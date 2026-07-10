@@ -73,14 +73,16 @@ These files replace scattered, prompt-only agent expectations. The runner still 
 ## User Prompt Flow
 
 1. User gives a simple or detailed book idea.
-2. `propose` expands the idea into options.
-3. `design-big` creates the full book plan, chapter plan, layout plan, and state ledgers.
-4. The user approves `runtime/approvals/book-plan-approval.json`.
-5. `design-small` prepares chapter-range scene plans.
-6. `create` writes manuscript chapters from approved state only.
-7. `polish` edits language, continuity, structure, TDK, and style.
-8. `rewrite` repairs only verified failures.
-9. `export` packages the current manuscript into front matter, cover brief, publication checks, and DOCX.
+2. `intake` asks/structures the missing decisions and writes `runtime/book-brief.json`, `runtime/book-dna.json`, and `runtime/layout-profile.json`.
+3. The user approves `runtime/approvals/book-brief-approval.json`.
+4. `propose` expands the approved brief into options.
+5. `design-big` creates the full book plan, chapter plan, layout plan, and state ledgers.
+6. The user approves `runtime/approvals/book-plan-approval.json`.
+7. `design-small` prepares chapter-range scene plans.
+8. `create` writes manuscript chapters from approved state only.
+9. `polish` edits language, continuity, structure, TDK, and style.
+10. `rewrite` repairs only verified failures.
+11. `export` packages the current manuscript into front matter, cover brief, publication checks, and DOCX.
 
 ## Run Journal
 

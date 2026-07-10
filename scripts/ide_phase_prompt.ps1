@@ -1,5 +1,5 @@
 param(
-  [ValidateSet("propose","design-big","design-small","create","polish","rewrite","export")]
+  [ValidateSet("intake","propose","design-big","design-small","create","polish","rewrite","export")]
   [string]$Phase,
   [string]$ProjectRoot = (Get-Location).Path
 )
@@ -28,6 +28,14 @@ function Show-CommonHeader {
 Show-CommonHeader -PhaseName $Phase
 
 switch ($Phase) {
+  "intake" {
+    Write-Host "Goal: ask/structure the user brief before story proposals or manuscript writing."
+    Write-Host "Required outputs:"
+    Write-Host "- runtime/book-brief.json"
+    Write-Host "- runtime/book-dna.json"
+    Write-Host "- runtime/layout-profile.json"
+    Write-Host "- runtime/approvals/book-brief-approval.json with approved=false until the user accepts the brief"
+  }
   "propose" {
     Write-Host "Goal: expand runtime/book-request.md into book proposals."
     Write-Host "Required outputs:"

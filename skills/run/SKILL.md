@@ -16,7 +16,7 @@ Start the full novel pipeline from one command and enforce hard execution gates.
 1. Ensure runtime bootstrap is prepared:
    - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
 2. Execute orchestrator:
-   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase propose -ToPhase export`
+   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase intake -ToPhase export`
 
 ## Hard Rules
 - Do not skip phases.

@@ -1,7 +1,8 @@
 # Architecture Map
 
 ## Flow Overview
-- `propose` -> idea candidates and selection
+- `intake` -> user brief, book DNA, layout/profile questions, and approval
+- `propose` -> idea candidates and selection from the approved brief
 - `design-big` -> macro architecture
 - `design-small` -> episode-range detail
 - `create` -> draft + TDK/layout + quality gate

@@ -1,8 +1,8 @@
 ﻿param(
   [string]$ProjectRoot = (Get-Location).Path,
-  [ValidateSet("propose","design-big","design-small","create","polish","rewrite","export")]
-  [string]$FromPhase = "propose",
-  [ValidateSet("propose","design-big","design-small","create","polish","rewrite","export")]
+  [ValidateSet("intake","propose","design-big","design-small","create","polish","rewrite","export")]
+  [string]$FromPhase = "intake",
+  [ValidateSet("intake","propose","design-big","design-small","create","polish","rewrite","export")]
   [string]$ToPhase = "export",
   [ValidateSet("manual","command")]
   [string]$Mode = "manual",
@@ -333,6 +333,17 @@ function Validate-PhaseArtifacts {
   param([string]$Phase, [string]$Root)
 
   switch ($Phase) {
+    "intake" {
+      Ensure-File (Join-Path $Root "runtime/book-request.md")
+      foreach ($requiredIntake in @(
+        "runtime/book-brief.json",
+        "runtime/book-dna.json",
+        "runtime/layout-profile.json",
+        "runtime/approvals/book-brief-approval.json"
+      )) {
+        Ensure-File (Join-Path $Root $requiredIntake)
+      }
+    }
     "propose" {
       Ensure-Any -Patterns @(
         "_workspace/01_proposals.md",
@@ -476,6 +487,9 @@ function Get-PhaseOutputArtifacts {
 
   $patterns = @()
   switch ($Phase) {
+    "intake" {
+      $patterns = @("runtime/book-brief.json","runtime/book-dna.json","runtime/layout-profile.json","runtime/approvals/book-brief-approval.json")
+    }
     "propose" {
       $patterns = @("_workspace/01_proposals*.md","*_proposal.md","runtime/approvals/story-choice.json")
     }
@@ -820,6 +834,7 @@ function Ensure-UserApproval {
   }
 
   $approvalMap = @{
+    "propose" = "runtime/approvals/book-brief-approval.json"
     "design-big" = "runtime/approvals/story-choice.json"
     "design-small" = "runtime/approvals/book-plan-approval.json"
     "create" = "runtime/approvals/design-freeze.json"
@@ -829,7 +844,7 @@ function Ensure-UserApproval {
 
   if ($Config -and $Config.quality_flags -and $Config.quality_flags.approval_files) {
     $custom = $Config.quality_flags.approval_files
-    foreach ($k in @("design-big","design-small","create","rewrite","export")) {
+    foreach ($k in @("propose","design-big","design-small","create","rewrite","export")) {
       if ($custom.PSObject.Properties.Name -contains $k -and $custom.$k) {
         $approvalMap[$k] = [string]$custom.$k
       }
@@ -1924,7 +1939,7 @@ function Validate-EpisodeTextQuality {
     }
   }
 }
-$phases = @("propose","design-big","design-small","create","polish","rewrite","export")
+$phases = @("intake","propose","design-big","design-small","create","polish","rewrite","export")
 $fromIdx = [Array]::IndexOf($phases, $FromPhase)
 $toIdx = [Array]::IndexOf($phases, $ToPhase)
 if ($fromIdx -lt 0 -or $toIdx -lt 0 -or $fromIdx -gt $toIdx) {

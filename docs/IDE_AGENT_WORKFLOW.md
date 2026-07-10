@@ -45,7 +45,7 @@ PowerShell 5.1 note: Turkish text files should be UTF-8 with BOM. If Turkish cha
 Start the runner:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase propose -ToPhase export
+powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase intake -ToPhase export
 ```
 
 At each phase, the runner pauses. In your IDE agent, ask it to do that phase. You can print the exact phase prompt:
@@ -92,7 +92,7 @@ Edit `runtime/runner-config.json`:
 Then run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -Mode command -FromPhase propose -ToPhase export
+powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -Mode command -FromPhase intake -ToPhase export
 ```
 
 ## What The IDE Agent Must Produce

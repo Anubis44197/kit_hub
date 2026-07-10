@@ -5,6 +5,7 @@
     "command_template": "powershell -ExecutionPolicy Bypass -File scripts/local_phase.ps1 -ProjectRoot \"{project_root}\" -Phase {phase} -RunId \"{run_id}\""
   },
   "phase_commands": {
+    "intake": "",
     "propose": "",
     "design-big": "",
     "design-small": "",
@@ -14,6 +15,7 @@
     "export": ""
   },
   "phase_prompts": {
+    "intake": "",
     "propose": "",
     "design-big": "",
     "design-small": "",
@@ -37,6 +39,7 @@
     "enable_artifact_size_budget": true,
     "max_text_artifact_bytes": 1500000,
     "approval_files": {
+      "propose": "runtime/approvals/book-brief-approval.json",
       "design-big": "runtime/approvals/story-choice.json",
       "design-small": "runtime/approvals/book-plan-approval.json",
       "create": "runtime/approvals/design-freeze.json",
@@ -80,7 +83,8 @@
     "When dictionary check is enabled, require_dictionary_provider=true makes missing Python/tdk-py fail instead of silently skipping.",
     "Phase evidence is mandatory when require_phase_evidence=true.",
     "execution_claim_mode should be 'executed' only when actual command-mode execution is used.",
-    "design-big/design-small/create/rewrite/export require explicit approval JSON files when require_user_approvals=true.",
+    "intake writes book-brief, book-dna, layout-profile, and book-brief-approval; propose and later phases require the approved brief.",
+    "propose/design-big/design-small/create/rewrite/export require explicit approval JSON files when require_user_approvals=true.",
     "design-big must produce book-plan, chapter-plan, and layout-plan artifacts; design-small is blocked until book-plan-approval.json is approved by the user.",
     "phase contracts are hard gates when enforce_phase_contracts=true.",
     "Agent orchestration is governed by runtime/agent-registry.json, runtime/agent-status-contract.json, and runtime/phase-contracts/*.json.",
