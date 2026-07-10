@@ -463,6 +463,7 @@ function New-Docx {
   if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Recurse -Force }
   Ensure-Dir (Join-Path $tmp "_rels")
   Ensure-Dir (Join-Path $tmp "word")
+  Ensure-Dir (Join-Path $tmp "word/_rels")
   Ensure-Dir (Join-Path $tmp "docProps")
 
   Write-Utf8 -Path (Join-Path $tmp "[Content_Types].xml") -Content @'
@@ -482,6 +483,11 @@ function New-Docx {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
   <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+</Relationships>
+'@
+  Write-Utf8 -Path (Join-Path $tmp "word/_rels/document.xml.rels") -Content @'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 </Relationships>
 '@
   Write-Utf8 -Path (Join-Path $tmp "word/styles.xml") -Content @"

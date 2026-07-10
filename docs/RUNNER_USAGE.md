@@ -14,6 +14,14 @@ Important:
 
 ## 1) Install Bootstrap
 
+Create book work in a separate KitHub project, not in the application repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/new_project.ps1 -Name "My Book"
+```
+
+The runner blocks manuscript phases in the `.git` application root. Use the generated project root for intake, planning, writing, revision, and export.
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 ```
@@ -24,6 +32,24 @@ This creates:
 - `runtime/approvals/design-freeze.json`
 - `runtime/approvals/rewrite-approval.json`
 - `runtime/approvals/export-approval.json`
+- `runtime/approvals/length-depth-approval.json`
+- `runtime/approvals/cleanup-approval.json`
+
+## Final Output and Cleanup
+
+Exporting does not remove working files. Copy the final DOCX/PDF to the user-selected location:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/export_final.ps1 -ProjectRoot "<project-root>" -DestinationDirectory "$env:USERPROFILE\Desktop"
+```
+
+To remove working files, the user must explicitly approve `runtime/approvals/cleanup-approval.json` with `approved=true` and `final_output_preserved=true`, then run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/cleanup_project.ps1 -ProjectRoot "<project-root>"
+```
+
+Cleanup never deletes the final output copied outside the project.
 
 ## 2) Manual Mode (Default)
 

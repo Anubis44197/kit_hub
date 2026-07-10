@@ -102,6 +102,9 @@ $LoadedStateFiles = Normalize-List -Values $LoadedStateFiles
 $OutputArtifacts = Normalize-List -Values $OutputArtifacts
 $AgentStatuses = Normalize-List -Values $AgentStatuses
 $MissingItems = Normalize-List -Values $MissingItems
+if ($null -eq $MissingItems) {
+  $MissingItems = @()
+}
 
 if ($AgentsExecuted.Count -lt 1) {
   $AgentsExecuted = $RequiredAgents
@@ -175,7 +178,7 @@ $payload = [ordered]@{
   phase_authority = $PhaseAuthority
   completed_at = (Get-Date).ToString("o")
   contract_status = $ContractStatus
-  missing_items = $MissingItems
+  missing_items = @($MissingItems)
 }
 
 $out = Join-Path $ProjectRoot ("runtime/agent-compliance/{0}.json" -f $Phase)

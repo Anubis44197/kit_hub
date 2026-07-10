@@ -41,6 +41,22 @@ function Get-ObjectString {
   return ""
 }
 
+function Get-CharacterAliases {
+  param([string]$Name)
+  $titleWords = @("Doktor","Dr","Madam","Bay","Bayan","Hanım","Hanim","Bey")
+  $parts = @($Name -split "\s+" | Where-Object { $_ -and $_.Trim() })
+  $aliases = @()
+  if ($Name.Trim()) { $aliases += $Name.Trim() }
+  foreach ($part in $parts) {
+    $clean = $part.Trim()
+    if ($clean -and $titleWords -notcontains $clean) {
+      $aliases += $clean
+      break
+    }
+  }
+  return @($aliases | Select-Object -Unique)
+}
+
 $bookPlan = Read-StateJson -Name "book-plan.json"
 $chapterPlan = Read-StateJson -Name "chapter-plan.json"
 $longformPlan = Read-StateJson -Name "longform-plan.json"
@@ -48,6 +64,11 @@ $characterState = Read-StateJson -Name "character-state.json"
 $plotLedger = Read-StateJson -Name "plot-ledger.json"
 $chapterSummaries = Read-StateJson -Name "chapter-summaries.json"
 $continuityLedger = Read-StateJson -Name "continuity-ledger.json"
+$relationshipGraphPath = Join-Path $ProjectRoot "revision/_state/relationship-graph.json"
+$relationshipGraph = $null
+if (Test-Path -LiteralPath $relationshipGraphPath -PathType Leaf) {
+  $relationshipGraph = Read-Utf8 -Path $relationshipGraphPath | ConvertFrom-Json
+}
 
 foreach ($field in @("plan_id","characters","chapter_count")) {
   if (-not ($bookPlan.PSObject.Properties.Name -contains $field)) {
@@ -79,6 +100,26 @@ foreach ($name in $bookCharacterNames) {
     throw "State reducer conflict: character-state missing planned character '$name'."
   }
 }
+foreach ($name in $stateCharacterNames) {
+  if ($bookCharacterNames -notcontains $name) {
+    throw "State reducer conflict: character-state contains unplanned character '$name'."
+  }
+}
+
+if ($relationshipGraph -and ($relationshipGraph.PSObject.Properties.Name -contains "nodes")) {
+  $graphCharacterNames = @($relationshipGraph.nodes | ForEach-Object { Get-ObjectString -Obj $_ -Field "name" })
+  Assert-UniqueStrings -Values $graphCharacterNames -Label "relationship-graph character names"
+  foreach ($name in $bookCharacterNames) {
+    if ($graphCharacterNames -notcontains $name) {
+      throw "State reducer conflict: relationship-graph missing planned character '$name'."
+    }
+  }
+  foreach ($name in $graphCharacterNames) {
+    if ($bookCharacterNames -notcontains $name) {
+      throw "State reducer conflict: relationship-graph contains unplanned character '$name'."
+    }
+  }
+}
 
 if (-not ($chapterPlan.PSObject.Properties.Name -contains "chapters")) {
   throw "State reducer conflict: chapter-plan.json missing chapters."
@@ -93,6 +134,17 @@ foreach ($chapter in $chapters) {
   foreach ($field in @("reader_title","purpose","events","target_words")) {
     if (-not ($chapter.PSObject.Properties.Name -contains $field)) {
       throw "State reducer conflict: chapter entry missing '$field'."
+    }
+  }
+  if ($chapter.PSObject.Properties.Name -contains "character_focus") {
+    $focus = Get-ObjectString -Obj $chapter -Field "character_focus"
+    $allowedAliases = @()
+    foreach ($name in $bookCharacterNames) { $allowedAliases += Get-CharacterAliases -Name $name }
+    foreach ($token in ($focus -split ",")) {
+      $clean = $token.Trim()
+      if ($clean -and $allowedAliases -notcontains $clean) {
+        throw "State reducer conflict: chapter character_focus references unknown character '$clean'."
+      }
     }
   }
 }

@@ -31,6 +31,17 @@ function Read-JsonFile {
   return Read-Utf8 -Path $Path | ConvertFrom-Json
 }
 
+function Assert-ProjectIsolation {
+  param([string]$Root)
+
+  $rootFull = [System.IO.Path]::GetFullPath($Root)
+  $gitDir = Join-Path $rootFull ".git"
+  $markerPath = Join-Path $rootFull ".kithub-project.json"
+  if ((Test-Path -LiteralPath $gitDir -PathType Container) -and -not (Test-Path -LiteralPath $markerPath -PathType Leaf)) {
+    throw "Project isolation blocked: do not run manuscript phases in the kit_hub application repository. Create a separate project with scripts/new_project.ps1 and run the pipeline there."
+  }
+}
+
 function ConvertTo-RelativeContractPath {
   param([string]$Path)
   return (([string]$Path) -replace "\\", "/").Trim()
@@ -1638,6 +1649,23 @@ function Validate-LongformState {
   }
 
   $bookPlan = Read-Utf8 -Path (Join-Path $stateDir "book-plan.json") | ConvertFrom-Json
+  if ($Phase -in @("design-big","design-small")) {
+    $targetPages = [int]$plan.target_pages
+    $characterCount = @($bookPlan.characters).Count
+    $writingType = ""
+    $genre = ""
+    if ($bookPlan.PSObject.Properties.Name -contains "writing_type") { $writingType = [string]$bookPlan.writing_type }
+    if ($bookPlan.PSObject.Properties.Name -contains "genre") { $genre = [string]$bookPlan.genre }
+    $complexForm = ($writingType -match "(?i)novel|roman|novella|historical|tarihsel|agent|ajan" -or $genre -match "(?i)novel|roman|novella|historical|tarihsel|agent|ajan")
+    if ($targetPages -le 20 -and $characterCount -ge 5 -and $complexForm) {
+      $lengthApprovalPath = Join-Path $Root "runtime/approvals/length-depth-approval.json"
+      Ensure-File $lengthApprovalPath
+      $lengthApproval = Read-Utf8 -Path $lengthApprovalPath | ConvertFrom-Json
+      if ($lengthApproval.approved -ne $true -or $lengthApproval.risk_acknowledged -ne $true) {
+        throw "Length-depth gate blocked: $targetPages pages with $characterCount characters and '$writingType/$genre' can limit character depth, pacing, and genre complexity. Ask the user to increase length or approve runtime/approvals/length-depth-approval.json with risk_acknowledged=true."
+      }
+    }
+  }
   foreach ($field in @("schema_version","run_id","plan_id","source_prompt","approved_story_option","title_working","writing_type","genre","theme","premise","scale_tier","target_pages","target_words","narrative_pov","tense","characters","plot_arc","chapter_count","max_chapters_per_batch","audit_interval_chapters","approval_required")) {
     if (-not ($bookPlan.PSObject.Properties.Name -contains $field)) {
       throw "book-plan.json missing '$field'."
@@ -1882,7 +1910,7 @@ function Assert-NoForbiddenPatterns {
     return
   }
 
-  $episodes = Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File -ErrorAction SilentlyContinue
+  $episodes = @(Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File -ErrorAction SilentlyContinue | Sort-Object Name)
   foreach ($ep in $episodes) {
     $raw = Read-Utf8 -Path $ep.FullName
     foreach ($p in $Patterns) {
@@ -2136,6 +2164,7 @@ function Validate-EpisodeTextQuality {
   $requireDashDialogue = $true
   $forbidMixedDialogue = $true
   $minPsychologicalMarkers = 6
+  $bridgeParagraphMinCharacters = 160
 
   if ($Config -and $Config.quality_flags -and ($Config.quality_flags.PSObject.Properties.Name -contains "text_quality_gates")) {
     $q = $Config.quality_flags.text_quality_gates
@@ -2146,9 +2175,38 @@ function Validate-EpisodeTextQuality {
     if ($q.PSObject.Properties.Name -contains "require_dash_dialogue") { $requireDashDialogue = [bool]$q.require_dash_dialogue }
     if ($q.PSObject.Properties.Name -contains "forbid_mixed_dialogue_styles") { $forbidMixedDialogue = [bool]$q.forbid_mixed_dialogue_styles }
     if ($q.PSObject.Properties.Name -contains "min_psychological_markers") { $minPsychologicalMarkers = [int]$q.min_psychological_markers }
+    if ($q.PSObject.Properties.Name -contains "bridge_paragraph_min_characters") { $bridgeParagraphMinCharacters = [int]$q.bridge_paragraph_min_characters }
   }
 
+  $bookPlanPath = Join-Path $Root "revision/_state/book-plan.json"
+  Ensure-File $bookPlanPath
+  $bookPlan = Read-Utf8 -Path $bookPlanPath | ConvertFrom-Json
+  $plannedCharacterAliases = @()
+  if ($bookPlan.PSObject.Properties.Name -contains "characters") {
+    foreach ($character in @($bookPlan.characters)) {
+      $name = ""
+      if ($character.PSObject.Properties.Name -contains "name") { $name = [string]$character.name }
+      $parts = @($name -split "\s+" | Where-Object { $_ -and $_.Trim() })
+      foreach ($part in $parts) {
+        $clean = $part.Trim()
+        if ($clean -and $clean -notin @("Doktor","Dr","Madam","Bay","Bayan","Hanım","Hanim","Bey")) {
+          $plannedCharacterAliases += $clean
+          break
+        }
+      }
+    }
+  }
+  $plannedCharacterAliases = @($plannedCharacterAliases | Select-Object -Unique)
+  $allEpisodeText = (($episodes | ForEach-Object { Read-Utf8 -Path $_.FullName }) -join "`n")
+  foreach ($alias in $plannedCharacterAliases) {
+    if ($allEpisodeText -notmatch "(?<!\p{L})$([regex]::Escape($alias))(?!\p{L})") {
+      throw "Text quality gate failed: planned character '$alias' is not present in manuscript text."
+    }
+  }
+
+  $episodeIndex = 0
   foreach ($ep in $episodes) {
+    $episodeIndex++
     $rawText = Read-Utf8 -Path $ep.FullName
 
     if ($rawText -match "[ÃÅÄ]") {
@@ -2159,6 +2217,12 @@ function Validate-EpisodeTextQuality {
     }
     if ($rawText -match "\b(ep\d{3}\.md|EP\d{3}-EP\d{3})\b") {
       throw "Text quality gate failed in $($ep.Name): internal episode/file label leaked into reader-facing text."
+    }
+    if ($episodeIndex -gt 1) {
+      $paragraphs = @($rawText -split "\r?\n\s*\r?\n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -and $_ -notmatch "^#\s+" })
+      if ($paragraphs.Count -lt 1 -or $paragraphs[0].Length -lt $bridgeParagraphMinCharacters) {
+        throw "Text quality gate failed in $($ep.Name): chapter bridge paragraph is too thin or missing."
+      }
     }
 
     $charCount = $rawText.Length
@@ -2260,6 +2324,8 @@ $runtimeDir = Join-Path $ProjectRoot "runtime"
 if (-not $ConfigPath) {
   $ConfigPath = Join-Path $runtimeDir "runner-config.json"
 }
+
+Assert-ProjectIsolation -Root $ProjectRoot
 
 $cfg = Load-RunnerConfig -Path $ConfigPath
 $effectiveMode = $Mode

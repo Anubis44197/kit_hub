@@ -35,6 +35,21 @@ function Get-ZipEntryText {
   }
 }
 
+function Assert-ZipEntry {
+  param([string]$DocxPath, [string]$EntryName)
+  Add-Type -AssemblyName System.IO.Compression
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $zip = [System.IO.Compression.ZipFile]::OpenRead($DocxPath)
+  try {
+    $entry = $zip.GetEntry($EntryName)
+    if (-not $entry) { throw "DOCX missing required entry: $EntryName" }
+    if ($entry.Length -lt 1) { throw "DOCX required entry is empty: $EntryName" }
+  }
+  finally {
+    $zip.Dispose()
+  }
+}
+
 $ProjectRoot = [System.IO.Path]::GetFullPath($ProjectRoot)
 $manifestFull = Resolve-ProjectPath -Path $ManifestPath
 if (-not (Test-Path -LiteralPath $manifestFull -PathType Leaf)) {
@@ -57,6 +72,10 @@ if (-not (Test-Path -LiteralPath $styleProfilePath -PathType Leaf)) {
   throw "DOCX style profile not found: $styleProfilePath"
 }
 
+foreach ($entryName in @("[Content_Types].xml","_rels/.rels","word/document.xml","word/styles.xml","word/_rels/document.xml.rels","docProps/core.xml","docProps/app.xml")) {
+  Assert-ZipEntry -DocxPath $docxPath -EntryName $entryName
+}
+
 $styleProfile = Read-Utf8 -Path $styleProfilePath | ConvertFrom-Json
 $style = $styleProfile.style_profile
 foreach ($field in @("page_width_twip","page_height_twip","margin_top_twip","margin_bottom_twip","margin_left_twip","margin_right_twip","font_family","font_size_pt")) {
@@ -67,7 +86,15 @@ foreach ($field in @("page_width_twip","page_height_twip","margin_top_twip","mar
 
 $documentXml = Get-ZipEntryText -DocxPath $docxPath -EntryName "word/document.xml"
 $stylesXml = Get-ZipEntryText -DocxPath $docxPath -EntryName "word/styles.xml"
+$rootRelsXml = Get-ZipEntryText -DocxPath $docxPath -EntryName "_rels/.rels"
+$contentTypesXml = Get-ZipEntryText -DocxPath $docxPath -EntryName "[Content_Types].xml"
 
+if ($rootRelsXml -notmatch 'officeDocument/2006/relationships/officeDocument' -or $rootRelsXml -notmatch 'Target="word/document.xml"') {
+  throw "DOCX root relationships do not point to word/document.xml."
+}
+if ($contentTypesXml -notmatch 'PartName="/word/document.xml"' -or $contentTypesXml -notmatch 'PartName="/word/styles.xml"') {
+  throw "DOCX content types missing document or styles overrides."
+}
 foreach ($styleId in @("KitHubBody","KitHubChapterTitle","KitHubFrontMatter","KitHubToc")) {
   if ($stylesXml -notmatch "w:styleId=`"$styleId`"") {
     throw "DOCX styles.xml missing paragraph style '$styleId'."
