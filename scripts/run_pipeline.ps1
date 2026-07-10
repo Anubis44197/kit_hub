@@ -419,6 +419,7 @@ function Validate-PhaseArtifacts {
         "revision/_workspace/*quality*verdict*EP*.md",
         "revision/_workspace/quality-verifier_EP*.md"
       ) -BasePath $Root
+      Ensure-Any -Patterns @("revision/_workspace/*editorial-cycle*.json") -BasePath $Root
       Ensure-Any -Patterns @(
         "revision/_workspace/08_tdk-polisher_issues_EP*.json",
         "revision/_workspace/*tdk-polisher*issues*EP*.json"
@@ -449,6 +450,7 @@ function Validate-PhaseArtifacts {
         "revision/_workspace/*revision-reviewer*EP*.md",
         "revision/_workspace/*reviewer*EP*.md"
       ) -BasePath $Root
+      Ensure-Any -Patterns @("revision/_workspace/*editorial-cycle*.json") -BasePath $Root
       Ensure-Any -Patterns @(
         "revision/_workspace/08_tdk-polisher_issues_EP*.json",
         "revision/_workspace/*tdk-polisher*issues*EP*.json"
@@ -462,6 +464,7 @@ function Validate-PhaseArtifacts {
         "revision/_workspace/04_quality-verifier_verdict_EP*.md",
         "revision/_workspace/*quality*verdict*EP*.md"
       ) -BasePath $Root
+      Ensure-Any -Patterns @("revision/_workspace/*editorial-cycle*.json") -BasePath $Root
       Ensure-Any -Patterns @(
         "revision/_workspace/08_tdk-polisher_issues_EP*.json",
         "revision/_workspace/*tdk-polisher*issues*EP*.json"
@@ -1050,6 +1053,76 @@ function Validate-JsonIssueContract {
     }
     if ($it.severity -notin @("critical","major","minor")) {
       throw "Invalid severity enum '$($it.severity)' in $Path"
+    }
+  }
+}
+
+function Validate-EditorialCycleContract {
+  param(
+    [string]$Root,
+    [string]$Phase,
+    [bool]$Enabled
+  )
+
+  if (-not $Enabled -or $Phase -notin @("create","polish","rewrite")) {
+    return
+  }
+
+  $files = @(Get-ChildItem -Path (Join-Path $Root "revision/_workspace/*editorial-cycle*.json") -File -ErrorAction SilentlyContinue | Sort-Object Name)
+  if ($files.Count -lt 1) {
+    throw "Editorial cycle gate failed: missing revision/_workspace/*editorial-cycle*.json for phase '$Phase'."
+  }
+
+  $stateScorecardPath = Join-Path $Root "revision/_state/editorial-quality-scorecard.json"
+  Ensure-File $stateScorecardPath
+  $stateScorecard = Read-Utf8 -Path $stateScorecardPath | ConvertFrom-Json
+  $threshold = 85
+  if ($stateScorecard.PSObject.Properties.Name -contains "threshold_pass") {
+    $threshold = [double]$stateScorecard.threshold_pass
+  }
+  $requiredAxes = @("continuity","progression","style","language","publication-readiness","type-fit")
+  if ($stateScorecard.PSObject.Properties.Name -contains "axes") {
+    $requiredAxes = @($stateScorecard.axes | ForEach-Object { [string]$_ })
+  }
+
+  foreach ($file in $files) {
+    $obj = Read-Utf8 -Path $file.FullName | ConvertFrom-Json
+    foreach ($field in @("run_id","step_id","phase","writing_type","verdict","threshold_pass","scores","issue_summary","required_fixes","next_action","reviewed_artifacts")) {
+      if (-not ($obj.PSObject.Properties.Name -contains $field)) {
+        throw "Editorial cycle gate failed: $($file.FullName) missing '$field'."
+      }
+    }
+    if ($obj.verdict -notin @("PASS","REWRITE","BLOCKED")) {
+      throw "Editorial cycle gate failed: invalid verdict '$($obj.verdict)' in $($file.FullName)."
+    }
+    if ([double]$obj.threshold_pass -lt $threshold) {
+      throw "Editorial cycle gate failed: threshold_pass lower than project scorecard threshold in $($file.FullName)."
+    }
+    foreach ($axis in $requiredAxes) {
+      if (-not ($obj.scores.PSObject.Properties.Name -contains $axis)) {
+        throw "Editorial cycle gate failed: scores missing required axis '$axis' in $($file.FullName)."
+      }
+      $score = [double]$obj.scores.$axis
+      if (($obj.verdict -eq "PASS") -and $score -lt $threshold) {
+        throw "Editorial cycle gate failed: PASS with axis '$axis' below threshold ($score < $threshold) in $($file.FullName)."
+      }
+    }
+    foreach ($field in @("critical","major","minor","manual_review_required")) {
+      if (-not ($obj.issue_summary.PSObject.Properties.Name -contains $field)) {
+        throw "Editorial cycle gate failed: issue_summary missing '$field' in $($file.FullName)."
+      }
+    }
+    if (($obj.verdict -eq "PASS") -and ([int]$obj.issue_summary.critical -gt 0 -or [int]$obj.issue_summary.major -gt 0 -or $obj.issue_summary.manual_review_required -eq $true)) {
+      throw "Editorial cycle gate failed: PASS cannot have critical/major/manual-review issues in $($file.FullName)."
+    }
+    if ($obj.verdict -ne "PASS" -and @($obj.required_fixes).Count -lt 1) {
+      throw "Editorial cycle gate failed: REWRITE/BLOCKED verdict must include required_fixes in $($file.FullName)."
+    }
+    if ([string]$obj.next_action -notin @("continue","rewrite_required","user_review_required","blocked")) {
+      throw "Editorial cycle gate failed: invalid next_action '$($obj.next_action)' in $($file.FullName)."
+    }
+    if (@($obj.reviewed_artifacts).Count -lt 1) {
+      throw "Editorial cycle gate failed: reviewed_artifacts must list reviewed files in $($file.FullName)."
     }
   }
 }
@@ -1795,7 +1868,7 @@ function Validate-LongformState {
     throw "book-plan.json page/word targets must match longform-plan."
   }
   $planWritingType = [string]$bookPlan.writing_type
-  $fictionWritingTypes = @("novel","story","novella","children_book","young_adult")
+  $fictionWritingTypes = @("novel","story","novella","children_book","young_adult","screenplay")
   $nonfictionWritingTypes = @("essay","memoir","biography","research_book","self_help","business_book","academic")
   if (($fictionWritingTypes -contains $planWritingType) -and @($bookPlan.characters).Count -lt 1) {
     throw "book-plan.json must include at least one planned character before writing starts."
@@ -1974,7 +2047,7 @@ function Validate-LongformState {
       throw "writing-type-profile.json missing '$field'."
     }
   }
-  $supportedWritingTypes = @("novel","story","novella","children_book","young_adult","essay","memoir","biography","research_book","self_help","business_book","academic")
+  $supportedWritingTypes = @("novel","story","novella","children_book","young_adult","essay","memoir","biography","research_book","self_help","business_book","academic","poetry_collection","screenplay")
   $activeWritingType = [string]$writingProfile.writing_type
   if ($supportedWritingTypes -notcontains $activeWritingType) {
     throw "writing-type-profile.json writing_type '$activeWritingType' is not supported or is not canonical."
@@ -1992,14 +2065,18 @@ function Validate-LongformState {
       throw "genre-structure-template.json missing '$field'."
     }
   }
-  $fictionTypes = @("novel","story","novella","children_book","young_adult")
+  $fictionTypes = @("novel","story","novella","children_book","young_adult","screenplay")
   $nonfictionTypes = @("essay","memoir","biography","research_book","self_help","business_book","academic")
+  $sequenceTypes = @("poetry_collection")
   $requiredTypeLedgers = @("chapter-summaries.json","continuity-ledger.json")
   if ($fictionTypes -contains $activeWritingType) {
     $requiredTypeLedgers += @("character-state.json","plot-ledger.json","world-state.json","relationship-graph.json","knowledge-graph.json","promise-payoff-ledger.json","timeline.json","theme-ledger.json")
   }
   if ($nonfictionTypes -contains $activeWritingType) {
     $requiredTypeLedgers += @("claim-ledger.json","source-ledger.json","term-glossary.json","argument-ledger.json")
+  }
+  if ($sequenceTypes -contains $activeWritingType) {
+    $requiredTypeLedgers += @("theme-ledger.json","style-profile.json","chapter-summaries.json")
   }
   foreach ($ledgerName in $requiredTypeLedgers) {
     if (@($structureTemplate.mandatory_ledgers) -notcontains $ledgerName) {
@@ -2827,6 +2904,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     Validate-AgentCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts -Artifacts $artifacts
     Validate-LongformState -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-StateReducers -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
+    Validate-EditorialCycleContract -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-MacroContinuityAudits -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-PublicationCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Assert-NoForbiddenPatterns -Root $ProjectRoot -Phase $phase -Patterns $negativePatterns -Enabled $enableNegativeEnforcement

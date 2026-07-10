@@ -72,6 +72,7 @@ Apply structural rewrites after design changes.
 ## Mandatory Artifact Gates
 - Do not run `quality-verifier` before `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` exist.
 - If `book_mode.enabled=true`, do not run `quality-verifier` before `09_tdk-layout_issues_EP{NNN}.json` and `09_tdk-layout_report_EP{NNN}.md` exist.
+- Do not accept `PASS` unless `revision/_workspace/rewrite_editorial-cycle_EP{RANGE}.json` exists and follows `skills/polish/references/editorial-cycle-schema.md`.
 - If any mandatory artifact is missing, stop with explicit artifact-missing error.
 
 ## Outputs
@@ -79,5 +80,6 @@ Apply structural rewrites after design changes.
 - mandatory TDK polisher outputs (`08_tdk-polisher_*`)
 - mandatory layout outputs when book mode is enabled (`09_tdk-layout_*`)
 - rewrite reports/logs/plans
+- editorial cycle JSON report (`rewrite_editorial-cycle_EP{RANGE}.json`)
 - unified rewrite report schema:
   - `skills/rewrite/references/rewrite-report-unified-schema.md`

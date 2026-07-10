@@ -108,6 +108,7 @@ Rule:
 - Do not run `quality-verifier` before `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` exist.
 - If `book_mode.enabled=true`, do not run `quality-verifier` before `09_tdk-layout_issues_EP{NNN}.json` and `09_tdk-layout_report_EP{NNN}.md` exist.
 - Do not accept `PASS` if create target contract metrics are missing in verifier report.
+- Do not accept `PASS` unless `revision/_workspace/create_editorial-cycle_EP{RANGE}.json` exists and follows `skills/polish/references/editorial-cycle-schema.md`.
 - If any mandatory artifact is missing, stop with explicit artifact-missing error.
 
 ## Longform Progression State Contract
@@ -136,4 +137,5 @@ The JSON must include `run_id`, `through_chapter`, `verdict`, `checked_ledgers`,
 - mandatory TDK polisher outputs (`08_tdk-polisher_*`)
 - mandatory layout outputs when book mode is enabled (`09_tdk-layout_*`)
 - verifier report with explicit target metrics and request compliance result
+- editorial cycle JSON report (`create_editorial-cycle_EP{RANGE}.json`)
 - updated create progress plan

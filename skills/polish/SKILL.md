@@ -90,6 +90,7 @@ Run systematic editorial correction over existing chapters.
 - Do not run `revision-reviewer` before `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` exist.
 - If `book_mode.enabled=true`, do not run `revision-reviewer` before `09_tdk-layout_issues_EP{NNN}.json` and `09_tdk-layout_report_EP{NNN}.md` exist.
 - Do not run export before `revision/_state/writing-type-profile.json`, `revision/_state/genre-structure-template.json`, `revision/_state/editorial-quality-scorecard.json`, and `revision/_state/llm-adapter-contract.json` exist.
+- Do not accept `PASS` unless `revision/_workspace/polish_editorial-cycle_EP{RANGE}.json` exists and follows `skills/polish/references/editorial-cycle-schema.md`.
 - If any mandatory artifact is missing, stop with explicit artifact-missing error.
 
 ## Outputs
@@ -99,5 +100,6 @@ Run systematic editorial correction over existing chapters.
 - optional dictionary verification report (`10_tdk-dictionary-check_<phase>.json`)
 - mandatory layout outputs when book mode is enabled (`09_tdk-layout_*`)
 - professional editorial reports from developmental, continuity, line, copy, research/citation, and final proof stages
+- editorial cycle JSON report (`polish_editorial-cycle_EP{RANGE}.json`)
 - professional writing state files in `revision/_state/`
 - updated fix plan and trackers

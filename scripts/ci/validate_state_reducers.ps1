@@ -80,7 +80,7 @@ $sourceLedger = Read-StateJson -Name "source-ledger.json"
 $termGlossary = Read-StateJson -Name "term-glossary.json"
 $argumentLedger = Read-StateJson -Name "argument-ledger.json"
 $writingType = if ($bookPlan.PSObject.Properties.Name -contains "writing_type") { [string]$bookPlan.writing_type } else { "" }
-$fictionWritingTypes = @("novel","story","novella","children_book","young_adult")
+$fictionWritingTypes = @("novel","story","novella","children_book","young_adult","screenplay")
 $nonfictionWritingTypes = @("essay","memoir","biography","research_book","self_help","business_book","academic")
 $relationshipGraphPath = Join-Path $ProjectRoot "revision/_state/relationship-graph.json"
 $relationshipGraph = $null
@@ -144,7 +144,7 @@ foreach ($field in @("writing_type","structure_model","continuity_policy","compl
     throw "State reducer conflict: writing-type-profile.json missing concrete '$field'."
   }
 }
-$supportedWritingTypes = @("novel","story","novella","children_book","young_adult","essay","memoir","biography","research_book","self_help","business_book","academic")
+$supportedWritingTypes = @("novel","story","novella","children_book","young_adult","essay","memoir","biography","research_book","self_help","business_book","academic","poetry_collection","screenplay")
 if ($supportedWritingTypes -notcontains ([string]$writingProfile.writing_type)) {
   throw "State reducer conflict: unsupported writing_type '$($writingProfile.writing_type)'."
 }
