@@ -48,13 +48,31 @@ grep -q "current-run.json" scripts/run_pipeline.ps1
 grep -q "Invoke-RunRetention" scripts/run_pipeline.ps1
 grep -q "Ensure-UserApproval" scripts/run_pipeline.ps1
 grep -q "Validate-PhaseContracts" scripts/run_pipeline.ps1
+grep -q "Validate-AgentCompliance" scripts/run_pipeline.ps1
+grep -q "Validate-AgentGovernanceCatalog" scripts/run_pipeline.ps1
+grep -q "Write-RunJournalEvent" scripts/run_pipeline.ps1
+grep -q "contract_hashes" scripts/run_pipeline.ps1
+grep -q "Validate-CommandSafety" scripts/run_pipeline.ps1
+grep -q "Validate-ArtifactSizeBudget" scripts/run_pipeline.ps1
 grep -q "Assert-NoForbiddenPatterns" scripts/run_pipeline.ps1
 grep -q "Validate-EpisodeTextQuality" scripts/run_pipeline.ps1
+grep -q "Validate-StateReducers" scripts/run_pipeline.ps1
 grep -q "require_user_approvals" runtime/runner-config.template.json
 grep -q "enforce_phase_contracts" runtime/runner-config.template.json
 grep -q "enable_negative_enforcement" runtime/runner-config.template.json
 grep -q "enable_text_quality_gates" runtime/runner-config.template.json
+grep -q "enable_command_safety" runtime/runner-config.template.json
+grep -q "enable_artifact_size_budget" runtime/runner-config.template.json
 grep -q "text_quality_gates" runtime/runner-config.template.json
+grep -q "contract_hashes" runtime/agent-compliance.schema.json
+grep -q "contract_hashes" docs/PHASE_EVIDENCE_SCHEMA.md
+grep -q "contract_hashes" docs/AGENT_COMPLIANCE_ENFORCEMENT.md
+grep -q "contract_hashes" scripts/ci/write_agent_compliance.ps1
+grep -q "front-matter-editor" scripts/local_phase.ps1
+grep -q "cover-designer" scripts/local_phase.ps1
+grep -q "revision/_state/book-plan.json" scripts/local_phase.ps1
+grep -q "revision/_state/chapter-plan.json" scripts/local_phase.ps1
+grep -q "revision/_state/layout-plan.json" scripts/local_phase.ps1
 
 echo "[contract-lint] validating quality-verifier strict metadata contract..."
 grep -q "## Required Report Metadata (Strict)" agents/quality-verifier.md
