@@ -120,11 +120,26 @@ Reference documents:
 5. Optional bootstrap:
    - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
 
+## Standard User Flow (Required)
+Do not write a book directly in the application repository root. Create one isolated project per book:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/new_project.ps1 -Name "Kitap Adi"
+Set-Location "$env:USERPROFILE\Documents\KitHubProjects\kitap-adi"
+```
+
+Then write the real user request into `runtime/book-request.md`, run intake, approve the brief, approve the story direction, approve the book plan, then write/create/polish/export. The app must not silently choose a default topic.
+
+The complete Turkish operating procedure is in:
+- `docs/USER_FLOW_TR.md`
+- `docs/SMALL_E2E_RUNBOOK_TR.md`
+
 ## No API Key / IDE Agent Mode
 You do not need to give this repository an API key. If your IDE already has an agent or model connection, run the repository in manual IDE mode.
 
-1. Bootstrap:
-   - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
+1. Create an isolated book project:
+   - `powershell -ExecutionPolicy Bypass -File scripts/new_project.ps1 -Name "Kitap Adi"`
+   - `Set-Location "$env:USERPROFILE\Documents\KitHubProjects\kitap-adi"`
 2. Create IDE manual config:
    - `Copy-Item runtime/runner-config.ide-manual.template.json runtime/runner-config.ide-manual.json -Force`
 3. Create `runtime/book-request.md` yourself and write only the user's actual book request into it. The repository does not ship a default topic file.
@@ -156,15 +171,16 @@ Detailed guide:
 - `docs/IDE_AGENT_WORKFLOW.md`
 
 ## Quick Start
-1. `/run` (single-command full pipeline)
-2. `/intake` (ask/lock book brief, writing type, page/layout, front matter, cover package)
-3. `/propose` (if you want phase-by-phase control)
-4. `/design-big`
-5. `/design-small`
-6. `/create`
-7. `/polish`
-8. `/rewrite` (only if needed)
-9. `/export-word` (requires explicit user approval)
+1. `scripts/new_project.ps1` creates a clean book project outside the app repository.
+2. `runtime/book-request.md` receives only the real user prompt.
+3. `/intake` asks/locks book brief, writing type, page/layout, front matter, cover package.
+4. `/propose` offers story/book directions and waits for user selection.
+5. `/design-big` and `/design-small` produce the book, chapter, continuity, and layout plans.
+6. `/create` writes only after approved plan/design freeze.
+7. `/polish` and `/rewrite` run editorial, continuity, TDK, layout, and quality gates.
+8. `/export-word` requires explicit user approval.
+9. `scripts/export_final.ps1` copies final DOCX outside the project, such as Desktop.
+10. `scripts/cleanup_project.ps1` runs only after explicit cleanup approval.
 
 ## Command Reference
 | Command | Purpose | Output |
@@ -310,6 +326,8 @@ For complete mapping see `docs/ARCHITECTURE_MAP.md`.
 
 ## Documentation
 - Architecture overview: `docs/ARCHITECTURE_MAP.md`
+- Turkish user flow: `docs/USER_FLOW_TR.md`
+- Small E2E runbook: `docs/SMALL_E2E_RUNBOOK_TR.md`
 - Runner usage: `docs/RUNNER_USAGE.md`
 - Release process: `RELEASE_CHECKLIST.md`
 - Release history: `CHANGELOG.md`

@@ -22,7 +22,8 @@ Autonomous creative generation requires an explicit provider-backed command or A
 ## Setup
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+powershell -ExecutionPolicy Bypass -File scripts/new_project.ps1 -Name "Kitap Adi"
+Set-Location "$env:USERPROFILE\Documents\KitHubProjects\kitap-adi"
 Copy-Item runtime/runner-config.ide-manual.template.json runtime/runner-config.ide-manual.json -Force
 ```
 
@@ -158,10 +159,11 @@ Final DOCX files are written under:
 revision/export/
 ```
 
-To copy a file to Desktop:
+To copy the approved final output to Desktop, use the guarded final-export command:
 
 ```powershell
-Copy-Item -LiteralPath "revision/export/YOUR_FILE.docx" -Destination "$env:USERPROFILE\Desktop\" -Force
+powershell -ExecutionPolicy Bypass -File scripts/export_final.ps1 -ProjectRoot . -DestinationDirectory "$env:USERPROFILE\Desktop" -RequireExportApproval
 ```
 
 Never copy or rename an older DOCX to satisfy export. If DOCX creation fails because a tool such as Pandoc is missing, report the failure and leave export blocked.
+Never clean working files until the user explicitly approves `runtime/approvals/cleanup-approval.json` with `approved=true` and `final_output_preserved=true`.
