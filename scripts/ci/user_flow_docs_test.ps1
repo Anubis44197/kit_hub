@@ -44,6 +44,11 @@ function Assert-NotContains {
 Assert-File "docs/USER_FLOW_TR.md"
 Assert-File "docs/SMALL_E2E_RUNBOOK_TR.md"
 
+foreach ($doc in @("README.md", "docs/USER_FLOW_TR.md", "docs/SMALL_E2E_RUNBOOK_TR.md", "docs/IDE_AGENT_WORKFLOW.md")) {
+  Assert-NotContains $doc '[\u00C3\u00C4\u00C5\uFFFD]' "mojibake marker"
+}
+Assert-NotContains "docs/SMALL_E2E_RUNBOOK_TR.md" "utf8BOM" "PowerShell-version-specific utf8BOM encoding flag"
+
 Assert-Contains "README.md" "scripts/new_project\.ps1" "isolated project creation command"
 Assert-Contains "README.md" "docs/USER_FLOW_TR\.md" "Turkish user flow link"
 Assert-Contains "README.md" "docs/SMALL_E2E_RUNBOOK_TR\.md" "small E2E runbook link"

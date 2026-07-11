@@ -1,20 +1,20 @@
-# Küçük E2E Test Runbook
+# Kucuk E2E Test Runbook
 
-Bu runbook uzun kitap testinden önce küçük ve kontrollü doğrulama yapmak içindir. Amaç edebi kaliteyi değil, uygulama kapılarının doğru çalıştığını kanıtlamaktır.
+Bu runbook uzun kitap testinden once kucuk ve kontrollu dogrulama yapmak icindir. Amac edebi kaliteyi degil, uygulama kapilarinin dogru calistigini kanitlamaktir.
 
-## Test Amacı
+## Test Amaci
 
-Şunlar doğrulanır:
+Sunlar dogrulanir:
 
-- proje uygulama deposu dışında oluşur
-- konu kullanıcı isteğinden gelir
-- brief onayı olmadan planlama ilerlemez
-- plan onayı olmadan yazım başlamaz
+- proje uygulama deposu disinda olusur
+- konu kullanici isteginden gelir
+- brief onayi olmadan planlama ilerlemez
+- plan onayi olmadan yazim baslamaz
 - editoryal kalite raporu olmadan `PASS` kabul edilmez
-- final DOCX proje dışına kopyalanır
-- kullanıcı cleanup onayı vermeden çalışma dosyaları silinmez
+- final DOCX proje disina kopyalanir
+- kullanici cleanup onayi vermeden calisma dosyalari silinmez
 
-## 1. Proje Oluştur
+## 1. Proje Olustur
 
 Uygulama deposunda:
 
@@ -22,16 +22,19 @@ Uygulama deposunda:
 powershell -ExecutionPolicy Bypass -File scripts/new_project.ps1 -Name "Kucuk E2E Test"
 ```
 
-Terminalde yazan proje yoluna geç:
+Terminalde yazan proje yoluna gec:
 
 ```powershell
 Set-Location "$env:USERPROFILE\Documents\KitHubProjects\kucuk-e2e-test"
 ```
 
-## 2. Kullanıcı İsteğini Yaz
+## 2. Kullanici Istegini Yaz
+
+PowerShell 5.1 ve PowerShell 7 uyumlu UTF-8 BOM yazimi:
 
 ```powershell
-Set-Content -LiteralPath runtime/book-request.md -Encoding utf8BOM -Value "10 sayfalik, 6 karakterli, 1930'larda Pera Palas'ta baslayan tarihsel ajan hikayesi. Ataturk tarihsel saygi cercevesinde konuya dahil olsun; sahte soz veya sahte alinti kullanilmasin."
+$text = "10 sayfalik, 6 karakterli, 1930'larda Pera Palas'ta baslayan tarihsel ajan hikayesi. Ataturk tarihsel saygi cercevesinde konuya dahil olsun; sahte soz veya sahte alinti kullanilmasin."
+[System.IO.File]::WriteAllText((Join-Path (Get-Location) "runtime/book-request.md"), $text, [System.Text.UTF8Encoding]::new($true))
 ```
 
 ## 3. IDE Manual Config
@@ -40,27 +43,27 @@ Set-Content -LiteralPath runtime/book-request.md -Encoding utf8BOM -Value "10 sa
 Copy-Item runtime/runner-config.ide-manual.template.json runtime/runner-config.ide-manual.json -Force
 ```
 
-## 4. Intake Fazını Çalıştır
+## 4. Intake Fazini Calistir
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase intake -ToPhase intake
 ```
 
-`runtime/approvals/book-brief-approval.json` dosyasını yalnızca brief doğruysa onayla.
+`runtime/approvals/book-brief-approval.json` dosyasini yalnizca brief dogruysa onayla.
 
-## 5. Proposal ve Plan Fazları
+## 5. Proposal ve Plan Fazlari
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase propose -ToPhase propose
 ```
 
-`runtime/approvals/story-choice.json` içinde bir seçenek seç ve onayla.
+`runtime/approvals/story-choice.json` icinde bir secenek sec ve onayla.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase design-big -ToPhase design-big
 ```
 
-Plan dosyalarını oku. Kabul edersen `runtime/approvals/book-plan-approval.json` onaylanır.
+Plan dosyalarini oku. Kabul edersen `runtime/approvals/book-plan-approval.json` onaylanir.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase design-small -ToPhase design-small
@@ -68,40 +71,40 @@ powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot .
 
 ## 6. Create / Polish / Rewrite / Export
 
-IDE ajanı her fazda ilgili dosyaları üretir. Runner dosyaları doğrular.
+IDE ajani her fazda ilgili dosyalari uretir. Runner dosyalari dogrular.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase create -ToPhase export
 ```
 
-Bu komut sırasında faz onayları ve eksik dosyalar varsa runner durur. Durması başarısızlık değil, doğru kapı davranışıdır.
+Bu komut sirasinda faz onaylari ve eksik dosyalar varsa runner durur. Durmasi basarisizlik degil, dogru kapi davranisidir.
 
-## 7. Final Dosyayı Masaüstüne Kopyala
+## 7. Final Dosyayi Masaustune Kopyala
 
-Export onaylı ve DOCX oluşmuşsa:
+Export onayli ve DOCX olusmussa:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/export_final.ps1 -ProjectRoot . -DestinationDirectory "$env:USERPROFILE\Desktop" -RequireExportApproval
 ```
 
-Bu komut eski DOCX kopyalama hilesinin yerine kullanılan tek güvenli yoldur.
+Bu komut eski DOCX kopyalama hilesinin yerine kullanilan tek guvenli yoldur.
 
 ## 8. Cleanup Testi
 
-Önce onaysız cleanup denenir; bloklanmalıdır:
+Once onaysiz cleanup denenir; bloklanmalidir:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/cleanup_project.ps1 -ProjectRoot .
 ```
 
-Kullanıcı gerçekten "bitti, temizle" derse `runtime/approvals/cleanup-approval.json` onaylanır ve cleanup çalıştırılır.
+Kullanici gercekten "bitti, temizle" derse `runtime/approvals/cleanup-approval.json` onaylanir ve cleanup calistirilir.
 
-## Başarı Ölçütü
+## Basari Olcutu
 
-Test ancak şu koşullarda başarılıdır:
+Test ancak su kosullarda basarilidir:
 
-- final DOCX masaüstünde açılabilir
-- DOCX içeriği güncel bölüm metniyle eşleşir
-- okuyucu çıktısında validator notu, yayın notu, run id, EP001/Sahne etiketi yoktur
-- proje içinde final çıktı saklanmaz
-- cleanup kullanıcı onayı olmadan çalışmaz
+- final DOCX masaustunde acilabilir
+- DOCX icerigi guncel bolum metniyle eslesir
+- okuyucu ciktisinda validator notu, yayin notu, run id, EP001/Sahne etiketi yoktur
+- proje icinde final cikti saklanmaz
+- cleanup kullanici onayi olmadan calismaz

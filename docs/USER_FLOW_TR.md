@@ -1,77 +1,77 @@
-# KitHub Kullanıcı Akışı
+# KitHub Kullanici Akisi
 
-Bu uygulama, kitap üretim motorudur. Uygulama kökü temiz kalır; her kitap ayrı bir proje klasöründe çalışır.
+Bu uygulama kitap uretim motorudur. Uygulama koku temiz kalir; her kitap ayri bir proje klasorunde calisir.
 
-## 1. Yeni Kitap Projesi Oluştur
+## 1. Yeni Kitap Projesi Olustur
 
-Uygulama klasöründe:
+Uygulama klasorunde:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/new_project.ps1 -Name "Kitap Adi"
 ```
 
-Varsayılan proje yeri:
+Varsayilan proje yeri:
 
 ```text
 Documents\KitHubProjects\<kitap-adi>
 ```
 
-Roman, hikaye, deneme, biyografi veya başka bir yazı işi bu proje klasöründe yürür. Uygulama deposunun içine bölüm, çıktı veya test romanı yazılmaz.
+Roman, hikaye, deneme, biyografi veya baska bir yazi isi bu proje klasorunde yurur. Uygulama deposunun icine bolum, cikti veya test romani yazilmaz.
 
-## 2. Kullanıcı İsteğini Yaz
+## 2. Kullanici Istegini Yaz
 
-Proje klasöründe şu dosyayı oluştur:
+Proje klasorunde su dosyayi olustur:
 
 ```text
 runtime/book-request.md
 ```
 
-Bu dosyaya sadece kullanıcının gerçek isteği yazılır. Varsayılan konu, eski roman adı, test başlığı veya örnek hikaye kullanılmaz.
+Bu dosyaya sadece kullanicinin gercek istegi yazilir. Varsayilan konu, eski roman adi, test basligi veya ornek hikaye kullanilmaz.
 
-Örnek:
+Ornek:
 
 ```text
-10 sayfalık, 1930'larda Pera Palas'ta başlayan, 6 karakterli bir ajan hikayesi istiyorum.
-Ataturk tarihsel saygı çerçevesinde konuya dahil olsun; sahte söz veya sahte alıntı kullanılmasın.
+10 sayfalik, 1930'larda Pera Palas'ta baslayan, 6 karakterli bir ajan hikayesi istiyorum.
+Ataturk tarihsel saygi cercevesinde konuya dahil olsun; sahte soz veya sahte alinti kullanilmasin.
 ```
 
-## 3. Intake: Yazmadan Önce Soru ve Brief
+## 3. Intake: Yazmadan Once Soru ve Brief
 
-Pipeline önce kullanıcının isteğini kilitler:
+Pipeline once kullanicinin istegini kilitler:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase intake -ToPhase intake
 ```
 
-Bu aşamada sistem şu dosyaları üretir:
+Bu asamada sistem su dosyalari uretir:
 
 - `runtime/book-brief.json`
 - `runtime/book-dna.json`
 - `runtime/layout-profile.json`
 - `runtime/approvals/book-brief-approval.json`
 
-Kullanıcı şu alanları netleştirmeden yazı başlamaz:
+Kullanici su alanlari netlestirmeden yazi baslamaz:
 
-- yazı türü
+- yazi turu
 - konu ve ana vaat
-- hedef sayfa / bölüm / kelime
-- tür ve alt tür
+- hedef sayfa / bolum / kelime
+- tur ve alt tur
 - hedef okur
-- karakter sayısı ve karakter politikası
-- dönem, mekan, anlatıcı, zaman
-- üslup ve yazı tonu
-- kapak, önsöz, içindekiler, künye gibi yayın paketi
-- araştırma/kaynak gereksinimi
+- karakter sayisi ve karakter politikasi
+- donem, mekan, anlatici, zaman
+- uslup ve yazi tonu
+- kapak, onsoz, icindekiler, kunye gibi yayin paketi
+- arastirma/kaynak gereksinimi
 
-`book-brief-approval.json` yalnızca kullanıcı briefi kabul ettiğinde `approved=true` yapılır.
+`book-brief-approval.json` yalnizca kullanici briefi kabul ettiginde `approved=true` yapilir.
 
-## 4. Propose: Hikaye Seçeneği
+## 4. Propose: Hikaye Secenegi
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase propose -ToPhase propose
 ```
 
-Sistem seçenek üretir. Kullanıcı bir yön seçmeden uygulama kendi kafasına göre konu seçemez.
+Sistem secenek uretir. Kullanici bir yon secmeden uygulama kendi kafasina gore konu secemez.
 
 Zorunlu dosya:
 
@@ -79,17 +79,17 @@ Zorunlu dosya:
 runtime/approvals/story-choice.json
 ```
 
-Bu dosyada `approved=true` ve `selected_option` dolu olmalıdır.
+Bu dosyada `approved=true` ve `selected_option` dolu olmalidir.
 
-## 5. Design: Kitap Planı
+## 5. Design: Kitap Plani
 
-Önce büyük plan:
+Once buyuk plan:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase design-big -ToPhase design-big
 ```
 
-Sonra kullanıcı şu planları okur:
+Sonra kullanici su planlari okur:
 
 - `design/04_book_plan.md`
 - `design/05_chapter_plan.md`
@@ -101,39 +101,39 @@ Sonra kullanıcı şu planları okur:
 - `revision/_state/character-state.json`
 - `revision/_state/plot-ledger.json`
 
-Kullanıcı planı kabul ederse:
+Kullanici plani kabul ederse:
 
 ```text
 runtime/approvals/book-plan-approval.json
 ```
 
-`approved=true` yapılır. Plan kabul edilmeden bölüm yazımı başlamaz.
+`approved=true` yapilir. Plan kabul edilmeden bolum yazimi baslamaz.
 
 ## 6. Create / Polish / Rewrite
 
-Yazım aşaması:
+Yazim asamasi:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase create -ToPhase create
 ```
 
-Bu aşamada LLM veya IDE ajanı plana bağlı kalarak bölüm dosyalarını ve state güncellemelerini üretir.
+Bu asamada LLM veya IDE ajani plana bagli kalarak bolum dosyalarini ve state guncellemelerini uretir.
 
-Zorunlu kontrol başlıkları:
+Zorunlu kontrol basliklari:
 
-- bölüm ilerlemesi
-- karakter tutarlılığı
-- olay/tema sürekliliği
-- tekrar kontrolü
-- TDK/yazım kontrolü
-- dizgi/layout kontrolü
-- editoryal kalite döngüsü
+- bolum ilerlemesi
+- karakter tutarliligi
+- olay/tema surekliligi
+- tekrar kontrolu
+- TDK/yazim kontrolu
+- dizgi/layout kontrolu
+- editoryal kalite dongusu
 
-`PASS` hilesi yapılamaz. Editoryal kalite raporu yoksa, düşük skor varsa, kritik/majör sorun varsa veya rewrite gerekiyorsa süreç durur.
+`PASS` hilesi yapilamaz. Editoryal kalite raporu yoksa, dusuk skor varsa, kritik/major sorun varsa veya rewrite gerekiyorsa surec durur.
 
 ## 7. Export
 
-Export için kullanıcı onayı gerekir:
+Export icin kullanici onayi gerekir:
 
 ```text
 runtime/approvals/export-approval.json
@@ -145,31 +145,31 @@ Sonra:
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase export -ToPhase export
 ```
 
-DOCX dosyası önce proje içinde `revision/export/` altında oluşur.
+DOCX dosyasi once proje icinde `revision/export/` altinda olusur.
 
-Kullanıcıya verilecek final dosya proje dışına kopyalanır:
+Kullaniciya verilecek final dosya proje disina kopyalanir:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/export_final.ps1 -ProjectRoot . -DestinationDirectory "$env:USERPROFILE\Desktop" -RequireExportApproval
 ```
 
-Final hedefi proje klasörünün içinde olamaz.
+Final hedefi proje klasorunun icinde olamaz.
 
-## 8. Kullanıcı Okuma ve Revizyon
+## 8. Kullanici Okuma ve Revizyon
 
-Roman veya kitap bittikten sonra çalışma dosyaları hemen silinmez.
+Roman veya kitap bittikten sonra calisma dosyalari hemen silinmez.
 
-Kullanıcı final dosyayı okuyabilir, eleştiri verebilir, bölüm ekletebilir, rewrite isteyebilir veya yeni export alabilir.
+Kullanici final dosyayi okuyabilir, elestiri verebilir, bolum ekletebilir, rewrite isteyebilir veya yeni export alabilir.
 
-## 9. Kullanıcı Onaylı Temizlik
+## 9. Kullanici Onayli Temizlik
 
-Yalnızca kullanıcı açıkça "bitti, çalışma alanını temizle" derse:
+Yalnizca kullanici acikca "bitti, calisma alanini temizle" derse:
 
 ```text
 runtime/approvals/cleanup-approval.json
 ```
 
-şu değerlerle güncellenir:
+su degerlerle guncellenir:
 
 ```json
 {
@@ -184,13 +184,13 @@ Sonra:
 powershell -ExecutionPolicy Bypass -File scripts/cleanup_project.ps1 -ProjectRoot .
 ```
 
-Cleanup final DOCX'i silmez. Final dosya proje dışında korunmuş değilse cleanup başlamaz.
+Cleanup final DOCX'i silmez. Final dosya proje disinda korunmus degilse cleanup baslamaz.
 
 ## Yasaklar
 
-- Eski DOCX dosyasını kopyalayıp yeni çıktı gibi göstermek yasaktır.
-- Varsayılan konu veya test romanı ile yazı başlatmak yasaktır.
-- Kullanıcı planı onaylamadan bölüm yazmak yasaktır.
-- `PASS` raporu uydurmak yasaktır.
-- Yayın notu, validator raporu, run id, EP001/Sahne etiketi gibi teknik metinleri okuyucu çıktısına koymak yasaktır.
-- Uygulama köküne roman çalışma dosyası bırakmak yasaktır.
+- Eski DOCX dosyasini kopyalayip yeni cikti gibi gostermek yasaktir.
+- Varsayilan konu veya test romani ile yazi baslatmak yasaktir.
+- Kullanici plani onaylamadan bolum yazmak yasaktir.
+- `PASS` raporu uydurmak yasaktir.
+- Yayin notu, validator raporu, run id, EP001/Sahne etiketi gibi teknik metinleri okuyucu ciktisina koymak yasaktir.
+- Uygulama kokune roman calisma dosyasi birakmak yasaktir.
