@@ -23,6 +23,11 @@ function Write-Utf8Bom {
 
 $ProjectRoot = [System.IO.Path]::GetFullPath($ProjectRoot)
 $DestinationDirectory = [System.IO.Path]::GetFullPath($DestinationDirectory)
+$projectRootPrefix = $ProjectRoot.TrimEnd("\") + "\"
+$destinationPrefix = $DestinationDirectory.TrimEnd("\") + "\"
+if ($destinationPrefix.StartsWith($projectRootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+  throw "Final export destination must be outside the KitHub project root. Choose Desktop, Documents, or another external folder."
+}
 $markerPath = Join-Path $ProjectRoot ".kithub-project.json"
 if (-not (Test-Path -LiteralPath $markerPath -PathType Leaf)) {
   throw "Final export must run inside a KitHub project created by scripts/new_project.ps1. Missing .kithub-project.json."

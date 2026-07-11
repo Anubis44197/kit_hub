@@ -53,6 +53,11 @@ $finalManifest = Read-Utf8 -Path $finalManifestPath | ConvertFrom-Json
 if (-not ($finalManifest.PSObject.Properties.Name -contains "final_output_path") -or -not (Test-Path -LiteralPath ([string]$finalManifest.final_output_path) -PathType Leaf)) {
   throw "Cleanup blocked: final output file is missing."
 }
+$projectRootPrefix = $ProjectRoot.TrimEnd("\") + "\"
+$finalOutputFull = [System.IO.Path]::GetFullPath([string]$finalManifest.final_output_path)
+if ($finalOutputFull.StartsWith($projectRootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+  throw "Cleanup blocked: final output must be outside the KitHub project root before working files are removed."
+}
 
 $targets = @(
   "episode",

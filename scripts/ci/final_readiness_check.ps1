@@ -133,6 +133,11 @@ Assert-File "scripts/ci/verify_docx_content_match.ps1"
 Assert-File "scripts/new_project.ps1"
 Assert-File "scripts/export_final.ps1"
 Assert-File "scripts/cleanup_project.ps1"
+Assert-File "scripts/ci/project_lifecycle_gate_test.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/project_lifecycle_gate_test.ps1"
+if ($LASTEXITCODE -ne 0) {
+  throw "project_lifecycle_gate_test.ps1 failed with exit code: $LASTEXITCODE"
+}
 Assert-File "docs/PROJECT_LIFECYCLE_TR.md"
 Assert-File "skills/polish/references/editorial-cycle-schema.md"
 Assert-File "agents/brief-interviewer.md"
