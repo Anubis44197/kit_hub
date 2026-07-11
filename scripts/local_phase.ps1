@@ -153,6 +153,28 @@ function Get-RequestedChapterCount {
 }
 
 function Get-RequestedPageCount {
+  foreach ($field in @("target_pages", "target_length")) {
+    $acceptedValue = Get-BriefAnswerValue -Field $field
+    if ($acceptedValue) {
+      $exactMatch = [regex]::Match($acceptedValue, "(?i)^\s*(\d+)\s*$")
+      if ($exactMatch.Success) {
+        $count = [int]$exactMatch.Groups[1].Value
+        if ($count -ge 1 -and $count -le 1000) { return $count }
+      }
+      $rangeMatch = [regex]::Match($acceptedValue, "(?i)(\d+)\s*[-–]\s*(\d+)\s*(sayfa|page|pages)")
+      if ($rangeMatch.Success) {
+        $low = [int]$rangeMatch.Groups[1].Value
+        $high = [int]$rangeMatch.Groups[2].Value
+        $mid = [int][Math]::Round(($low + $high) / 2)
+        if ($mid -ge 1 -and $mid -le 1000) { return $mid }
+      }
+      $answerMatch = [regex]::Match($acceptedValue, "(?i)(\d+)\s*(sayfa|page|pages)")
+      if ($answerMatch.Success) {
+        $count = [int]$answerMatch.Groups[1].Value
+        if ($count -ge 1 -and $count -le 1000) { return $count }
+      }
+    }
+  }
   $raw = Get-DesignSeed
   $m = [regex]::Match($raw, "(?i)(\d+)\s*(sayfa|page|pages)")
   if ($m.Success) {
@@ -185,7 +207,7 @@ function Get-RequestedPageCount {
 
 function Get-RequestedCharacterCount {
   $raw = Get-DesignSeed
-  $m = [regex]::Match($raw, "(?i)(\d+)\s*(karakter|character|characters)")
+  $m = [regex]::Match($raw, "(?i)(\d+)\s*(?:\w+\s+){0,3}(karakter|character|characters)")
   if ($m.Success) {
     $count = [int]$m.Groups[1].Value
     if ($count -ge 1 -and $count -le 40) { return $count }
@@ -333,6 +355,14 @@ function Get-WritingTypeProfileFromSeed {
 
 function Get-CleanTitleFromText {
   param([string]$Text)
+  $titleLine = (($Text -split "\r?\n") | Where-Object { $_ -match "(?i)^\s*(kitap\s+adi|kitap\s+adı|title|baslik|başlık)\s*:" } | Select-Object -First 1)
+  if ($titleLine) {
+    $title = ($titleLine -replace "(?i)^\s*(kitap\s+adi|kitap\s+adı|title|baslik|başlık)\s*:\s*", "").Trim(" .,:;")
+    if ($title) {
+      if ($title.Length -gt 70) { $title = $title.Substring(0, 70).Trim() }
+      return $title
+    }
+  }
   $line = (($Text -split "\r?\n") | Where-Object { $_.Trim() -and $_ -notmatch "^\s*#" } | Select-Object -First 1)
   if (-not $line) { $line = $Text }
   $line = ($line -replace "(?i)^\s*\d+\s*(bölümlük|bolumluk|bölüm|bolum|chapter|chapters)\s*[:\-]?\s*", "").Trim()
@@ -1010,21 +1040,36 @@ Her bölüm önceki bölümün sonucundan doğmalı; bölüm tekrarları ve tekn
 
   $chapters = @()
   $chapterPlan = @()
+  $chapterBeats = @(
+    @{ title = "Mektuplarin Bulundugu Gun"; event = "Ogretmen okulun eski dolabinda askere ait mektup destesini bulur."; change = "Kasabanin suskunlugu ilk kez somut bir nesneye baglanir." },
+    @{ title = "Okulun Sobasi"; event = "Ilk mektup okunur ve kayip askerin donemeyecegi sanilan yolculugu acilir."; change = "Ogretmen, mektuplarin sadece aile sirri degil kasaba sirri oldugunu sezer." },
+    @{ title = "Istasyon Defteri"; event = "Istasyon kaydinda mektuplardaki tarih ile resmi kayit arasinda celiski gorulur."; change = "Arastirma kisisel meraktan kamusal bir sorumluluga doner." },
+    @{ title = "Yarim Kalan Nisan"; event = "Kayip askerin sevdigi kadinin bugunku sessizligiyle eski mektuplar yan yana gelir."; change = "Yarim kalmis ask, ihanet sorusunu insani bedene kavusturur." },
+    @{ title = "Muhtarin Suskunlugu"; event = "Kasabanin otoritesi mektuplarin acilmasina karsi cikar."; change = "Ogretmen ilk acik baskiyla karsilasir." },
+    @{ title = "Bozkirda Kar"; event = "Ikinci deste mektup bir ev sandiginda bulunur."; change = "Kayip askerin suc sandigi kararinin aslinda baskasinin tercihi olabilecegi anlasilir." },
+    @{ title = "Kirik Muhur"; event = "Eski resmi kagittaki muhur, mektuplarin neden saklandigina dair iz verir."; change = "Ihanetin maddi kaniti belirir." },
+    @{ title = "Bir Aksam Ezani"; event = "Sevda, aile ve kasaba onuru arasinda kalan yasli karakter gercegi yarim anlatir."; change = "Saklanan bilgi ilk kez dile gelir ama tamamlanmaz." },
+    @{ title = "Son Mektup"; event = "Ogretmen son mektubun eksik sayfasini bulur."; change = "Kayip askerin gercek secimi ve kasabanin korkusu gorunur olur." },
+    @{ title = "Kasaba Meydani"; event = "Mektuplar saklanacak mi yoksa okunacak mi sorusu ortak yuzlesmeye doner."; change = "Ozel sir kamusal hesaba donusur." },
+    @{ title = "Defterin Kenari"; event = "Ogretmen kendi kalma/gitme kararini mektuplarin isiginda verir."; change = "Bas karakter pasif okuyucudan sorumluluk alan ozneye donusur." },
+    @{ title = "Bozkirda Son Sabah"; event = "Sonuc, mektuplarin kaderini ve karakterlerin yeni dengesini gosterir."; change = "Acilis vaadi kapanir; suskunluk yerini agir ama temiz bir bilgiye birakir." }
+  )
   for ($i = 1; $i -le $targetChapters; $i++) {
     $chapterId = ("EP{0:D3}" -f $i)
-    $readerTitle = ("Bölüm {0}" -f $i)
+    $beat = $chapterBeats[($i - 1) % $chapterBeats.Count]
+    $readerTitle = [string]$beat.title
     $chapters += [ordered]@{
       id = $chapterId
       reader_label = $readerTitle
       target_words = $wordsPerChapter
-      purpose = "Bu bölüm olay, karakter veya tema açısından ölçülebilir yeni ilerleme taşımalıdır."
+      purpose = [string]$beat.change
       must_advance = @("plot", "character", "theme")
     }
     $chapterPlan += [ordered]@{
       id = $chapterId
       reader_title = $readerTitle
-      purpose = "Önceki bölümün sonucundan doğan yeni olay, karar veya çatışma üret."
-      events = @("Yeni bilgi ortaya çıkar.", "Karakter bir seçim yapmak zorunda kalır.", "Bölüm sonunda geri alınamaz bir sonuç oluşur.")
+      purpose = [string]$beat.change
+      events = @([string]$beat.event, "Karakter bir seçim yapmak zorunda kalır.", "Bölüm sonunda geri alınamaz bir sonuç oluşur.")
       character_focus = @("Ana karakterin arzusu, korkusu ve bilgi sınırı güncellenir.")
       continuity_promises = @("Bölüm sonucu sonraki bölümün nedenini oluşturur.", "Tekrarlanan açılış ve teknik sahne etiketi kullanılmaz.")
       target_words = $wordsPerChapter
@@ -1032,15 +1077,28 @@ Her bölüm önceki bölümün sonucundan doğmalı; bölüm tekrarları ve tekn
   }
 
   $plannedCharacters = @()
+  $characterTemplates = @(
+    @{ role = "protagonist"; name = "Mahir Ogretmen"; desire = "Mektuplarin sahibine ve kendi ogretmenlik vicdanina karsi dogru olani yapmak."; fear = "Kasabanin sessizligine dokunarak hem okulunu hem de yeni hayatini kaybetmek."; arc = "Merak eden yabancidan, bedelini bilerek gercegi tasiyan bir ogretmene donusur." },
+    @{ role = "memory_keeper"; name = "Emine"; desire = "Yarim kalmis askin hatirasini kirletmeden yasamak."; fear = "Son mektup acilirsa hem sevdigi adami hem kendi gencligini ikinci kez kaybetmek."; arc = "Suskun taniktan, hakikatin insani bedelini soyleyen kisiye donusur." },
+    @{ role = "opposing_force"; name = "Rasit Muhtar"; desire = "Kasabanin itibarini ve eski duzenini korumak."; fear = "Gecmisteki tercihlerinin aciga cikmasi ve otoritesinin cokmesi."; arc = "Duzeni koruyan adamdan, sakladigi sirla yuzlesmeye zorlanan adama donusur." },
+    @{ role = "lost_soldier"; name = "Yusuf"; desire = "Mektuplarinda geride kalanlara temiz bir iz birakmak."; fear = "Kendi adinin baskalarinin sucu icin kullanilmasi."; arc = "Yokluguyla baslayan karakter, mektuplariyla olaylarin ahlaki merkezine yerlesir." },
+    @{ role = "witness"; name = "Hatice Ana"; desire = "Ailesinin dagilmamasi ve gecmisin tekrar yara acmamasi."; fear = "Suskunlugunun bir gencin hayatini karartmis olabilecegini kabul etmek."; arc = "Korkuyla saklayan taniktan, eksik parcayi teslim eden taniga donusur." },
+    @{ role = "catalyst"; name = "Naci Katip"; desire = "Defterlerdeki kayitlari kendi guvenligini riske atmadan dogru kisiye ulastirmak."; fear = "Kucuk bir kaydin buyuk bir hesaba donusmesi."; arc = "Kenar bilgi tasiyan memurdan, olay zincirini ilerleten taniga donusur." }
+  )
   for ($c = 1; $c -le $requestedCharacterCount; $c++) {
-    $role = if ($c -eq 1) { "protagonist" } elseif ($c -eq 2) { "opposing_force" } else { "supporting_character" }
-    $name = if ($c -eq 1) { $protagonistName } else { "Karakter $c" }
+    $template = $characterTemplates[($c - 1) % $characterTemplates.Count]
+    $role = [string]$template.role
+    $name = [string]$template.name
+    if ($c -gt $characterTemplates.Count) {
+      $name = "Yan Karakter $c"
+      $role = "supporting_character"
+    }
     $plannedCharacters += [ordered]@{
       role = $role
       name = $name
-      desire = "Konu merkezindeki baski icinde kendi hedefini korumak."
-      fear = "Yanlis bilgi, gecmis veya iliski baskisi nedeniyle kontrolu kaybetmek."
-      arc = "Baslangicta belirgin bir konum; ortada degisen iliski ve bilgi; sonda secimin sonucu."
+      desire = [string]$template.desire
+      fear = [string]$template.fear
+      arc = [string]$template.arc
     }
   }
 
@@ -1102,6 +1160,12 @@ run_id: $RunId
 plan_id: $planId
 
 Her bölüm önceki bölümün sonucundan doğmalı, yeni bilgi üretmeli ve karakter/olay durumunu değiştirmelidir. Okur çıktısında EP kodu veya sahne etiketi kullanılamaz.
+
+$(
+  ($chapterPlan | ForEach-Object {
+    "- $($_.reader_title): $($_.purpose) Hedef: $($_.target_words) kelime."
+  }) -join [Environment]::NewLine
+)
 "@
 
   Write-Utf8 -Path (Join-Path $design "06_layout_plan.md") -Content @"

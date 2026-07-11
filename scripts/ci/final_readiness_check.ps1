@@ -151,6 +151,11 @@ Assert-File "scripts/ci/small_e2e_user_flow_test.ps1"
 if ($LASTEXITCODE -ne 0) {
   throw "small_e2e_user_flow_test.ps1 failed with exit code: $LASTEXITCODE"
 }
+Assert-File "scripts/ci/design_plan_specificity_test.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/design_plan_specificity_test.ps1"
+if ($LASTEXITCODE -ne 0) {
+  throw "design_plan_specificity_test.ps1 failed with exit code: $LASTEXITCODE"
+}
 Assert-File "scripts/new_project.ps1"
 Assert-File "scripts/export_final.ps1"
 Assert-File "scripts/cleanup_project.ps1"
