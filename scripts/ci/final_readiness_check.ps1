@@ -130,6 +130,12 @@ Assert-File "scripts/ci/write_agent_compliance.ps1"
 Assert-File "scripts/ci/validate_agent_governance.ps1"
 Assert-File "scripts/ci/validate_state_reducers.ps1"
 Assert-File "scripts/ci/verify_docx_content_match.ps1"
+Assert-File "scripts/ci/verify_docx_reader_clean.ps1"
+Assert-File "scripts/ci/docx_export_gate_test.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/docx_export_gate_test.ps1"
+if ($LASTEXITCODE -ne 0) {
+  throw "docx_export_gate_test.ps1 failed with exit code: $LASTEXITCODE"
+}
 Assert-File "scripts/ci/user_flow_docs_test.ps1"
 & powershell -ExecutionPolicy Bypass -File "scripts/ci/user_flow_docs_test.ps1"
 if ($LASTEXITCODE -ne 0) {
