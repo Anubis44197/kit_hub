@@ -96,6 +96,11 @@ Assert-Contains -Path "skills/rewrite/SKILL.md" -Pattern $policyPattern -ErrorMe
 Assert-Contains -Path "skills/export-word/SKILL.md" -Pattern $policyPattern -ErrorMessage "Missing language policy in skills/export-word/SKILL.md"
 
 Write-Host "[final-readiness-ps] validating adapter references..."
+Assert-File "scripts/ci/app_root_cleanliness_test.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/app_root_cleanliness_test.ps1"
+if ($LASTEXITCODE -ne 0) {
+  throw "app_root_cleanliness_test.ps1 failed with exit code: $LASTEXITCODE"
+}
 Assert-File "skills/polish/references/shared-task-schema.md"
 Assert-File "skills/polish/references/agent-skill-schema-mapping.md"
 Assert-File "skills/polish/references/adapter-claude-codex.md"
