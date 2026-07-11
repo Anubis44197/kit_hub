@@ -167,6 +167,11 @@ Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-EditorialCyc
 Assert-Contains -Path "skills/create/SKILL.md" -Pattern "create_editorial-cycle" -ErrorMessage "Create skill must require editorial cycle JSON"
 Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "polish_editorial-cycle" -ErrorMessage "Polish skill must require editorial cycle JSON"
 Assert-Contains -Path "skills/rewrite/SKILL.md" -Pattern "rewrite_editorial-cycle" -ErrorMessage "Rewrite skill must require editorial cycle JSON"
+Assert-File "scripts/ci/editorial_cycle_gate_test.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/editorial_cycle_gate_test.ps1"
+if ($LASTEXITCODE -ne 0) {
+  throw "editorial_cycle_gate_test.ps1 failed with exit code: $LASTEXITCODE"
+}
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Publication metadata missing" -ErrorMessage "Missing publication metadata validation"
 Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "Assert-PublicationMetadataClean" -ErrorMessage "Local export must validate publication metadata before DOCX"
 Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "Assert-ReaderArtifactClean" -ErrorMessage "Local export must validate reader-facing front/cover artifacts"
