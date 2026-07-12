@@ -57,7 +57,9 @@ function New-TestDocx {
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:style w:type="paragraph" w:default="1" w:styleId="KitHubBody"><w:name w:val="KitHub Body"/></w:style>
-  <w:style w:type="paragraph" w:styleId="KitHubChapterTitle"><w:name w:val="KitHub Chapter Title"/></w:style>
+  <w:style w:type="paragraph" w:styleId="KitHubBodyFirst"><w:name w:val="KitHub Body First"/><w:pPr><w:ind w:firstLine="0"/></w:pPr></w:style>
+  <w:style w:type="paragraph" w:styleId="KitHubBookTitle"><w:name w:val="KitHub Book Title"/></w:style>
+  <w:style w:type="paragraph" w:styleId="KitHubChapterTitle"><w:name w:val="KitHub Chapter Title"/><w:pPr><w:pageBreakBefore/></w:pPr></w:style>
   <w:style w:type="paragraph" w:styleId="KitHubFrontMatter"><w:name w:val="KitHub Front Matter"/></w:style>
   <w:style w:type="paragraph" w:styleId="KitHubToc"><w:name w:val="KitHub TOC"/></w:style>
 </w:styles>
@@ -67,7 +69,7 @@ function New-TestDocx {
     foreach ($p in $Paragraphs) {
       $idx++
       $safe = [System.Security.SecurityElement]::Escape($p)
-      $styleId = if ($idx -eq 1) { "KitHubChapterTitle" } else { "KitHubBody" }
+      $styleId = if ($idx -eq 1) { "KitHubBookTitle" } elseif ($idx -eq 2) { "KitHubBodyFirst" } else { "KitHubBody" }
       $body.Add("<w:p><w:pPr><w:pStyle w:val=""$styleId""/></w:pPr><w:r><w:t xml:space=""preserve"">$safe</w:t></w:r></w:p>")
     }
     Write-Utf8 -Path (Join-Path $tmp "word/document.xml") -Content @"

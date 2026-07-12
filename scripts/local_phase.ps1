@@ -697,15 +697,15 @@ function Get-DocxStyleProfile {
 
   $widthMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "width_mm")) { [double]$pageSetup.width_mm } else { 148.0 }
   $heightMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "height_mm")) { [double]$pageSetup.height_mm } else { 210.0 }
-  $topMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "margin_top_mm")) { [double]$pageSetup.margin_top_mm } else { 20.0 }
+  $topMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "margin_top_mm")) { [double]$pageSetup.margin_top_mm } else { 18.0 }
   $bottomMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "margin_bottom_mm")) { [double]$pageSetup.margin_bottom_mm } else { 20.0 }
-  $insideMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "margin_inside_mm")) { [double]$pageSetup.margin_inside_mm } else { 18.0 }
-  $outsideMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "margin_outside_mm")) { [double]$pageSetup.margin_outside_mm } else { 18.0 }
+  $insideMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "margin_inside_mm")) { [double]$pageSetup.margin_inside_mm } else { 20.0 }
+  $outsideMm = if ($pageSetup -and ($pageSetup.PSObject.Properties.Name -contains "margin_outside_mm")) { [double]$pageSetup.margin_outside_mm } else { 16.0 }
 
-  $fontFamily = if ($profile.font_family) { [string]$profile.font_family } else { "Times New Roman" }
-  $fontSizePt = if ($profile.body_font_size_pt) { [double]$profile.body_font_size_pt } else { 11.0 }
+  $fontFamily = if ($profile.font_family) { [string]$profile.font_family } else { "Garamond" }
+  $fontSizePt = if ($profile.body_font_size_pt) { [double]$profile.body_font_size_pt } else { 11.5 }
   $lineSpacing = if ($profile.line_spacing) { [double]$profile.line_spacing } else { 1.15 }
-  $indentCm = if ($typography -and ($typography.PSObject.Properties.Name -contains "paragraph_first_line_indent_cm")) { [double]$typography.paragraph_first_line_indent_cm } else { 0.6 }
+  $indentCm = if ($typography -and ($typography.PSObject.Properties.Name -contains "paragraph_first_line_indent_cm")) { [double]$typography.paragraph_first_line_indent_cm } else { 0.55 }
   $spacingAfterPt = if ($typography -and ($typography.PSObject.Properties.Name -contains "paragraph_spacing_after_pt")) { [double]$typography.paragraph_spacing_after_pt } else { 0.0 }
   $justification = if ($typography -and ($typography.PSObject.Properties.Name -contains "justification")) { [string]$typography.justification } else { "both" }
 
@@ -731,6 +731,7 @@ function Get-DocxStyleProfile {
     line_spacing_twip = [int][Math]::Round(240 * $lineSpacing)
     paragraph_first_line_indent_cm = $indentCm
     paragraph_first_line_indent_twip = Convert-CmToTwip $indentCm
+    paragraph_body_first_line_indent_twip = 0
     paragraph_spacing_after_pt = $spacingAfterPt
     paragraph_spacing_after_twip = [int][Math]::Round($spacingAfterPt * 20)
     justification = $justification
@@ -803,21 +804,34 @@ function New-Docx {
     <w:pPr><w:jc w:val="$($style.justification)"/><w:spacing w:line="$($style.line_spacing_twip)" w:lineRule="auto" w:after="$($style.paragraph_spacing_after_twip)"/><w:ind w:firstLine="$($style.paragraph_first_line_indent_twip)"/></w:pPr>
     <w:rPr><w:rFonts w:ascii="$($style.font_family)" w:hAnsi="$($style.font_family)" w:cs="$($style.font_family)"/><w:sz w:val="$($style.font_size_half_points)"/></w:rPr>
   </w:style>
+  <w:style w:type="paragraph" w:styleId="KitHubBodyFirst">
+    <w:name w:val="KitHub Body First Paragraph"/>
+    <w:basedOn w:val="KitHubBody"/>
+    <w:pPr><w:jc w:val="$($style.justification)"/><w:spacing w:line="$($style.line_spacing_twip)" w:lineRule="auto" w:after="$($style.paragraph_spacing_after_twip)"/><w:ind w:firstLine="0"/></w:pPr>
+    <w:rPr><w:rFonts w:ascii="$($style.font_family)" w:hAnsi="$($style.font_family)" w:cs="$($style.font_family)"/><w:sz w:val="$($style.font_size_half_points)"/></w:rPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="KitHubBookTitle">
+    <w:name w:val="KitHub Book Title"/>
+    <w:basedOn w:val="KitHubBody"/>
+    <w:pPr><w:jc w:val="center"/><w:spacing w:before="1080" w:after="360"/><w:ind w:firstLine="0"/></w:pPr>
+    <w:rPr><w:b/><w:rFonts w:ascii="$($style.font_family)" w:hAnsi="$($style.font_family)" w:cs="$($style.font_family)"/><w:sz w:val="36"/></w:rPr>
+  </w:style>
   <w:style w:type="paragraph" w:styleId="KitHubChapterTitle">
     <w:name w:val="KitHub Chapter Title"/>
     <w:basedOn w:val="KitHubBody"/>
-    <w:pPr><w:keepNext/><w:pageBreakBefore/><w:jc w:val="center"/><w:spacing w:before="360" w:after="240"/><w:ind w:firstLine="0"/></w:pPr>
-    <w:rPr><w:b/><w:rFonts w:ascii="$($style.font_family)" w:hAnsi="$($style.font_family)" w:cs="$($style.font_family)"/><w:sz w:val="28"/></w:rPr>
+    <w:pPr><w:keepNext/><w:pageBreakBefore/><w:jc w:val="center"/><w:spacing w:before="720" w:after="360"/><w:ind w:firstLine="0"/></w:pPr>
+    <w:rPr><w:b/><w:rFonts w:ascii="$($style.font_family)" w:hAnsi="$($style.font_family)" w:cs="$($style.font_family)"/><w:sz w:val="30"/></w:rPr>
   </w:style>
   <w:style w:type="paragraph" w:styleId="KitHubFrontMatter">
     <w:name w:val="KitHub Front Matter"/>
     <w:basedOn w:val="KitHubBody"/>
-    <w:pPr><w:jc w:val="center"/><w:spacing w:after="120"/><w:ind w:firstLine="0"/></w:pPr>
+    <w:pPr><w:jc w:val="center"/><w:spacing w:after="140"/><w:ind w:firstLine="0"/></w:pPr>
+    <w:rPr><w:rFonts w:ascii="$($style.font_family)" w:hAnsi="$($style.font_family)" w:cs="$($style.font_family)"/><w:sz w:val="22"/></w:rPr>
   </w:style>
   <w:style w:type="paragraph" w:styleId="KitHubToc">
     <w:name w:val="KitHub TOC"/>
     <w:basedOn w:val="KitHubBody"/>
-    <w:pPr><w:jc w:val="left"/><w:spacing w:after="80"/><w:ind w:firstLine="0"/></w:pPr>
+    <w:pPr><w:jc w:val="left"/><w:spacing w:after="100"/><w:ind w:firstLine="0"/></w:pPr>
   </w:style>
 </w:styles>
 "@
@@ -831,11 +845,26 @@ function New-Docx {
     $index++
     $safe = [System.Security.SecurityElement]::Escape($p)
     $styleId = "KitHubBody"
-    if ($index -eq 1) { $styleId = "KitHubFrontMatter" }
+    if ($index -eq 1) { $styleId = "KitHubBookTitle" }
     elseif ($p -eq "İçindekiler") { $styleId = "KitHubChapterTitle" }
     elseif ($chapterTitleSet.ContainsKey($p)) {
       $chapterTitleSet[$p] = [int]$chapterTitleSet[$p] + 1
       $styleId = $(if ([int]$chapterTitleSet[$p] -eq 1) { "KitHubToc" } else { "KitHubChapterTitle" })
+    }
+    elseif ($index -gt 1) {
+      $seenToc = $false
+      foreach ($titleKey in $chapterTitleSet.Keys) {
+        if ([int]$chapterTitleSet[$titleKey] -gt 1) { $seenToc = $true; break }
+      }
+      if (-not $seenToc) {
+        $styleId = "KitHubFrontMatter"
+      }
+      else {
+        $previous = if ($index -gt 1) { $Paragraphs[$index - 2] } else { "" }
+        if ($chapterTitleSet.ContainsKey($previous) -and [int]$chapterTitleSet[$previous] -gt 1) {
+          $styleId = "KitHubBodyFirst"
+        }
+      }
     }
     $body.Add("<w:p><w:pPr><w:pStyle w:val=""$styleId""/></w:pPr><w:r><w:t xml:space=""preserve"">$safe</w:t></w:r></w:p>")
   }
@@ -973,7 +1002,7 @@ function Invoke-Intake {
     suggested_defaults = [ordered]@{
       target_length = "Ask the user; do not assume. If the user says 'sen sec', choose a length and record that approval."
       publication_package = "publisher_submission_docx, print_preview_docx, title page, copyright placeholder, preface optional, table of contents, cover brief, back cover copy"
-      layout = "A5, Times New Roman 11 pt, 1.15 line spacing, justified, first-line indent, chapter starts on new page"
+      layout = "A5, Garamond 11.5 pt, 1.15 line spacing, justified, narrow book text block, first paragraph after chapter unindented, chapter starts on new page"
     }
     approval_requirements = @(
       "answers.writing_type must be filled",
@@ -1008,9 +1037,9 @@ function Invoke-Intake {
     profile_status = "QUESTIONS_PENDING"
     print_target = "A5_NOVEL_DOCX"
     trim_size = "A5"
-    font_family = "Georgia"
+    font_family = "Garamond"
     body_font_size_pt = 11.5
-    line_spacing = 1.2
+    line_spacing = 1.15
     paragraph_alignment = "justified"
     paragraph_spacing_policy = "no_blank_line_between_body_paragraphs"
     chapter_start_policy = "new_page"
@@ -1034,10 +1063,10 @@ function Invoke-Intake {
       trim_size = "A5"
       width_mm = 148
       height_mm = 210
-      margin_top_mm = 20
+      margin_top_mm = 18
       margin_bottom_mm = 20
-      margin_inside_mm = 18
-      margin_outside_mm = 18
+      margin_inside_mm = 20
+      margin_outside_mm = 16
       source_note = "Novel print preview default; publisher-specific submission rules override this profile."
     }
     typography = [ordered]@{
@@ -1045,7 +1074,7 @@ function Invoke-Intake {
       chapter_title_style = "KitHubChapterTitle"
       front_matter_style = "KitHubFrontMatter"
       toc_style = "KitHubToc"
-      paragraph_first_line_indent_cm = 0.7
+      paragraph_first_line_indent_cm = 0.55
       paragraph_spacing_after_pt = 0
       justification = "both"
     }
@@ -1062,7 +1091,7 @@ function Invoke-Intake {
     }
     rule_sources = @(
       "TDK yazim ve noktalama kurallari",
-      "Novel print preview: A5, book-like serif body font, chapter new page, page numbers; publisher submission may override with Times New Roman 11",
+      "Trade fiction print preview: A5, Garamond-like serif body font, narrow book text block, chapter new page, page numbers; publisher submission may override with Times New Roman 11",
       "Publication metadata checklist: ISBN, kunye, bandrol and barcode are external/final publisher tasks"
     )
   })
@@ -1416,14 +1445,14 @@ plan_id: $planId
     trim_size = "A5"
     width_mm = 148
     height_mm = 210
-    margin_top_mm = 20
+    margin_top_mm = 18
     margin_bottom_mm = 20
-    margin_inside_mm = 18
-    margin_outside_mm = 18
-    font_family = "Georgia"
+    margin_inside_mm = 20
+    margin_outside_mm = 16
+    font_family = "Garamond"
     font_size_pt = 11.5
-    line_spacing = 1.2
-    paragraph_first_line_indent_cm = 0.7
+    line_spacing = 1.15
+    paragraph_first_line_indent_cm = 0.55
     words_per_page_estimate = $wordsPerPage
     target_pages = $targetPages
     target_words = $targetWords

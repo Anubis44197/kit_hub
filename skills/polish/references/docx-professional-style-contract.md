@@ -18,6 +18,7 @@ The DOCX export must be ready for editor review and print/e-book conversion.
 - explicit delivery profile: `publisher_submission` or `print_preview`
 - explicit page setup in millimeters and Word twips
 - Word paragraph styles for body, chapter title, front matter, and TOC text
+- distinct Word paragraph styles for book title and first paragraph after chapter title
 - explicit front matter plan
 - explicit back matter plan
 - explicit page numbering policy
@@ -25,6 +26,7 @@ The DOCX export must be ready for editor review and print/e-book conversion.
 - explicit publisher-submission label when ISBN, barcode, kunye, or bandrol are not externally complete
 - body text justified unless the selected publisher profile says otherwise
 - body font, size, line spacing, paragraph spacing, and first-line indentation must come from `runtime/layout-profile.json`
+- trade fiction print preview should use a book-like serif profile, a narrow A5 text block, no blank line between body paragraphs, unindented first paragraph after chapter titles, and indented following paragraphs
 - no mojibake
 - no TODO markers
 - no unsupported fake ISBN, publisher, citation, or legal claim

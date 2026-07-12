@@ -97,7 +97,7 @@ try {
   Write-Utf8BomText -Path (Join-Path $projectRoot "runtime/book-request.md") -Value @'
 Kitap Adı: Sisli Defterler
 Tür: Tarihi Gerilim / Casusluk Romanı
-Hedef Uzunluk: 45 sayfa
+Hedef Uzunluk: 45 sayfa, 10 bölüm
 Karakter Sayısı: 6 ana karakter
 Konu: 1930'lar İstanbul'unda Pera Palas'ta başlayan bir dosya, Galata ve Dolmabahçe hattında eski bir istihbarat ağını ortaya çıkarır.
 '@
@@ -112,8 +112,9 @@ Konu: 1930'lar İstanbul'unda Pera Palas'ta başlayan bir dosya, Galata ve Dolma
   $briefApproval | Add-Member -NotePropertyName accepted_answers -NotePropertyValue ([ordered]@{
     writing_type = "novel"
     premise = "1930'lar İstanbul'unda Pera Palas'ta başlayan bir dosya, Galata ve Dolmabahçe hattında eski bir istihbarat ağını ortaya çıkarır."
-    target_length = "45 sayfa"
+    target_length = "45 sayfa, 10 bölüm"
     target_pages = "45"
+    target_chapters = "10"
     target_reader = "Yetişkin roman okuru"
     genre = "tarihi gerilim"
     character_policy = "6 ana karakter"
@@ -157,9 +158,19 @@ Konu: 1930'lar İstanbul'unda Pera Palas'ta başlayan bir dosya, Galata ve Dolma
   if ($characters.Count -lt 6) {
     $characters = @("Münevver", "Selim", "Nermin", "Kemal", "Eleni", "Rauf")
   }
-  $titles = @("Mermerdeki İz", "Tepebaşı'nda Yağmur", "Galata Defteri", "Dolmabahçe Gölgesi", "Sarnıçtaki Ses", "Kayıp Mühür", "Karaköy'de İtiraf", "Sis Çekilirken")
+  $targetChapters = [int]$longformPlan.target_chapters
+  $baseTitles = @("Mermerdeki İz", "Tepebaşı'nda Yağmur", "Galata Defteri", "Dolmabahçe Gölgesi", "Sarnıçtaki Ses", "Kayıp Mühür", "Karaköy'de İtiraf", "Sis Çekilirken")
+  $titles = @()
+  for ($i = 1; $i -le $targetChapters; $i++) {
+    if ($i -le $baseTitles.Count) {
+      $titles += $baseTitles[$i - 1]
+    }
+    else {
+      $titles += ("Sisli Eşik {0}" -f $i)
+    }
+  }
   $episodeRels = @()
-  for ($i = 1; $i -le 8; $i++) {
+  for ($i = 1; $i -le $targetChapters; $i++) {
     $rel = "episode/ep{0:D3}.md" -f $i
     $episodeRels += $rel
     Write-Utf8BomText -Path (Join-Path $projectRoot $rel) -Value (New-ChapterText -Index $i -Title $titles[$i - 1] -Characters $characters)
@@ -168,9 +179,10 @@ Konu: 1930'lar İstanbul'unda Pera Palas'ta başlayan bir dosya, Galata ve Dolma
   $work = Join-Path $projectRoot "revision/_workspace"
   $state = Join-Path $projectRoot "revision/_state"
   New-Item -ItemType Directory -Path $work -Force | Out-Null
-  Write-Utf8BomText -Path (Join-Path $work "04_quality-verifier_verdict_EP001-EP008.md") -Value "# Quality Verifier`n`nVERDICT: PASS`n`nEight chapters were reviewed for progression, chapter distinction, dash dialogue, Turkish characters, and continuity state updates."
-  Write-Utf8BomJson -Path (Join-Path $work "08_tdk-polisher_issues_EP001-EP008.json") -Value ([ordered]@{ run_id = "production-sample"; phase = "create"; verdict = "PASS"; issues = @(); checked = @("encoding", "diacritics", "technical-labels") })
-  Write-Utf8BomJson -Path (Join-Path $work "create_editorial-cycle_EP001-EP008.json") -Value ([ordered]@{
+  $episodeRangeLabel = "EP001-EP{0:D3}" -f $targetChapters
+  Write-Utf8BomText -Path (Join-Path $work "04_quality-verifier_verdict_$episodeRangeLabel.md") -Value "# Quality Verifier`n`nVERDICT: PASS`n`n$targetChapters chapters were reviewed for progression, chapter distinction, dash dialogue, Turkish characters, and continuity state updates."
+  Write-Utf8BomJson -Path (Join-Path $work "08_tdk-polisher_issues_$episodeRangeLabel.json") -Value ([ordered]@{ run_id = "production-sample"; phase = "create"; verdict = "PASS"; issues = @(); checked = @("encoding", "diacritics", "technical-labels") })
+  Write-Utf8BomJson -Path (Join-Path $work "create_editorial-cycle_$episodeRangeLabel.json") -Value ([ordered]@{
     run_id = "production-sample"
     step_id = "create-editorial-cycle"
     phase = "create"
@@ -198,7 +210,7 @@ Konu: 1930'lar İstanbul'unda Pera Palas'ta başlayan bir dosya, Galata ve Dolma
   $chapterSummaries = Read-Utf8Json -Path (Join-Path $state "chapter-summaries.json")
   $chapterSummaries.chapters = @()
   $previousLink = "Açılışta lacivert defter Münevver'i Pera Palas merdivenlerine çağırır."
-  for ($i = 1; $i -le 8; $i++) {
+  for ($i = 1; $i -le $targetChapters; $i++) {
     $nextLink = ("Ağın {0}. halkası öğrenildiği için {1} yeni eşiğe yönelir." -f $i, $characters[($i - 1) % $characters.Count])
     $chapterSummaries.chapters += [ordered]@{ id = ("EP{0:D3}" -f $i); summary = $titles[$i - 1]; previous_chapter_result = $previousLink; new_event = ("Yeni dosya parçası {0}. eşikte ortaya çıktı." -f $i); new_information = ("Ağın {0}. halkası öğrenildi." -f $i); irreversible_change = ("Karakterlerin bilgi dengesi {0}. bölüm sonunda geri dönülmez biçimde değişti." -f $i); next_causal_link = $nextLink; state_updates = @("character-state", "plot-ledger", "continuity-ledger") }
     $previousLink = $nextLink
@@ -206,7 +218,7 @@ Konu: 1930'lar İstanbul'unda Pera Palas'ta başlayan bir dosya, Galata ve Dolma
   Write-Utf8BomJson -Path (Join-Path $state "chapter-summaries.json") -Value $chapterSummaries
   $plotLedger = Read-Utf8Json -Path (Join-Path $state "plot-ledger.json")
   $plotLedger.cause_effect_chain = @()
-  for ($i = 1; $i -le 8; $i++) {
+  for ($i = 1; $i -le $targetChapters; $i++) {
     $plotLedger.cause_effect_chain += [ordered]@{
       cause = ("EP{0:D3} içinde bulunan iz karakterleri yeni karar almaya zorlar." -f $i)
       effect = ("EP{0:D3} sonunda ağın {1}. halkası açılır ve sonraki bölümün yönü değişir." -f $i, $i)
@@ -214,9 +226,9 @@ Konu: 1930'lar İstanbul'unda Pera Palas'ta başlayan bir dosya, Galata ve Dolma
   }
   Write-Utf8BomJson -Path (Join-Path $state "plot-ledger.json") -Value $plotLedger
   $outputArtifacts = @($episodeRels + @(
-    "revision/_workspace/04_quality-verifier_verdict_EP001-EP008.md",
-    "revision/_workspace/08_tdk-polisher_issues_EP001-EP008.json",
-    "revision/_workspace/create_editorial-cycle_EP001-EP008.json",
+    "revision/_workspace/04_quality-verifier_verdict_$episodeRangeLabel.md",
+    "revision/_workspace/08_tdk-polisher_issues_$episodeRangeLabel.json",
+    "revision/_workspace/create_editorial-cycle_$episodeRangeLabel.json",
     "revision/_workspace/macro-continuity-audit_EP005.json",
     "revision/_workspace/macro-continuity-audit_EP005.md",
     "revision/_state/chapter-summaries.json"
@@ -264,7 +276,7 @@ Konu: 1930'lar İstanbul'unda Pera Palas'ta başlayan bir dosya, Galata ve Dolma
   Invoke-CheckedPowerShell -Arguments @("-ExecutionPolicy", "Bypass", "-File", (Join-Path $RepoRoot "scripts/ci/verify_docx_layout_profile.ps1"), "-ProjectRoot", $projectRoot, "-ManifestPath", $manifest.FullName) | Out-Null
   if ($KeepOutputDirectory) {
     New-Item -ItemType Directory -Path $KeepOutputDirectory -Force | Out-Null
-    Copy-Item -LiteralPath $createdDocx -Destination (Join-Path $KeepOutputDirectory "Sisli Defterler Production_EP001-EP008.docx") -Force
+    Copy-Item -LiteralPath $createdDocx -Destination (Join-Path $KeepOutputDirectory ("Sisli Defterler Production_{0}.docx" -f $episodeRangeLabel)) -Force
     Copy-Item -LiteralPath $manifest.FullName -Destination (Join-Path $KeepOutputDirectory "Sisli Defterler Production_manifest.json") -Force
   }
 

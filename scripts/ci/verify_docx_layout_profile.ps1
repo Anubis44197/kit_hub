@@ -96,7 +96,7 @@ if ($rootRelsXml -notmatch 'officeDocument/2006/relationships/officeDocument' -o
 if ($contentTypesXml -notmatch 'PartName="/word/document.xml"' -or $contentTypesXml -notmatch 'PartName="/word/styles.xml"') {
   throw "DOCX content types missing document or styles overrides."
 }
-foreach ($styleId in @("KitHubBody","KitHubChapterTitle","KitHubFrontMatter","KitHubToc")) {
+foreach ($styleId in @("KitHubBody","KitHubBodyFirst","KitHubBookTitle","KitHubChapterTitle","KitHubFrontMatter","KitHubToc")) {
   if ($stylesXml -notmatch "w:styleId=`"$styleId`"") {
     throw "DOCX styles.xml missing paragraph style '$styleId'."
   }
@@ -106,6 +106,13 @@ if ($documentXml -notmatch 'w:pStyle w:val="KitHubBody"') {
 }
 if ($documentXml -notmatch 'w:pStyle w:val="KitHubChapterTitle"') {
   throw "DOCX document.xml does not reference KitHubChapterTitle style."
+}
+if ($documentXml -notmatch 'w:pStyle w:val="KitHubBookTitle"') {
+  throw "DOCX document.xml does not reference KitHubBookTitle style."
+}
+$bodyFirstStyle = [regex]::Match($stylesXml, 'w:style[^>]*w:styleId="KitHubBodyFirst"[\s\S]*?</w:style>').Value
+if (-not $bodyFirstStyle -or $bodyFirstStyle -notmatch 'w:ind w:firstLine="0"') {
+  throw "DOCX styles.xml must define KitHubBodyFirst with firstLine=0 for first paragraphs after chapter titles."
 }
 
 $chapterTitleCount = [regex]::Matches($documentXml, 'w:pStyle w:val="KitHubChapterTitle"').Count
