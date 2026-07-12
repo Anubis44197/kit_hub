@@ -149,7 +149,7 @@ Ensure-ApprovalFile -Path (Join-Path $approvalsDir "book-plan-approval.json") -T
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "length-depth-approval.json") -Title "Length Depth Approval" -ExtraFields @{ risk_acknowledged = $false; note = "Set approved=true and risk_acknowledged=true only when the user accepts that the requested page count may limit character depth, pacing, or genre complexity." }
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "rewrite-approval.json") -Title "Rewrite Approval"
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "export-approval.json") -Title "Export Approval"
-Ensure-ApprovalFile -Path (Join-Path $approvalsDir "cleanup-approval.json") -Title "Cleanup Approval" -ExtraFields @{ final_output_preserved = $false; note = "Set approved=true and final_output_preserved=true only after the user explicitly says the book is finished and working files should be removed. This is not implied by export approval." }
+Ensure-ApprovalFile -Path (Join-Path $approvalsDir "cleanup-approval.json") -Title "Cleanup Approval" -ExtraFields @{ final_output_preserved = $false; user_confirmed_book_finished = $false; note = "Set approved=true, final_output_preserved=true, and user_confirmed_book_finished=true only after the user explicitly says the book is finished and working files should be removed. This is not implied by export approval." }
 
 if (-not (Test-Path -LiteralPath $statusPath -PathType Leaf)) {
   $status = [ordered]@{

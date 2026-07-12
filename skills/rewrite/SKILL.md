@@ -69,6 +69,11 @@ Apply structural rewrites after design changes.
 - Orchestrator must write canonical text back to:
   - `episode/epNNN.md`
 
+## Open Source Story Model Contract
+- `revision/_state/open-source-story-model.json` is mandatory before rewrite.
+- Rewrite agents must preserve its outline, character, plot, world, cross-reference, research and export models unless the user explicitly approves a plan change.
+- Any rewrite that changes character knowledge, relationship state, plot promises, settings, source claims or scene order must update the matching state ledger in the same phase.
+
 ## Mandatory Artifact Gates
 - Do not run `quality-verifier` before `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` exist.
 - If `book_mode.enabled=true`, do not run `quality-verifier` before `09_tdk-layout_issues_EP{NNN}.json` and `09_tdk-layout_report_EP{NNN}.md` exist.

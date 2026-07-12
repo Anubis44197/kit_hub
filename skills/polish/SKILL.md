@@ -86,10 +86,15 @@ Run systematic editorial correction over existing chapters.
 - Orchestrator must write canonical text back to:
   - `episode/epNNN.md`
 
+## Open Source Story Model Contract
+- `revision/_state/open-source-story-model.json` is mandatory before polish.
+- Polish agents must preserve its outline, character, plot, world, cross-reference, research and export models.
+- Any polish change that alters character knowledge, relationship state, plot promises, settings, source claims or scene order must update the matching state ledger in the same phase.
+
 ## Mandatory Artifact Gates
 - Do not run `revision-reviewer` before `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` exist.
 - If `book_mode.enabled=true`, do not run `revision-reviewer` before `09_tdk-layout_issues_EP{NNN}.json` and `09_tdk-layout_report_EP{NNN}.md` exist.
-- Do not run export before `revision/_state/writing-type-profile.json`, `revision/_state/genre-structure-template.json`, `revision/_state/editorial-quality-scorecard.json`, and `revision/_state/llm-adapter-contract.json` exist.
+- Do not run export before `revision/_state/open-source-story-model.json`, `revision/_state/writing-type-profile.json`, `revision/_state/genre-structure-template.json`, `revision/_state/editorial-quality-scorecard.json`, and `revision/_state/llm-adapter-contract.json` exist.
 - Do not accept `PASS` unless `revision/_workspace/polish_editorial-cycle_EP{RANGE}.json` exists and follows `skills/polish/references/editorial-cycle-schema.md`.
 - If any mandatory artifact is missing, stop with explicit artifact-missing error.
 

@@ -1,12 +1,83 @@
-{
-  "schema_version": 1,
-  "phase": "rewrite",
-  "required_agents": ["revision-analyst", "character-sculptor", "revision-executor", "episode-rewriter", "tdk-polisher", "tdk-layout-agent", "quality-verifier"],
-  "required_references": ["skills/rewrite/SKILL.md", "skills/rewrite/references/rewrite-quality-criteria.md", "skills/rewrite/references/rewrite-report-unified-schema.md", "skills/rewrite/references/character-embodiment-rubric.md", "skills/rewrite/references/character-dialogue-dna.md", "skills/polish/references/docx-professional-style-contract.md"],
-  "required_state_files": ["runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/style-profile.json", "runtime/approvals/rewrite-approval.json"],
-  "required_approvals": ["runtime/approvals/rewrite-approval.json"],
-  "allowed_write_roots": ["episode", "revision/_workspace", "revision/_state", "runtime/agent-compliance"],
-  "allowed_output_patterns": ["episode/ep*.md", "revision/_workspace/*.md", "revision/_workspace/*.json", "revision/_state/*.json"],
-  "denied_output_patterns": ["revision/export/*", "*.docx", "*.zip"],
-  "status_contract": "runtime/agent-status-contract.json"
+﻿{
+    "schema_version":  1,
+    "phase":  "rewrite",
+    "required_agents":  [
+                            "revision-analyst",
+                            "character-sculptor",
+                            "revision-executor",
+                            "episode-rewriter",
+                            "tdk-polisher",
+                            "tdk-layout-agent",
+                            "quality-verifier",
+                            "chief-editor-orchestrator",
+                            "tdk-rule-auditor"
+                        ],
+    "required_references":  [
+                                "skills/rewrite/SKILL.md",
+                                "skills/rewrite/references/rewrite-quality-criteria.md",
+                                "skills/rewrite/references/rewrite-report-unified-schema.md",
+                                "skills/rewrite/references/character-embodiment-rubric.md",
+                                "skills/rewrite/references/character-dialogue-dna.md",
+                                "skills/polish/references/open-source-novel-editor-patterns.md",
+                                "skills/polish/references/docx-professional-style-contract.md",
+                                "skills/polish/references/chief-editor-orchestrator-contract.md",
+                                "skills/polish/references/tdk-source-assurance-chain.md"
+                            ],
+    "required_state_files":  [
+                                 "runtime/book-brief.json",
+                                 "runtime/book-dna.json",
+                                 "runtime/layout-profile.json",
+                                 "runtime/approvals/book-brief-approval.json",
+                                 "revision/_state/book-plan.json",
+                                 "revision/_state/open-source-story-model.json",
+                                 "revision/_state/chapter-plan.json",
+                                 "revision/_state/layout-plan.json",
+                                 "revision/_state/longform-plan.json",
+                                 "revision/_state/character-state.json",
+                                 "revision/_state/plot-ledger.json",
+                                 "revision/_state/chapter-summaries.json",
+                                 "revision/_state/continuity-ledger.json",
+                                 "revision/_state/world-state.json",
+                                 "revision/_state/relationship-graph.json",
+                                 "revision/_state/knowledge-graph.json",
+                                 "revision/_state/promise-payoff-ledger.json",
+                                 "revision/_state/timeline.json",
+                                 "revision/_state/theme-ledger.json",
+                                 "revision/_state/volume-plan.json",
+                                 "revision/_state/style-profile.json",
+                                 "runtime/approvals/rewrite-approval.json"
+                             ],
+    "required_approvals":  [
+                               "runtime/approvals/rewrite-approval.json"
+                           ],
+    "allowed_write_roots":  [
+                                "episode",
+                                "revision/_workspace",
+                                "revision/_state",
+                                "runtime/agent-compliance"
+                            ],
+    "allowed_output_patterns":  [
+                                    "episode/ep*.md",
+                                    "revision/_workspace/*.md",
+                                    "revision/_workspace/*.json",
+                                    "revision/_state/*.json",
+                                    "runtime/agent-compliance/chief-editor-orchestrator_*"
+                                ],
+    "denied_output_patterns":  [
+                                   "revision/export/*",
+                                   "*.docx",
+                                   "*.zip"
+                               ],
+    "status_contract":  "runtime/agent-status-contract.json",
+    "agent_sequence":  [
+                           "revision-analyst",
+                           "character-sculptor",
+                           "revision-executor",
+                           "episode-rewriter",
+                           "tdk-polisher",
+                           "tdk-layout-agent",
+                           "quality-verifier",
+                           "tdk-rule-auditor",
+                           "chief-editor-orchestrator"
+                       ]
 }

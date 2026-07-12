@@ -41,6 +41,7 @@ This phase never writes manuscript chapters. It turns the user's actual request 
 - `design/06_layout_plan.md`
 - `novel-config.md`
 - `revision/_state/book-plan.json`
+- `revision/_state/open-source-story-model.json`
 - `revision/_state/chapter-plan.json`
 - `revision/_state/layout-plan.json`
 - `revision/_state/longform-plan.json`
@@ -57,3 +58,10 @@ This phase never writes manuscript chapters. It turns the user's actual request 
 - `revision/_state/source-ledger.json`
 - `revision/_state/term-glossary.json`
 - `revision/_state/argument-ledger.json`
+
+## Open Source Story Model Contract
+- Load `skills/polish/references/open-source-novel-editor-patterns.md` before planning.
+- Produce `revision/_state/open-source-story-model.json` in every design-big run.
+- Bind `book-plan.json.open_source_story_model` to `revision/_state/open-source-story-model.json`.
+- The generated model must include Manuskript-style character/plot/world/outline fields, novelWriter-style synopsis/tag/cross-reference rules, bibisco-style premise/fabula/narrative-strand/setting rules, and STORM-style pre-writing question/source rules.
+- Later writing phases must treat this file as governing state, not optional commentary.

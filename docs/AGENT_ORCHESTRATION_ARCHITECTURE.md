@@ -32,6 +32,19 @@ Every agent declares:
 
 The runner rejects a phase if a required agent is missing from the registry or is not allowed in that phase.
 
+## Chief Editor Orchestrator
+
+`chief-editor-orchestrator` is required across phases. It is the supervising editor layer: it does not write the manuscript, but it verifies that the specialist agents produced evidence and that the phase can continue.
+
+Its job is to block:
+
+- unsupported `PASS` claims;
+- missing specialist evidence;
+- fake official TDK/source verification;
+- export claims not proven by DOCX XML;
+- stale copied outputs;
+- creative writing that bypasses approved plans.
+
 ## Status Contract
 
 Canonical file:
@@ -61,6 +74,7 @@ runtime/phase-contracts/
 Each phase contract declares:
 
 - required agents;
+- ordered `agent_sequence`;
 - required references;
 - required state files;
 - required approvals;
@@ -69,6 +83,8 @@ Each phase contract declares:
 - status contract.
 
 These files replace scattered, prompt-only agent expectations. The runner still performs its existing artifact gates, but the phase contract is now the governance layer above them.
+
+`agent_sequence` is the coordination plan. Specialist agents run first; `chief-editor-orchestrator` must be last when present. The chief editor is not another writer. It is the final phase supervisor that accepts or blocks the specialist work based on evidence, state ledgers, approvals, and output cleanliness.
 
 ## User Prompt Flow
 
@@ -118,10 +134,11 @@ The manifest must include:
 - output artifacts;
 - artifact hashes;
 - agent statuses;
+- agent evidence;
 - phase authority;
 - missing items.
 
-The runner rejects `PASS` if any required agent status is not `completed`.
+The runner rejects `PASS` if any required agent status is not `completed`, or if any required agent lacks an `agent_evidence` record with existing evidence artifacts and checks performed.
 
 Each manifest also carries `contract_hashes` for:
 

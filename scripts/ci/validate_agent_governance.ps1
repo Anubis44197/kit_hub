@@ -63,10 +63,26 @@ foreach ($phase in @("intake","propose","design-big","design-small","create","po
   if ([string]$contract.phase -ne $phase) {
     throw "Phase contract mismatch in $contractPath"
   }
-  foreach ($field in @("required_agents","required_references","required_state_files","allowed_output_patterns","denied_output_patterns","status_contract")) {
+  foreach ($field in @("required_agents","agent_sequence","required_references","required_state_files","allowed_output_patterns","denied_output_patterns","status_contract")) {
     if (-not ($contract.PSObject.Properties.Name -contains $field)) {
       throw "Phase contract '$phase' missing '$field'."
     }
+  }
+  $requiredAgents = @($contract.required_agents | ForEach-Object { [string]$_ })
+  $agentSequence = @($contract.agent_sequence | ForEach-Object { [string]$_ })
+  if ($agentSequence.Count -ne $requiredAgents.Count) {
+    throw "Phase contract '$phase' agent_sequence must include every required agent exactly once."
+  }
+  foreach ($agentName in $requiredAgents) {
+    if ($agentSequence -notcontains $agentName) {
+      throw "Phase contract '$phase' agent_sequence missing required agent '$agentName'."
+    }
+  }
+  if (($agentSequence | Sort-Object -Unique).Count -ne $agentSequence.Count) {
+    throw "Phase contract '$phase' agent_sequence contains duplicate agents."
+  }
+  if ($requiredAgents -contains "chief-editor-orchestrator" -and $agentSequence[-1] -ne "chief-editor-orchestrator") {
+    throw "Phase contract '$phase' must run chief-editor-orchestrator last."
   }
   foreach ($agentName in @($contract.required_agents)) {
     if ($agentNames -notcontains $agentName) {

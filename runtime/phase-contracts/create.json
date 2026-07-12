@@ -1,12 +1,78 @@
-{
-  "schema_version": 1,
-  "phase": "create",
-  "required_agents": ["episode-architect", "continuity-bridge", "episode-creator", "quality-verifier", "tdk-polisher", "tdk-layout-agent"],
-  "required_references": ["skills/create/SKILL.md", "skills/create/references/creation-principles.md", "skills/polish/references/tdk-official-writing-rules.md"],
-  "required_state_files": ["runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/style-profile.json", "runtime/approvals/design-freeze.json"],
-  "required_approvals": ["runtime/approvals/design-freeze.json"],
-  "allowed_write_roots": ["episode", "revision/_workspace", "revision/_state", "runtime/agent-compliance"],
-  "allowed_output_patterns": ["episode/ep*.md", "revision/_workspace/*.md", "revision/_workspace/*.json", "revision/_state/*.json"],
-  "denied_output_patterns": ["revision/export/*", "*.docx", "*.zip"],
-  "status_contract": "runtime/agent-status-contract.json"
+﻿{
+    "schema_version":  1,
+    "phase":  "create",
+    "required_agents":  [
+                            "episode-architect",
+                            "continuity-bridge",
+                            "episode-creator",
+                            "quality-verifier",
+                            "tdk-polisher",
+                            "tdk-layout-agent",
+                            "chief-editor-orchestrator",
+                            "tdk-rule-auditor"
+                        ],
+    "required_references":  [
+                                "skills/create/SKILL.md",
+                                "skills/create/references/creation-principles.md",
+                                "skills/polish/references/open-source-novel-editor-patterns.md",
+                                "skills/polish/references/tdk-official-writing-rules.md",
+                                "skills/polish/references/chief-editor-orchestrator-contract.md",
+                                "skills/polish/references/tdk-source-assurance-chain.md"
+                            ],
+    "required_state_files":  [
+                                 "runtime/book-brief.json",
+                                 "runtime/book-dna.json",
+                                 "runtime/layout-profile.json",
+                                 "runtime/approvals/book-brief-approval.json",
+                                 "revision/_state/book-plan.json",
+                                 "revision/_state/open-source-story-model.json",
+                                 "revision/_state/chapter-plan.json",
+                                 "revision/_state/layout-plan.json",
+                                 "revision/_state/longform-plan.json",
+                                 "revision/_state/character-state.json",
+                                 "revision/_state/plot-ledger.json",
+                                 "revision/_state/chapter-summaries.json",
+                                 "revision/_state/continuity-ledger.json",
+                                 "revision/_state/world-state.json",
+                                 "revision/_state/relationship-graph.json",
+                                 "revision/_state/knowledge-graph.json",
+                                 "revision/_state/promise-payoff-ledger.json",
+                                 "revision/_state/timeline.json",
+                                 "revision/_state/theme-ledger.json",
+                                 "revision/_state/volume-plan.json",
+                                 "revision/_state/style-profile.json",
+                                 "runtime/approvals/design-freeze.json"
+                             ],
+    "required_approvals":  [
+                               "runtime/approvals/design-freeze.json"
+                           ],
+    "allowed_write_roots":  [
+                                "episode",
+                                "revision/_workspace",
+                                "revision/_state",
+                                "runtime/agent-compliance"
+                            ],
+    "allowed_output_patterns":  [
+                                    "episode/ep*.md",
+                                    "revision/_workspace/*.md",
+                                    "revision/_workspace/*.json",
+                                    "revision/_state/*.json",
+                                    "runtime/agent-compliance/chief-editor-orchestrator_*"
+                                ],
+    "denied_output_patterns":  [
+                                   "revision/export/*",
+                                   "*.docx",
+                                   "*.zip"
+                               ],
+    "status_contract":  "runtime/agent-status-contract.json",
+    "agent_sequence":  [
+                           "episode-architect",
+                           "continuity-bridge",
+                           "episode-creator",
+                           "tdk-polisher",
+                           "tdk-layout-agent",
+                           "quality-verifier",
+                           "tdk-rule-auditor",
+                           "chief-editor-orchestrator"
+                       ]
 }

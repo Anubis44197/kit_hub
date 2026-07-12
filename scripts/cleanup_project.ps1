@@ -44,6 +44,9 @@ if ($approval.approved -ne $true) {
 if ($approval.final_output_preserved -ne $true) {
   throw "Cleanup blocked: cleanup-approval.json final_output_preserved must be true."
 }
+if ($approval.user_confirmed_book_finished -ne $true) {
+  throw "Cleanup blocked: cleanup-approval.json user_confirmed_book_finished must be true after the user explicitly says the book is finished."
+}
 
 $finalManifestPath = Join-Path $ProjectRoot "runtime/final-export-manifest.json"
 if (-not (Test-Path -LiteralPath $finalManifestPath -PathType Leaf)) {

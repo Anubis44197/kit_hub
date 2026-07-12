@@ -131,7 +131,22 @@ Then run:
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase intake -ToPhase export -Mode command
 ```
 
-## 3.1) Optional Dictionary Check Layer
+## 3.1) Automatic Provider Mode
+
+Automatic provider mode is command mode with a real external model/agent CLI connected through `scripts/provider_phase.ps1`.
+
+```powershell
+Copy-Item runtime/runner-config.provider.template.json runtime/runner-config.json -Force
+$env:KITHUB_PROVIDER_EXE="your-agent-cli"
+$env:KITHUB_PROVIDER_ARGS="--project-root ""{project_root}"" --phase {phase} --run-id ""{run_id}"" --prompt-file ""{prompt_file}"""
+powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.json -FromPhase intake -ToPhase export
+```
+
+The provider wrapper writes a phase prompt under `runtime/provider-prompts/` and then calls the configured provider. The provider must write the actual required artifacts for the phase. If it does not, the normal phase-contract, agent-compliance, state, length, TDK/layout, and export gates fail.
+
+This is the correct route for fully automatic book writing. Manual IDE mode remains useful, but it must not be described as proof that autonomous writer agents executed.
+
+## 3.2) Optional Dictionary Check Layer
 
 You can enable an additional dictionary-verification pass for Turkish text quality.
 This runs automatically after `create`, `polish`, and `rewrite` phases.

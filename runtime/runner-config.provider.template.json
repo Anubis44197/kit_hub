@@ -1,0 +1,88 @@
+{
+  "execution_mode": "command",
+  "adapter": {
+    "strategy": "command_template",
+    "command_template": "powershell -ExecutionPolicy Bypass -File scripts/provider_phase.ps1 -ProjectRoot \"{project_root}\" -Phase {phase} -RunId \"{run_id}\""
+  },
+  "phase_commands": {
+    "intake": "powershell -ExecutionPolicy Bypass -File scripts/provider_phase.ps1 -ProjectRoot \"{project_root}\" -Phase intake -RunId \"{run_id}\"",
+    "propose": "powershell -ExecutionPolicy Bypass -File scripts/provider_phase.ps1 -ProjectRoot \"{project_root}\" -Phase propose -RunId \"{run_id}\"",
+    "design-big": "powershell -ExecutionPolicy Bypass -File scripts/provider_phase.ps1 -ProjectRoot \"{project_root}\" -Phase design-big -RunId \"{run_id}\"",
+    "design-small": "powershell -ExecutionPolicy Bypass -File scripts/provider_phase.ps1 -ProjectRoot \"{project_root}\" -Phase design-small -RunId \"{run_id}\"",
+    "create": "powershell -ExecutionPolicy Bypass -File scripts/provider_phase.ps1 -ProjectRoot \"{project_root}\" -Phase create -RunId \"{run_id}\"",
+    "polish": "powershell -ExecutionPolicy Bypass -File scripts/provider_phase.ps1 -ProjectRoot \"{project_root}\" -Phase polish -RunId \"{run_id}\"",
+    "rewrite": "powershell -ExecutionPolicy Bypass -File scripts/provider_phase.ps1 -ProjectRoot \"{project_root}\" -Phase rewrite -RunId \"{run_id}\"",
+    "export": "powershell -ExecutionPolicy Bypass -File scripts/provider_phase.ps1 -ProjectRoot \"{project_root}\" -Phase export -RunId \"{run_id}\""
+  },
+  "phase_prompts": {
+    "intake": "",
+    "propose": "",
+    "design-big": "",
+    "design-small": "",
+    "create": "",
+    "polish": "",
+    "rewrite": "",
+    "export": ""
+  },
+  "quality_flags": {
+    "enable_dictionary_check": false,
+    "dictionary_check_command": "powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot \"{project_root}\" -Phase {phase} -RunId {run_id} {require_provider_arg}",
+    "require_dictionary_provider": true,
+    "require_phase_evidence": true,
+    "execution_claim_mode": "executed",
+    "require_user_approvals": true,
+    "enforce_phase_contracts": true,
+    "enable_negative_enforcement": true,
+    "enable_text_quality_gates": true,
+    "require_executed_claims_for_critical_phases": true,
+    "enable_command_safety": true,
+    "enable_artifact_size_budget": true,
+    "max_text_artifact_bytes": 1500000,
+    "approval_files": {
+      "propose": "runtime/approvals/book-brief-approval.json",
+      "design-big": "runtime/approvals/story-choice.json",
+      "design-small": "runtime/approvals/book-plan-approval.json",
+      "create": "runtime/approvals/design-freeze.json",
+      "rewrite": "runtime/approvals/rewrite-approval.json",
+      "export": "runtime/approvals/export-approval.json"
+    },
+    "forbidden_content_patterns": [
+      "(?i)TL;DR",
+      "(?im)^\\s*Ozet\\s*:",
+      "(?im)^\\s*Summary\\s*:",
+      "\\[TODO\\]",
+      "(?i)lorem ipsum"
+    ],
+    "text_quality_gates": {
+      "max_duplicate_line_ratio": 0.28,
+      "max_repeated_paragraph_prefix": 1,
+      "paragraph_prefix_length": 95,
+      "tell_sensory_ratio_max": 2.4,
+      "require_dash_dialogue": true,
+      "forbid_mixed_dialogue_styles": true,
+      "require_turkish_diacritics": true,
+      "min_turkish_diacritic_ratio": 0.003,
+      "min_psychological_markers": 6
+    },
+    "cross_chapter_gates": {
+      "max_chapter_similarity": 0.72,
+      "max_opening_prefix_repeat": 1,
+      "min_event_markers_per_chapter": 4
+    },
+    "length_fulfillment_gates": {
+      "min_chapter_word_completion_ratio": 0.65,
+      "min_total_word_completion_ratio": 0.9,
+      "min_total_page_completion_ratio": 0.9
+    },
+    "retention": {
+      "enabled": true,
+      "max_runs": 20
+    }
+  },
+  "notes": [
+    "Automatic provider mode requires KITHUB_PROVIDER_EXE to point to a real model/agent CLI.",
+    "Optional KITHUB_PROVIDER_ARGS may override arguments and can use {project_root}, {phase}, {run_id}, and {prompt_file}.",
+    "If the provider does not produce required artifacts, phase contracts and agent compliance gates fail.",
+    "No phase may claim completed autonomous writing without execution_claim_mode=executed evidence."
+  ]
+}

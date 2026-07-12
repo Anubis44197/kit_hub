@@ -60,12 +60,19 @@
       "tell_sensory_ratio_max": 2.4,
       "require_dash_dialogue": true,
       "forbid_mixed_dialogue_styles": true,
+      "require_turkish_diacritics": true,
+      "min_turkish_diacritic_ratio": 0.003,
       "min_psychological_markers": 6
     },
     "cross_chapter_gates": {
       "max_chapter_similarity": 0.72,
       "max_opening_prefix_repeat": 1,
       "min_event_markers_per_chapter": 4
+    },
+    "length_fulfillment_gates": {
+      "min_chapter_word_completion_ratio": 0.65,
+      "min_total_word_completion_ratio": 0.9,
+      "min_total_page_completion_ratio": 0.9
     },
     "retention": {
       "enabled": true,
@@ -81,6 +88,8 @@
     "Alternative: fill phase_commands.<phase> for explicit per-phase commands.",
     "Dictionary check is optional and only runs for create/polish/rewrite when enabled.",
     "When dictionary check is enabled, require_dictionary_provider=true makes missing Python/tdk-py fail instead of silently skipping.",
+    "Export always runs the deterministic local Turkish rule gate and must not claim official TDK verification.",
+    "External grammar providers are not part of the default engine because they produced unreliable Turkish suggestions in live tests.",
     "Phase evidence is mandatory when require_phase_evidence=true.",
     "execution_claim_mode should be 'executed' only when actual command-mode execution is used.",
     "intake writes book-brief, book-dna, layout-profile, and book-brief-approval; propose and later phases require the approved brief.",

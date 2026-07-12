@@ -26,6 +26,7 @@ Write book chapters with a multi-agent pipeline and strict validation. Legacy fi
 
 ## Config Source
 - `novel-config.md` is required.
+- `revision/_state/open-source-story-model.json` is required and governs chapter/scene cards, character depth, plot progression, world continuity, cross-references, and reader-output cleanup.
 
 ## Create Target Contract (Mandatory)
 If `novel-config.md` includes a `create_quality` block, the values below are mandatory gates:
@@ -123,6 +124,18 @@ Every created chapter must update `revision/_state/chapter-summaries.json` with:
 - `state_updates`
 
 The next chapter's `previous_chapter_result` must connect to the previous chapter's `next_causal_link`. Repeating the same event, summary, or irreversible change is a hard failure.
+
+## Length Fulfillment Contract
+Target length is variable. A user may request 10, 50, 245, 500, or more pages. Do not collapse the request into a fixed three-part story.
+
+Before drafting, load `revision/_state/longform-plan.json`, `revision/_state/volume-plan.json`, and `revision/_state/chapter-plan.json`. Treat these as the production contract:
+- `target_pages` defines the requested book scale.
+- `target_words` defines the minimum manuscript mass needed for that scale.
+- `target_chapters` defines how many reader-facing chapters must exist before export.
+- each chapter `target_words` defines the chapter budget.
+- `max_chapters_per_batch` defines how many chapters may be written before state ledgers must be updated and reloaded.
+
+If the model cannot finish the whole target in one response, write only the approved batch, update all state ledgers, and continue with the next batch. Never mark the book complete, request export, or claim final delivery while planned chapters are missing or total words/pages are under target.
 
 ## Macro Continuity Audit Contract
 Read `revision/_state/volume-plan.json.audit_schedule`. When generated chapters reach a scheduled marker such as `EP010`, emit:

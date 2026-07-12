@@ -67,6 +67,7 @@ try {
   Write-Utf8Json -Path (Join-Path $project "runtime/approvals/cleanup-approval.json") -Value ([ordered]@{
     approved = $false
     final_output_preserved = $false
+    user_confirmed_book_finished = $false
   })
   Write-Utf8Text -Path (Join-Path $project "revision/export/Lifecycle.docx") -Value "fake docx for lifecycle gate"
   Write-Utf8Text -Path (Join-Path $project "episode/ep001.md") -Value "# Bolum"
@@ -96,6 +97,7 @@ try {
   Write-Utf8Json -Path (Join-Path $project "runtime/approvals/cleanup-approval.json") -Value ([ordered]@{
     approved = $true
     final_output_preserved = $false
+    user_confirmed_book_finished = $false
   })
   Assert-ThrowsLike `
     -Label "cleanup before final output preservation confirmation" `
@@ -107,6 +109,19 @@ try {
   Write-Utf8Json -Path (Join-Path $project "runtime/approvals/cleanup-approval.json") -Value ([ordered]@{
     approved = $true
     final_output_preserved = $true
+    user_confirmed_book_finished = $false
+  })
+  Assert-ThrowsLike `
+    -Label "cleanup before user confirms book finished" `
+    -Pattern "user_confirmed_book_finished must be true" `
+    -Action {
+      Invoke-CheckedPowerShell -Arguments @("-ExecutionPolicy", "Bypass", "-File", (Join-Path $RepoRoot "scripts/cleanup_project.ps1"), "-ProjectRoot", $project)
+    }
+
+  Write-Utf8Json -Path (Join-Path $project "runtime/approvals/cleanup-approval.json") -Value ([ordered]@{
+    approved = $true
+    final_output_preserved = $true
+    user_confirmed_book_finished = $true
   })
   Invoke-CheckedPowerShell -Arguments @("-ExecutionPolicy", "Bypass", "-File", (Join-Path $RepoRoot "scripts/cleanup_project.ps1"), "-ProjectRoot", $project) | Out-Null
 

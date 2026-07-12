@@ -12,40 +12,669 @@
     "Export agents may package validated manuscript files, but may not modify episode manuscript text."
   ],
   "agents": [
-    { "name": "brief-interviewer", "allowed_phases": ["intake"], "required_references": ["skills/intake/SKILL.md"], "allowed_write_roots": ["runtime", "runtime/approvals", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 30 },
-    { "name": "book-dna-locker", "allowed_phases": ["intake"], "required_references": ["skills/intake/SKILL.md", "skills/polish/references/writing-type-profiles.md"], "allowed_write_roots": ["runtime", "runtime/approvals", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 30 },
-    { "name": "layout-profile-planner", "allowed_phases": ["intake"], "required_references": ["skills/intake/SKILL.md", "skills/polish/references/docx-professional-style-contract.md", "skills/polish/references/tdk-print-submission-rules.md"], "allowed_write_roots": ["runtime", "runtime/approvals", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 30 },
-    { "name": "proposal-generator", "allowed_phases": ["propose"], "required_references": ["skills/propose/SKILL.md"], "allowed_write_roots": ["_workspace", "runtime/approvals"], "timeout_seconds": 900, "max_turns": 30 },
-    { "name": "concept-builder", "allowed_phases": ["design-big"], "required_references": ["skills/design-big/SKILL.md"], "allowed_write_roots": ["design", "revision/_state", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 50 },
-    { "name": "character-architect", "allowed_phases": ["design-big"], "required_references": ["skills/character/SKILL.md", "skills/design-big/SKILL.md"], "allowed_write_roots": ["design", "revision/_state", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 50 },
-    { "name": "plot-hook-engineer", "allowed_phases": ["design-big", "design-small"], "required_references": ["skills/plot-hook/SKILL.md", "skills/design-big/SKILL.md"], "allowed_write_roots": ["design", "revision/_state", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 50 },
-    { "name": "book-structure-optimizer", "allowed_phases": ["design-big", "polish"], "required_references": ["skills/design-big/SKILL.md", "skills/polish/references/book-mode-profiles.md"], "allowed_write_roots": ["design", "revision/_workspace", "revision/_state", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 50 },
-    { "name": "domain-researcher", "allowed_phases": ["design-big", "design-small"], "required_references": ["skills/design-big/SKILL.md", "skills/polish/references/source-citation-style-tdk.md"], "allowed_write_roots": ["design", "revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 50 },
-    { "name": "research-citation-auditor", "allowed_phases": ["design-big", "export"], "required_references": ["skills/polish/references/source-citation-style-tdk.md"], "allowed_write_roots": ["revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 30 },
-    { "name": "episode-architect", "allowed_phases": ["design-small", "create"], "required_references": ["skills/design-small/SKILL.md", "skills/create/SKILL.md"], "allowed_write_roots": ["design", "revision/_state", "revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 60 },
-    { "name": "continuity-bridge", "allowed_phases": ["design-small", "create"], "required_references": ["skills/polish/references/continuity-bridge-output-schema.md", "skills/polish/references/handoff-contract.md"], "allowed_write_roots": ["design", "revision/_state", "revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 60 },
-    { "name": "character-sculptor", "allowed_phases": ["design-small", "create", "rewrite"], "required_references": ["skills/rewrite/references/character-embodiment-rubric.md", "skills/rewrite/references/character-dialogue-dna.md"], "allowed_write_roots": ["design", "revision/_state", "revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 60 },
-    { "name": "episode-creator", "allowed_phases": ["create"], "required_references": ["skills/create/SKILL.md", "skills/create/references/creation-principles.md"], "allowed_write_roots": ["episode", "revision/_state", "revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 1800, "max_turns": 120 },
-    { "name": "alive-enhancer", "allowed_phases": ["create", "polish", "rewrite"], "required_references": ["skills/create/references/creation-principles.md"], "allowed_write_roots": ["episode", "revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 80 },
-    { "name": "story-analyst", "allowed_phases": ["create", "polish", "rewrite"], "required_references": ["skills/polish/references/12-axes.md"], "allowed_write_roots": ["revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 40 },
-    { "name": "rule-checker", "allowed_phases": ["create", "polish", "rewrite", "export"], "required_references": ["skills/polish/references/verdict-report-standard.md"], "allowed_write_roots": ["revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 40 },
-    { "name": "quality-verifier", "allowed_phases": ["create", "rewrite"], "required_references": ["skills/polish/references/editorial-quality-scorecard.md", "skills/polish/references/verdict-report-standard.md"], "allowed_write_roots": ["revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 40 },
-    { "name": "tdk-polisher", "allowed_phases": ["create", "polish", "rewrite"], "required_references": ["skills/polish/references/tdk-official-writing-rules.md", "skills/polish/references/tdk-official-baseline.md"], "allowed_write_roots": ["episode", "revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 40 },
-    { "name": "tdk-layout-agent", "allowed_phases": ["create", "polish", "rewrite", "export"], "required_references": ["skills/polish/references/tdk-print-submission-rules.md", "skills/polish/references/docx-professional-style-contract.md"], "allowed_write_roots": ["revision/_workspace", "revision/export", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 40 },
-    { "name": "developmental-editor", "allowed_phases": ["polish"], "required_references": ["skills/polish/SKILL.md", "skills/polish/references/editorial-quality-scorecard.md"], "allowed_write_roots": ["episode", "revision/_workspace", "revision/_state", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 80 },
-    { "name": "continuity-editor", "allowed_phases": ["polish"], "required_references": ["skills/polish/references/design-document-map.md", "skills/polish/references/handoff-contract.md"], "allowed_write_roots": ["episode", "revision/_workspace", "revision/_state", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 80 },
-    { "name": "line-editor", "allowed_phases": ["polish"], "required_references": ["skills/polish/SKILL.md"], "allowed_write_roots": ["episode", "revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 80 },
-    { "name": "copy-editor", "allowed_phases": ["polish"], "required_references": ["skills/polish/SKILL.md", "skills/polish/references/tdk-official-writing-rules.md"], "allowed_write_roots": ["episode", "revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 80 },
-    { "name": "revision-reviewer", "allowed_phases": ["polish"], "required_references": ["skills/polish/SKILL.md", "skills/polish/references/verdict-report-standard.md"], "allowed_write_roots": ["revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 40 },
-    { "name": "revision-analyst", "allowed_phases": ["rewrite"], "required_references": ["skills/rewrite/SKILL.md", "skills/rewrite/references/rewrite-quality-criteria.md"], "allowed_write_roots": ["revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 40 },
-    { "name": "revision-executor", "allowed_phases": ["polish", "rewrite"], "required_references": ["skills/rewrite/SKILL.md", "skills/rewrite/references/rewrite-report-unified-schema.md"], "allowed_write_roots": ["episode", "revision/_workspace", "revision/_state", "runtime/agent-compliance"], "timeout_seconds": 1800, "max_turns": 120 },
-    { "name": "episode-rewriter", "allowed_phases": ["rewrite"], "required_references": ["skills/rewrite/SKILL.md"], "allowed_write_roots": ["episode", "revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 1800, "max_turns": 120 },
-    { "name": "export-approval-gate", "allowed_phases": ["export"], "required_references": ["skills/export-word/SKILL.md"], "allowed_write_roots": ["revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 600, "max_turns": 20 },
-    { "name": "export-validator", "allowed_phases": ["export"], "required_references": ["skills/export-word/SKILL.md", "skills/export-word/references/word-compatibility-test-plan.md"], "allowed_write_roots": ["revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 40 },
-    { "name": "front-matter-editor", "allowed_phases": ["export"], "required_references": ["skills/export-word/SKILL.md", "skills/polish/references/publication-metadata-checklist.md"], "allowed_write_roots": ["revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 40 },
-    { "name": "cover-designer", "allowed_phases": ["export"], "required_references": ["skills/export-word/SKILL.md"], "allowed_write_roots": ["revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 40 },
-    { "name": "publication-compliance-checker", "allowed_phases": ["export"], "required_references": ["skills/polish/references/isbn-kunye-bandrol-checklist.md", "skills/polish/references/tdk-print-submission-rules.md"], "allowed_write_roots": ["revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 900, "max_turns": 40 },
-    { "name": "final-proofreader", "allowed_phases": ["polish", "export"], "required_references": ["skills/export-word/SKILL.md", "skills/polish/references/tdk-official-writing-rules.md"], "allowed_write_roots": ["revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 80 },
-    { "name": "book-exporter", "allowed_phases": ["export"], "required_references": ["skills/export-word/SKILL.md", "skills/export-word/references/docx-style-profile-template.md"], "allowed_write_roots": ["revision/export", "revision/_workspace", "runtime/agent-compliance"], "timeout_seconds": 1200, "max_turns": 60 }
+    {
+      "name": "brief-interviewer",
+      "allowed_phases": [
+        "intake"
+      ],
+      "required_references": [
+        "skills/intake/SKILL.md"
+      ],
+      "allowed_write_roots": [
+        "runtime",
+        "runtime/approvals",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 30
+    },
+    {
+      "name": "book-dna-locker",
+      "allowed_phases": [
+        "intake"
+      ],
+      "required_references": [
+        "skills/intake/SKILL.md",
+        "skills/polish/references/writing-type-profiles.md"
+      ],
+      "allowed_write_roots": [
+        "runtime",
+        "runtime/approvals",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 30
+    },
+    {
+      "name": "layout-profile-planner",
+      "allowed_phases": [
+        "intake"
+      ],
+      "required_references": [
+        "skills/intake/SKILL.md",
+        "skills/polish/references/docx-professional-style-contract.md",
+        "skills/polish/references/tdk-print-submission-rules.md"
+      ],
+      "allowed_write_roots": [
+        "runtime",
+        "runtime/approvals",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 30
+    },
+    {
+      "name": "proposal-generator",
+      "allowed_phases": [
+        "propose"
+      ],
+      "required_references": [
+        "skills/propose/SKILL.md"
+      ],
+      "allowed_write_roots": [
+        "_workspace",
+        "runtime/approvals"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 30
+    },
+    {
+      "name": "concept-builder",
+      "allowed_phases": [
+        "design-big"
+      ],
+      "required_references": [
+        "skills/design-big/SKILL.md"
+      ],
+      "allowed_write_roots": [
+        "design",
+        "revision/_state",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 50
+    },
+    {
+      "name": "character-architect",
+      "allowed_phases": [
+        "design-big"
+      ],
+      "required_references": [
+        "skills/character/SKILL.md",
+        "skills/design-big/SKILL.md"
+      ],
+      "allowed_write_roots": [
+        "design",
+        "revision/_state",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 50
+    },
+    {
+      "name": "plot-hook-engineer",
+      "allowed_phases": [
+        "design-big",
+        "design-small"
+      ],
+      "required_references": [
+        "skills/plot-hook/SKILL.md",
+        "skills/design-big/SKILL.md"
+      ],
+      "allowed_write_roots": [
+        "design",
+        "revision/_state",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 50
+    },
+    {
+      "name": "book-structure-optimizer",
+      "allowed_phases": [
+        "design-big",
+        "polish"
+      ],
+      "required_references": [
+        "skills/design-big/SKILL.md",
+        "skills/polish/references/book-mode-profiles.md"
+      ],
+      "allowed_write_roots": [
+        "design",
+        "revision/_workspace",
+        "revision/_state",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 50
+    },
+    {
+      "name": "domain-researcher",
+      "allowed_phases": [
+        "design-big",
+        "design-small"
+      ],
+      "required_references": [
+        "skills/design-big/SKILL.md",
+        "skills/polish/references/source-citation-style-tdk.md"
+      ],
+      "allowed_write_roots": [
+        "design",
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 50
+    },
+    {
+      "name": "research-citation-auditor",
+      "allowed_phases": [
+        "design-big",
+        "export"
+      ],
+      "required_references": [
+        "skills/polish/references/source-citation-style-tdk.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 30
+    },
+    {
+      "name": "episode-architect",
+      "allowed_phases": [
+        "design-small",
+        "create"
+      ],
+      "required_references": [
+        "skills/design-small/SKILL.md",
+        "skills/create/SKILL.md"
+      ],
+      "allowed_write_roots": [
+        "design",
+        "revision/_state",
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 60
+    },
+    {
+      "name": "continuity-bridge",
+      "allowed_phases": [
+        "design-small",
+        "create"
+      ],
+      "required_references": [
+        "skills/polish/references/continuity-bridge-output-schema.md",
+        "skills/polish/references/handoff-contract.md"
+      ],
+      "allowed_write_roots": [
+        "design",
+        "revision/_state",
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 60
+    },
+    {
+      "name": "character-sculptor",
+      "allowed_phases": [
+        "design-small",
+        "create",
+        "rewrite"
+      ],
+      "required_references": [
+        "skills/rewrite/references/character-embodiment-rubric.md",
+        "skills/rewrite/references/character-dialogue-dna.md"
+      ],
+      "allowed_write_roots": [
+        "design",
+        "revision/_state",
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 60
+    },
+    {
+      "name": "episode-creator",
+      "allowed_phases": [
+        "create"
+      ],
+      "required_references": [
+        "skills/create/SKILL.md",
+        "skills/create/references/creation-principles.md"
+      ],
+      "allowed_write_roots": [
+        "episode",
+        "revision/_state",
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1800,
+      "max_turns": 120
+    },
+    {
+      "name": "alive-enhancer",
+      "allowed_phases": [
+        "create",
+        "polish",
+        "rewrite"
+      ],
+      "required_references": [
+        "skills/create/references/creation-principles.md"
+      ],
+      "allowed_write_roots": [
+        "episode",
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 80
+    },
+    {
+      "name": "story-analyst",
+      "allowed_phases": [
+        "create",
+        "polish",
+        "rewrite"
+      ],
+      "required_references": [
+        "skills/polish/references/12-axes.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "rule-checker",
+      "allowed_phases": [
+        "create",
+        "polish",
+        "rewrite",
+        "export"
+      ],
+      "required_references": [
+        "skills/polish/references/verdict-report-standard.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "quality-verifier",
+      "allowed_phases": [
+        "create",
+        "rewrite"
+      ],
+      "required_references": [
+        "skills/polish/references/editorial-quality-scorecard.md",
+        "skills/polish/references/verdict-report-standard.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "tdk-polisher",
+      "allowed_phases": [
+        "create",
+        "polish",
+        "rewrite"
+      ],
+      "required_references": [
+        "skills/polish/references/tdk-official-writing-rules.md",
+        "skills/polish/references/tdk-official-baseline.md"
+      ],
+      "allowed_write_roots": [
+        "episode",
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "tdk-layout-agent",
+      "allowed_phases": [
+        "create",
+        "polish",
+        "rewrite",
+        "export"
+      ],
+      "required_references": [
+        "skills/polish/references/tdk-print-submission-rules.md",
+        "skills/polish/references/docx-professional-style-contract.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "revision/export",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "developmental-editor",
+      "allowed_phases": [
+        "polish"
+      ],
+      "required_references": [
+        "skills/polish/SKILL.md",
+        "skills/polish/references/editorial-quality-scorecard.md"
+      ],
+      "allowed_write_roots": [
+        "episode",
+        "revision/_workspace",
+        "revision/_state",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 80
+    },
+    {
+      "name": "continuity-editor",
+      "allowed_phases": [
+        "polish"
+      ],
+      "required_references": [
+        "skills/polish/references/design-document-map.md",
+        "skills/polish/references/handoff-contract.md"
+      ],
+      "allowed_write_roots": [
+        "episode",
+        "revision/_workspace",
+        "revision/_state",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 80
+    },
+    {
+      "name": "line-editor",
+      "allowed_phases": [
+        "polish"
+      ],
+      "required_references": [
+        "skills/polish/SKILL.md"
+      ],
+      "allowed_write_roots": [
+        "episode",
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 80
+    },
+    {
+      "name": "copy-editor",
+      "allowed_phases": [
+        "polish"
+      ],
+      "required_references": [
+        "skills/polish/SKILL.md",
+        "skills/polish/references/tdk-official-writing-rules.md"
+      ],
+      "allowed_write_roots": [
+        "episode",
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 80
+    },
+    {
+      "name": "revision-reviewer",
+      "allowed_phases": [
+        "polish"
+      ],
+      "required_references": [
+        "skills/polish/SKILL.md",
+        "skills/polish/references/verdict-report-standard.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "revision-analyst",
+      "allowed_phases": [
+        "rewrite"
+      ],
+      "required_references": [
+        "skills/rewrite/SKILL.md",
+        "skills/rewrite/references/rewrite-quality-criteria.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "revision-executor",
+      "allowed_phases": [
+        "polish",
+        "rewrite"
+      ],
+      "required_references": [
+        "skills/rewrite/SKILL.md",
+        "skills/rewrite/references/rewrite-report-unified-schema.md"
+      ],
+      "allowed_write_roots": [
+        "episode",
+        "revision/_workspace",
+        "revision/_state",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1800,
+      "max_turns": 120
+    },
+    {
+      "name": "episode-rewriter",
+      "allowed_phases": [
+        "rewrite"
+      ],
+      "required_references": [
+        "skills/rewrite/SKILL.md"
+      ],
+      "allowed_write_roots": [
+        "episode",
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1800,
+      "max_turns": 120
+    },
+    {
+      "name": "export-approval-gate",
+      "allowed_phases": [
+        "export"
+      ],
+      "required_references": [
+        "skills/export-word/SKILL.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 600,
+      "max_turns": 20
+    },
+    {
+      "name": "export-validator",
+      "allowed_phases": [
+        "export"
+      ],
+      "required_references": [
+        "skills/export-word/SKILL.md",
+        "skills/export-word/references/word-compatibility-test-plan.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "front-matter-editor",
+      "allowed_phases": [
+        "export"
+      ],
+      "required_references": [
+        "skills/export-word/SKILL.md",
+        "skills/polish/references/publication-metadata-checklist.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "cover-designer",
+      "allowed_phases": [
+        "export"
+      ],
+      "required_references": [
+        "skills/export-word/SKILL.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "publication-compliance-checker",
+      "allowed_phases": [
+        "export"
+      ],
+      "required_references": [
+        "skills/polish/references/isbn-kunye-bandrol-checklist.md",
+        "skills/polish/references/tdk-print-submission-rules.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "final-proofreader",
+      "allowed_phases": [
+        "polish",
+        "export"
+      ],
+      "required_references": [
+        "skills/export-word/SKILL.md",
+        "skills/polish/references/tdk-official-writing-rules.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 80
+    },
+    {
+      "name": "book-exporter",
+      "allowed_phases": [
+        "export"
+      ],
+      "required_references": [
+        "skills/export-word/SKILL.md",
+        "skills/export-word/references/docx-style-profile-template.md"
+      ],
+      "allowed_write_roots": [
+        "revision/export",
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 1200,
+      "max_turns": 60
+    },
+    {
+      "name": "chief-editor-orchestrator",
+      "allowed_phases": [
+        "intake",
+        "propose",
+        "design-big",
+        "design-small",
+        "create",
+        "polish",
+        "rewrite",
+        "export"
+      ],
+      "required_references": [
+        "skills/polish/references/chief-editor-orchestrator-contract.md",
+        "skills/polish/references/verdict-report-standard.md"
+      ],
+      "allowed_write_roots": [
+        "runtime/agent-compliance",
+        "revision/_workspace",
+        "revision/_state"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "tdk-rule-auditor",
+      "allowed_phases": [
+        "create",
+        "polish",
+        "rewrite",
+        "export"
+      ],
+      "required_references": [
+        "skills/polish/references/tdk-official-writing-rules.md",
+        "skills/polish/references/tdk-source-assurance-chain.md",
+        "skills/polish/references/tdk-regression-test-spec.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
+      "name": "typography-layout-auditor",
+      "allowed_phases": [
+        "export"
+      ],
+      "required_references": [
+        "skills/export-word/references/docx-style-profile-template.md",
+        "skills/export-word/references/word-compatibility-test-plan.md",
+        "skills/polish/references/docx-professional-style-contract.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    }
   ]
 }

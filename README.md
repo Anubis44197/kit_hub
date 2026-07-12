@@ -110,15 +110,23 @@ Reference documents:
 - Python 3.10+ (recommended for optional dictionary-check layer)
 
 ## Installation
-1. Clone repository:
+1. Clone the repository:
    - `git clone https://github.com/Anubis44197/kit_hub.git`
-2. Open repository in your IDE/runtime workspace.
-3. Ensure plugin metadata is discoverable:
+   - `cd kit_hub`
+2. Run the readiness check:
+   - `powershell -ExecutionPolicy Bypass -File scripts/ci/final_readiness_check.ps1`
+3. Open the repository in your IDE/runtime workspace.
+4. Ensure plugin metadata is discoverable:
    - `.claude-plugin/plugin.json`
    - `.claude-plugin/marketplace.json`
-4. Restart runtime session to reload agents and skills.
-5. Optional bootstrap:
+5. Restart the runtime session to reload agents and skills.
+6. Optional bootstrap:
    - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
+
+The default readiness check is intentionally fast enough for normal use. Long-form and production sample tests are available separately:
+- `powershell -ExecutionPolicy Bypass -File scripts/ci/writing_type_profiles_gate_test.ps1`
+- `powershell -ExecutionPolicy Bypass -File scripts/ci/longform_scalability_gate_test.ps1`
+- `powershell -ExecutionPolicy Bypass -File scripts/ci/production_sample_export_test.ps1`
 
 ## Standard User Flow (Required)
 Do not write a book directly in the application repository root. Create one isolated project per book:
@@ -147,7 +155,7 @@ You do not need to give this repository an API key. If your IDE already has an a
    - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase intake -ToPhase export`
 5. After `intake`, answer or accept the questions/options in `runtime/book-brief.json`, `runtime/book-dna.json`, and `runtime/layout-profile.json`; set `runtime/approvals/book-brief-approval.json` to `approved=true` only when the writing brief and page/layout package are acceptable. `approved=true` is not enough by itself: the brief must include accepted answers for writing type, target length/pages, target reader, genre, character policy, style/tone, and publication package.
 6. After `propose`, choose one story direction in `runtime/approvals/story-choice.json` by setting `selected_option` and `approved=true`.
-7. After `design-big`, review `design/04_book_plan.md`, `design/05_chapter_plan.md`, `design/06_layout_plan.md`, and the matching `revision/_state/book-plan.json`, `revision/_state/chapter-plan.json`, `revision/_state/layout-plan.json`, and `revision/_state/volume-plan.json`; set `runtime/approvals/book-plan-approval.json` to `approved=true` only if the plan, page target, chapter target, continuity model, and layout are acceptable.
+7. After `design-big`, review `design/04_book_plan.md`, `design/05_chapter_plan.md`, `design/06_layout_plan.md`, and the matching `revision/_state/book-plan.json`, `revision/_state/open-source-story-model.json`, `revision/_state/chapter-plan.json`, `revision/_state/layout-plan.json`, and `revision/_state/volume-plan.json`; set `runtime/approvals/book-plan-approval.json` to `approved=true` only if the plan, page target, chapter target, continuity model, open-source story model, and layout are acceptable.
 7. When the runner pauses, ask your IDE agent to complete the current phase.
 8. Optional phase prompt helper:
    - `powershell -ExecutionPolicy Bypass -File scripts/ide_phase_prompt.ps1 -Phase create`
@@ -160,6 +168,7 @@ Agent orchestration is contract-bound:
 - `runtime/agent-status-contract.json` defines allowed agent statuses.
 - `runtime/phase-contracts/*.json` defines mandatory agents, state files, approvals, allowed outputs, and denied outputs.
 - `runtime/runs/{run_id}/run-journal.jsonl` records phase audit events.
+- `revision/_state/open-source-story-model.json` binds Manuskript, novelWriter, bibisco, and STORM-inspired planning patterns into the current book's outline, character, plot, world, cross-reference, research, and export rules.
 
 Each phase must also write an agent compliance manifest:
 - `runtime/agent-compliance/{phase}.json`
@@ -169,6 +178,21 @@ The manifest and phase evidence also carry `contract_hashes`; stale compliance f
 
 Detailed guide:
 - `docs/IDE_AGENT_WORKFLOW.md`
+
+## Automatic Provider Mode
+For a fully automatic writing run, connect a real model/agent CLI and use the provider config. This mode is fail-closed: if no provider is configured, it stops instead of pretending that writer agents ran.
+
+1. Create a project with `scripts/new_project.ps1`.
+2. Copy provider config:
+   - `Copy-Item runtime/runner-config.provider.template.json runtime/runner-config.json -Force`
+3. Set the provider executable:
+   - `$env:KITHUB_PROVIDER_EXE="your-agent-cli"`
+4. Optionally set provider arguments:
+   - `$env:KITHUB_PROVIDER_ARGS="--project-root ""{project_root}"" --phase {phase} --run-id ""{run_id}"" --prompt-file ""{prompt_file}"""`
+5. Run the pipeline:
+   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.json -FromPhase intake -ToPhase export`
+
+The provider must write the exact artifacts required by `runtime/phase-contracts/{phase}.json`, including `runtime/agent-compliance/{phase}.json`. The runner then verifies approvals, agent sequence, agent evidence, state updates, length fulfillment, Turkish text quality, layout, and export integrity.
 
 ## Quick Start
 1. `scripts/new_project.ps1` creates a clean book project outside the app repository.
@@ -244,6 +268,7 @@ The runner rejects a fake brief approval. The brief must contain structured `req
 | External IDE smoke test (Windows) | `powershell -ExecutionPolicy Bypass -File scripts/ci/external_smoke_test.ps1 -WorkspaceRoot <repo-path> -TestRunPath test-run` |
 | DOCX structural integrity | `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_docx_integrity.ps1 -DocxPath <absolute-path-to-docx>` |
 | Optional dictionary verification | `powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot . -Phase polish -RunId RUN-LOCAL` |
+| Length fulfillment gate | `powershell -ExecutionPolicy Bypass -File scripts/ci/length_fulfillment_gate_test.ps1` |
 
 ## Local Preview Policy
 - Automatic localhost preview is disabled.
@@ -269,7 +294,7 @@ The runner rejects a fake brief approval. The brief must contain structured `req
   - `runtime/approvals/rewrite-approval.json`
   - `runtime/approvals/export-approval.json`
 - `story-choice.json` must include both `approved=true` and a `selected_option` before `design-big` can continue. This prevents the app from silently choosing a plot direction after a simple topic prompt.
-- `book-plan-approval.json` must be approved before `design-small`; this prevents an IDE or LLM from writing chapters before the user has accepted the book plan, chapter plan, and page/layout targets.
+- `book-plan-approval.json` must be approved before `design-small`; this prevents an IDE or LLM from writing chapters before the user has accepted the book plan, open-source story model, chapter plan, and page/layout targets.
 - Runner enforces hard phase contracts (default):
   - issue JSON schema
   - verdict markdown token (`PASS|FAIL|BLOCKED`)
@@ -314,14 +339,14 @@ For complete mapping see `docs/ARCHITECTURE_MAP.md`.
 ## Repository Structure
 ```text
 .
-├── agents/
-├── skills/
-├── scripts/
-├── tests/
-├── docs/
-├── runtime/
-├── .claude-plugin/
-└── index.html
+|-- agents/
+|-- skills/
+|-- scripts/
+|-- tests/
+|-- docs/
+|-- runtime/
+|-- .claude-plugin/
+`-- index.html
 ```
 
 ## Documentation
@@ -334,4 +359,3 @@ For complete mapping see `docs/ARCHITECTURE_MAP.md`.
 
 ## License
 Apache-2.0
-- `book-brief-approval.json` must be approved before `propose`; this prevents the app from silently deciding writing type, target length, characters, front matter, cover, or page layout.

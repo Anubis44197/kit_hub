@@ -64,9 +64,23 @@ $manifest = [ordered]@{
   source_docx = $docx[0].FullName
   final_output_path = $destPath
   exported_at = (Get-Date).ToString("o")
-  cleanup_note = "Final output was copied outside the working project. Cleanup still requires cleanup-approval.json."
+  cleanup_note = "Final output was copied outside the working project. The user must read/review the book and explicitly approve cleanup before working files are removed."
 }
 Write-Utf8Bom -Path (Join-Path $ProjectRoot "runtime/final-export-manifest.json") -Content ($manifest | ConvertTo-Json -Depth 10)
+
+$cleanupApprovalPath = Join-Path $ProjectRoot "runtime/approvals/cleanup-approval.json"
+$cleanupApproval = [ordered]@{
+  approved = $false
+  title = "Cleanup Approval"
+  approved_by = ""
+  approved_at = ""
+  final_output_preserved = $true
+  final_output_path = $destPath
+  user_confirmed_book_finished = $false
+  user_must_confirm_book_finished = $true
+  note = "Do not set approved=true until the user has read/reviewed the final book and explicitly says the book is finished and working files may be removed."
+}
+Write-Utf8Bom -Path $cleanupApprovalPath -Content ($cleanupApproval | ConvertTo-Json -Depth 10)
 
 $statusPath = Join-Path $ProjectRoot "runtime/project-status.json"
 if (Test-Path -LiteralPath $statusPath -PathType Leaf) {
@@ -75,9 +89,12 @@ if (Test-Path -LiteralPath $statusPath -PathType Leaf) {
 else {
   $status = [pscustomobject]@{ schema_version = "1.0.0"; project_name = ""; status = "draft"; cleanup_allowed = $false }
 }
-$status | Add-Member -NotePropertyName status -NotePropertyValue "exported" -Force
+$status | Add-Member -NotePropertyName status -NotePropertyValue "exported_waiting_user_review" -Force
 $status | Add-Member -NotePropertyName final_output_path -NotePropertyValue $destPath -Force
 $status | Add-Member -NotePropertyName exported_at -NotePropertyValue (Get-Date).ToString("o") -Force
+$status | Add-Member -NotePropertyName cleanup_allowed -NotePropertyValue $false -Force
+$status | Add-Member -NotePropertyName next_user_decision -NotePropertyValue "Read/review the exported book. If revisions are needed, continue rewrite/export. If the book is truly finished, approve runtime/approvals/cleanup-approval.json and run scripts/cleanup_project.ps1." -Force
 Write-Utf8Bom -Path $statusPath -Content ($status | ConvertTo-Json -Depth 10)
 
 Write-Host "[export-final] copied: $destPath"
+Write-Host "[export-final] waiting for user review. Cleanup remains blocked until cleanup-approval.json approved=true after the user says the book is finished."

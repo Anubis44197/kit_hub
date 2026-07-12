@@ -174,7 +174,8 @@ su degerlerle guncellenir:
 ```json
 {
   "approved": true,
-  "final_output_preserved": true
+  "final_output_preserved": true,
+  "user_confirmed_book_finished": true
 }
 ```
 

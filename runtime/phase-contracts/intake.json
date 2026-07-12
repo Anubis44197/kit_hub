@@ -1,12 +1,48 @@
-{
-  "schema_version": 1,
-  "phase": "intake",
-  "required_agents": ["brief-interviewer", "book-dna-locker", "layout-profile-planner"],
-  "required_references": ["skills/intake/SKILL.md", "skills/polish/references/writing-type-profiles.md", "skills/polish/references/docx-professional-style-contract.md"],
-  "required_state_files": ["runtime/book-request.md"],
-  "required_approvals": [],
-  "allowed_write_roots": ["runtime", "runtime/approvals", "runtime/agent-compliance"],
-  "allowed_output_patterns": ["runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json"],
-  "denied_output_patterns": ["episode/*", "design/*", "revision/export/*", "*.docx", "*.zip"],
-  "status_contract": "runtime/agent-status-contract.json"
+﻿{
+    "schema_version":  1,
+    "phase":  "intake",
+    "required_agents":  [
+                            "brief-interviewer",
+                            "book-dna-locker",
+                            "layout-profile-planner",
+                            "chief-editor-orchestrator"
+                        ],
+    "required_references":  [
+                                "skills/intake/SKILL.md",
+                                "skills/polish/references/writing-type-profiles.md",
+                                "skills/polish/references/docx-professional-style-contract.md",
+                                "skills/polish/references/chief-editor-orchestrator-contract.md"
+                            ],
+    "required_state_files":  [
+                                 "runtime/book-request.md"
+                             ],
+    "required_approvals":  [
+
+                           ],
+    "allowed_write_roots":  [
+                                "runtime",
+                                "runtime/approvals",
+                                "runtime/agent-compliance"
+                            ],
+    "allowed_output_patterns":  [
+                                    "runtime/book-brief.json",
+                                    "runtime/book-dna.json",
+                                    "runtime/layout-profile.json",
+                                    "runtime/approvals/book-brief-approval.json",
+                                    "runtime/agent-compliance/chief-editor-orchestrator_*"
+                                ],
+    "denied_output_patterns":  [
+                                   "episode/*",
+                                   "design/*",
+                                   "revision/export/*",
+                                   "*.docx",
+                                   "*.zip"
+                               ],
+    "status_contract":  "runtime/agent-status-contract.json",
+    "agent_sequence":  [
+                           "brief-interviewer",
+                           "book-dna-locker",
+                           "layout-profile-planner",
+                           "chief-editor-orchestrator"
+                       ]
 }

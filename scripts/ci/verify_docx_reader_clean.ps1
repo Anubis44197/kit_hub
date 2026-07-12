@@ -92,7 +92,14 @@ $blockedPatterns = @(
   "(?i)yayı[nm]\s+not",
   "(?i)yayin\s+not",
   "(?i)inceleme\s+not",
-  "(?i)test\s+dosya"
+  "(?i)test\s+dosya",
+  "(?i)\bBu düğümde\s+\d+",
+  "(?i)\bAyrıntı\s+\d+\s+bu sahnenin",
+  "(?i)\bB[oö]l[üu]m[üu]n\s+(özgün|ozgun)\s+(ayrıntı|ayrinti)\s+alan[ıi]",
+  "(?i)\bDefterin kenarında\s+\d+",
+  "(?i)\bÖnceki bölümün bıraktığı iz",
+  "(?i)\bBu söz .+ içinde yeni bir iz bıraktı",
+  "(?i)\byanında duran Mahir, gördüğü şeyin yalnız bir eşya olmadığını anladı"
 )
 
 foreach ($pattern in $blockedPatterns) {

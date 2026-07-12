@@ -67,6 +67,7 @@ function Get-CharacterAliases {
 }
 
 $bookPlan = Read-StateJson -Name "book-plan.json"
+$openSourceStoryModel = Read-StateJson -Name "open-source-story-model.json"
 $chapterPlan = Read-StateJson -Name "chapter-plan.json"
 $longformPlan = Read-StateJson -Name "longform-plan.json"
 $characterState = Read-StateJson -Name "character-state.json"
@@ -100,6 +101,37 @@ foreach ($field in @("target_chapters","target_words","target_pages")) {
 }
 if ([int]$bookPlan.chapter_count -ne [int]$longformPlan.target_chapters) {
   throw "State reducer conflict: book-plan chapter_count does not match longform target_chapters."
+}
+if (-not ($bookPlan.PSObject.Properties.Name -contains "open_source_story_model") -or [string]$bookPlan.open_source_story_model -ne "revision/_state/open-source-story-model.json") {
+  throw "State reducer conflict: book-plan must bind revision/_state/open-source-story-model.json."
+}
+
+foreach ($field in @("sources","outline_model","character_model","plot_model","world_model","cross_reference_model","research_outline_model","export_model")) {
+  if (-not ($openSourceStoryModel.PSObject.Properties.Name -contains $field)) {
+    throw "State reducer conflict: open-source-story-model.json missing '$field'."
+  }
+}
+$sourceProjects = @($openSourceStoryModel.sources | ForEach-Object { Get-ObjectString -Obj $_ -Field "project" })
+foreach ($project in @("Manuskript","novelWriter","bibisco","STORM")) {
+  if ($sourceProjects -notcontains $project) {
+    throw "State reducer conflict: open-source-story-model.json missing upstream source '$project'."
+  }
+}
+foreach ($modelCheck in @(
+  @{ name = "outline_model"; fields = @("required_fields","chapter_scene_rule","progression_rule") },
+  @{ name = "character_model"; fields = @("required_fields","consistency_rule") },
+  @{ name = "plot_model"; fields = @("required_fields","repetition_blocker") },
+  @{ name = "world_model"; fields = @("required_fields","continuity_rule") },
+  @{ name = "cross_reference_model"; fields = @("required_targets","tag_policy") },
+  @{ name = "research_outline_model"; fields = @("required_for","required_ledgers","rule") },
+  @{ name = "export_model"; fields = @("required","print_claim_policy") }
+)) {
+  $modelObj = $openSourceStoryModel.PSObject.Properties[[string]$modelCheck.name].Value
+  foreach ($field in $modelCheck.fields) {
+    if (-not ($modelObj.PSObject.Properties.Name -contains $field)) {
+      throw "State reducer conflict: open-source-story-model.$($modelCheck.name) missing '$field'."
+    }
+  }
 }
 
 $bookCharacterNames = @($bookPlan.characters | ForEach-Object { Get-ObjectString -Obj $_ -Field "name" })

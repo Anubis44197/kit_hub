@@ -88,6 +88,7 @@ $documentXml = Get-ZipEntryText -DocxPath $docxPath -EntryName "word/document.xm
 $stylesXml = Get-ZipEntryText -DocxPath $docxPath -EntryName "word/styles.xml"
 $rootRelsXml = Get-ZipEntryText -DocxPath $docxPath -EntryName "_rels/.rels"
 $contentTypesXml = Get-ZipEntryText -DocxPath $docxPath -EntryName "[Content_Types].xml"
+$documentRelsXml = Get-ZipEntryText -DocxPath $docxPath -EntryName "word/_rels/document.xml.rels"
 
 if ($rootRelsXml -notmatch 'officeDocument/2006/relationships/officeDocument' -or $rootRelsXml -notmatch 'Target="word/document.xml"') {
   throw "DOCX root relationships do not point to word/document.xml."
@@ -105,6 +106,39 @@ if ($documentXml -notmatch 'w:pStyle w:val="KitHubBody"') {
 }
 if ($documentXml -notmatch 'w:pStyle w:val="KitHubChapterTitle"') {
   throw "DOCX document.xml does not reference KitHubChapterTitle style."
+}
+
+$chapterTitleCount = [regex]::Matches($documentXml, 'w:pStyle w:val="KitHubChapterTitle"').Count
+$pageBreakCount = [regex]::Matches($documentXml, 'w:br[^>]*w:type="page"').Count
+$sectionBreakCount = [regex]::Matches($documentXml, '<w:sectPr').Count
+$chapterStyleHasPageBreak = $stylesXml -match 'w:style[^>]*w:styleId="KitHubChapterTitle"[\s\S]*?<w:pageBreakBefore\s*/>'
+$requiresChapterNewPage = $false
+if (($style.PSObject.Properties.Name -contains "delivery_profiles") -and $style.delivery_profiles.print_preview) {
+  $printPreview = $style.delivery_profiles.print_preview
+  if (($printPreview.PSObject.Properties.Name -contains "chapter_start") -and [string]$printPreview.chapter_start -eq "new_page") {
+    $requiresChapterNewPage = $true
+  }
+}
+if ($requiresChapterNewPage -and $chapterTitleCount -gt 1 -and -not $chapterStyleHasPageBreak -and (($pageBreakCount + $sectionBreakCount) -lt ($chapterTitleCount - 1))) {
+  throw "DOCX layout mismatch: profile requires chapter_start=new_page but document has chapter_titles=$chapterTitleCount, page_breaks=$pageBreakCount, section_breaks=$sectionBreakCount."
+}
+
+$requiresPageNumbers = $false
+if (($style.PSObject.Properties.Name -contains "delivery_profiles") -and $style.delivery_profiles.print_preview) {
+  $printPreview = $style.delivery_profiles.print_preview
+  if (($printPreview.PSObject.Properties.Name -contains "page_numbers") -and [string]$printPreview.page_numbers -eq "required") {
+    $requiresPageNumbers = $true
+  }
+}
+if ($requiresPageNumbers) {
+  if ($documentXml -notmatch 'w:footerReference|w:headerReference' -or $documentRelsXml -notmatch 'relationships/footer|relationships/header') {
+    throw "DOCX layout mismatch: profile requires page numbers but document has no header/footer relationship."
+  }
+  Assert-ZipEntry -DocxPath $docxPath -EntryName "word/footer1.xml"
+  $footerXml = Get-ZipEntryText -DocxPath $docxPath -EntryName "word/footer1.xml"
+  if ($footerXml -notmatch 'PAGE') {
+    throw "DOCX layout mismatch: footer exists but does not contain PAGE field."
+  }
 }
 
 $pageWidth = [regex]::Match($documentXml, 'w:pgSz[^>]*w:w="(\d+)"').Groups[1].Value
