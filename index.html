@@ -131,13 +131,16 @@
     }
 
     .topbar {
+      position: relative;
+      z-index: 30;
       grid-column: 1 / -1;
       display: grid;
-      grid-template-columns: var(--left-w) 1fr var(--right-w);
+      grid-template-columns: var(--left-w) minmax(0, 1fr) auto;
       border-bottom: 1px solid var(--line-soft);
       background: rgba(6, 13, 15, 0.86);
       backdrop-filter: blur(18px);
       transition: grid-template-columns 220ms ease;
+      overflow: visible;
     }
 
     .ribbon {
@@ -274,11 +277,12 @@
       font-weight: 650;
     }
 
-    body.nav-collapsed { --left-w: 72px; }
+    body.nav-collapsed { --left-w: 0px; }
     body.agents-collapsed { --right-w: 0px; }
-    body.type-collapsed { --type-h: 40px; }
+    body.type-collapsed { --type-h: 0px; }
 
     .brand {
+      grid-column: 1;
       padding: 14px 18px;
       border-right: 1px solid var(--line-soft);
     }
@@ -297,43 +301,19 @@
     }
 
     .crumbs {
+      grid-column: 2;
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
       padding: 0 18px;
       color: var(--muted);
       font-size: 12px;
       min-width: 0;
     }
 
-    .mode {
-      margin-left: auto;
-      display: inline-grid;
-      grid-template-columns: 1fr 1fr;
-      width: 202px;
-      height: 38px;
-      padding: 3px;
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      background: #0a1214;
-    }
-
-    .mode button {
-      min-height: 30px;
-      padding: 0;
-      border: 0;
-      border-radius: 18px;
-      background: transparent;
-      color: var(--muted);
-    }
-
-    .mode button.active {
-      background: linear-gradient(180deg, #2f8483, #1e5e60);
-      color: #efffff;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
-    }
-
     .top-actions {
+      position: relative;
+      grid-column: 3;
       display: flex;
       align-items: center;
       justify-content: flex-end;
@@ -351,6 +331,135 @@
       border-right: 1px solid var(--line-soft);
     }
 
+    .settings-menu {
+      position: relative;
+    }
+
+    .settings-menu summary {
+      list-style: none;
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--muted);
+      background: #111d21;
+      cursor: pointer;
+    }
+
+    .settings-menu summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .settings-menu[open] summary {
+      color: var(--teal);
+      border-color: rgba(52, 198, 193, 0.5);
+      background: rgba(52, 198, 193, 0.08);
+    }
+
+    .settings-panel {
+      position: absolute;
+      z-index: 60;
+      top: calc(100% + 16px);
+      right: 0;
+      width: 310px;
+      padding: 14px;
+      border: 1px solid rgba(52, 198, 193, 0.24);
+      border-radius: 10px;
+      background: rgba(9, 19, 22, 0.98);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 14px;
+    }
+
+    .settings-panel h3 {
+      margin: 0;
+      color: var(--text);
+      font: 700 15px/1.2 var(--display);
+    }
+
+    .settings-section {
+      display: grid;
+      gap: 8px;
+    }
+
+    .settings-section label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .settings-section select,
+    .settings-section input {
+      width: 100%;
+      height: 31px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #0c171a;
+      color: var(--text);
+      padding: 0 9px;
+      font-size: 12px;
+    }
+
+    .mode-panel {
+      display: none;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.025);
+    }
+
+    .mode-panel.active {
+      display: grid;
+    }
+
+    .mode-panel p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .settings-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .settings-action-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .settings-action-row button {
+      flex: 1;
+    }
+
+    .secret-input {
+      font-family: var(--ui);
+    }
+
+    .settings-note {
+      color: var(--gold);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .mode {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .mode button {
+      min-height: 31px;
+      border-radius: 6px;
+    }
+
     .icon-button {
       width: 34px;
       min-width: 34px;
@@ -365,6 +474,10 @@
       border-color: rgba(52, 198, 193, 0.5);
       color: var(--teal);
       background: rgba(52, 198, 193, 0.08);
+    }
+
+    body.tools-collapsed .toolbar {
+      display: none;
     }
 
     .score {
@@ -427,21 +540,7 @@
     }
 
     body.nav-collapsed .brand {
-      padding: 13px 8px;
-      text-align: center;
-    }
-
-    body.nav-collapsed .brand strong {
-      font-size: 20px;
-    }
-
-    body.nav-collapsed .brand strong::after {
-      content: "S";
-      font-size: 20px;
-    }
-
-    body.nav-collapsed .brand strong {
-      font-size: 0;
+      display: none;
     }
 
     body.nav-collapsed .brand span,
@@ -458,8 +557,7 @@
     }
 
     body.nav-collapsed .sidebar {
-      overflow: hidden;
-      scrollbar-gutter: auto;
+      display: none;
     }
 
     body.nav-collapsed .sidebar > :not(.side-head) {
@@ -467,9 +565,7 @@
     }
 
     body.nav-collapsed #sideCollapseBtn {
-      width: 42px;
-      height: 42px;
-      padding: 0;
+      display: none;
     }
 
     .side-head, .agent-head, .type-head {
@@ -688,6 +784,10 @@
       background: linear-gradient(180deg, rgba(14, 23, 27, 0.92), rgba(8, 14, 16, 0.96));
     }
 
+    body.tools-collapsed .workspace {
+      grid-template-rows: 0 minmax(0, 1fr) 33px;
+    }
+
     .tabs {
       display: none;
       align-items: end;
@@ -712,6 +812,7 @@
     }
 
     .toolbar {
+      grid-row: 1;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -735,6 +836,11 @@
       color: var(--muted);
     }
 
+    .toolbar .focus-button {
+      min-width: 64px;
+      color: var(--soft);
+    }
+
     .toolbar select, .toolbar input {
       height: 29px;
       border: 1px solid var(--line);
@@ -746,6 +852,69 @@
     }
 
     .toolbar .spacer { flex: 1; }
+
+    .tool-cluster {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-right: 8px;
+      border-right: 1px solid var(--line-soft);
+    }
+
+    .tool-cluster:last-of-type {
+      border-right: 0;
+      padding-right: 0;
+    }
+
+    .control-menu {
+      position: relative;
+    }
+
+    .control-menu summary {
+      list-style: none;
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--muted);
+      background: #111d21;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .control-menu summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .control-menu[open] summary {
+      color: var(--teal);
+      border-color: rgba(52, 198, 193, 0.5);
+      background: rgba(52, 198, 193, 0.08);
+    }
+
+    .control-menu-list {
+      position: absolute;
+      z-index: 8;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 210px;
+      padding: 8px;
+      border: 1px solid rgba(52, 198, 193, 0.24);
+      border-radius: 8px;
+      background: rgba(9, 19, 22, 0.98);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 6px;
+    }
+
+    .control-menu-list button {
+      justify-content: flex-start;
+      width: 100%;
+      min-height: 32px;
+      text-align: left;
+    }
 
     .live-preview-chip {
       display: inline-flex;
@@ -771,6 +940,7 @@
     }
 
     .editor-grid {
+      grid-row: 2;
       position: relative;
       min-height: 0;
       display: grid;
@@ -844,6 +1014,115 @@
       white-space: pre-wrap;
     }
 
+    .story-card-grid {
+      display: grid;
+      gap: 10px;
+      white-space: normal;
+    }
+
+    .story-card {
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(255,255,255,0.03);
+      cursor: grab;
+      transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+    }
+
+    .story-card:hover {
+      border-color: rgba(52, 198, 193, 0.34);
+      background: rgba(52, 198, 193, 0.045);
+    }
+
+    .story-card.dragging {
+      opacity: 0.56;
+      transform: scale(0.985);
+    }
+
+    .story-card h4 {
+      margin: 0 0 6px;
+      color: var(--text);
+      font: 700 14px/1.2 var(--display);
+    }
+
+    .story-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .story-card small {
+      display: inline-flex;
+      margin-top: 10px;
+      color: var(--gold);
+      font-size: 11px;
+    }
+
+    .ledger-grid {
+      display: grid;
+      gap: 10px;
+      white-space: normal;
+    }
+
+    .ledger-row {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr);
+      gap: 10px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .ledger-row b {
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .ledger-row span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .analysis-list {
+      display: grid;
+      gap: 8px;
+      white-space: normal;
+    }
+
+    .analysis-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 9px 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      background: rgba(255,255,255,0.025);
+    }
+
+    .analysis-row b {
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .analysis-row span {
+      color: var(--gold);
+      font-size: 12px;
+    }
+
+    .genre-chip {
+      display: inline-flex;
+      align-items: center;
+      height: 29px;
+      padding: 0 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
     textarea {
       width: 100%;
       height: 100%;
@@ -874,6 +1153,7 @@
       display: grid;
       align-items: start;
       justify-items: center;
+      gap: 18px;
       padding: 14px 22px 14px 14px;
       overflow: auto;
       scrollbar-color: rgba(150, 166, 161, 0.48) rgba(6, 13, 15, 0.16);
@@ -900,6 +1180,53 @@
 
     body.preview-focus .page {
       width: min(100%, calc(520px * var(--page-zoom)));
+    }
+
+    .page.preview-extra {
+      margin-top: 2px;
+    }
+
+    .preview-limit-note {
+      width: min(100%, calc(440px * var(--page-zoom)));
+      padding: 10px 12px;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.025);
+      font: 12px/1.4 var(--ui);
+      text-align: center;
+    }
+
+    body.focus-writing .topbar,
+    body.focus-writing .sidebar,
+    body.focus-writing .agents,
+    body.focus-writing .typography,
+    body.focus-writing .preview-shell,
+    body.focus-writing .notes-panel {
+      display: none !important;
+    }
+
+    body.focus-writing .app {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: 41px minmax(0, 1fr) 33px;
+    }
+
+    body.focus-writing .workspace {
+      grid-column: 1;
+      grid-row: 1 / -1;
+      border-right: 0;
+    }
+
+    body.focus-writing .editor-grid {
+      grid-template-columns: minmax(0, min(920px, 100%));
+      justify-content: center;
+      padding: 24px;
+    }
+
+    body.focus-writing .manuscript textarea {
+      padding: 72px 70px;
+      font-size: 20px;
+      line-height: 1.8;
     }
 
     .page::before, .page::after {
@@ -1006,6 +1333,7 @@
     }
 
     .statusbar {
+      grid-row: 3;
       display: flex;
       align-items: center;
       gap: 18px;
@@ -1360,7 +1688,7 @@
     }
 
     body.type-collapsed .typography {
-      grid-template-rows: 39px 0;
+      display: none;
     }
 
     body.type-collapsed .type-body {
@@ -1558,30 +1886,76 @@
         <span>Yaz. Denetle. Diz. Yayına hazırla.</span>
       </div>
       <div class="crumbs">
-        <span>Projeler</span>
-        <span>›</span>
-        <span id="projectName">Proje Bekleniyor</span>
-        <span>›</span>
-        <span id="draftName">Studio</span>
         <div class="chrome-controls" aria-label="Panel kontrolleri">
           <button type="button" class="icon-button active" id="toggleNav" title="Kitap haritasını aç/kapat" aria-label="Kitap haritasını aç veya kapat">☰</button>
           <button type="button" class="icon-button active" id="toggleType" title="Dizgi panelini aç/kapat" aria-label="Dizgi panelini aç veya kapat">▣</button>
           <button type="button" class="icon-button active" id="toggleAgents" title="Ajan panelini aç/kapat" aria-label="Ajan panelini aç veya kapat">◎</button>
           <button type="button" class="icon-button" id="togglePreviewFocus" title="Büyük ön izleme" aria-label="Büyük ön izlemeyi aç veya kapat">⤢</button>
-        </div>
-        <div class="mode" aria-label="Çalışma modu">
-          <button type="button" class="active" data-mode="IDE">IDE Modu</button>
-          <button type="button" data-mode="API">API Modu</button>
+          <button type="button" class="icon-button active" id="toggleWritingTools" title="Yazım araçlarını aç/kapat" aria-label="Yazım araçlarını aç veya kapat">✎</button>
         </div>
       </div>
       <div class="top-actions">
-        <div class="score">
-          <div>
-            <span>Kalite Skoru</span>
-            <strong id="qualityLabel">Proje bekliyor</strong>
+        <details class="settings-menu" id="settingsMenu">
+          <summary title="Ayarlar" aria-label="Ayarlar">⚙</summary>
+          <div class="settings-panel">
+            <h3>Ayarlar</h3>
+            <section class="settings-section">
+              <label>Çalışma modu
+                <div class="mode" aria-label="Çalışma modu">
+                  <button type="button" class="active" data-mode="IDE">IDE Modu</button>
+                  <button type="button" data-mode="API">API Modu</button>
+                </div>
+              </label>
+              <div class="mode-panel active" data-mode-panel="IDE">
+                <p>IDE modunda Cursor, VS Code, Windsurf, Codex veya başka bir IDE bu proje klasörünü açar. KitHub IDE adını değil, üretilen plan, bölüm, state ve ajan kanıt dosyalarını doğrular.</p>
+                <div class="settings-action-row">
+                  <button type="button" id="copyIdeCommandBtn">IDE Komutunu Kopyala</button>
+                </div>
+              </div>
+              <div class="mode-panel" data-mode-panel="API">
+                <label>Sağlayıcı
+                  <select id="apiProvider">
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="custom-openai">OpenAI uyumlu özel endpoint</option>
+                  </select>
+                </label>
+                <div class="settings-row">
+                  <label>Model
+                    <input id="apiModel" value="gpt-4.1" />
+                  </label>
+                  <label>Endpoint
+                    <input id="apiBaseUrl" placeholder="Varsayılan" />
+                  </label>
+                </div>
+                <label>API anahtarı
+                  <input id="apiKeyInput" class="secret-input" type="password" autocomplete="off" placeholder="Anahtar repo içine yazılmaz" />
+                </label>
+                <div class="settings-action-row">
+                  <button type="button" id="saveApiSettingsBtn">Kaydet</button>
+                  <button type="button" id="testApiSettingsBtn">Test Et</button>
+                </div>
+                <span class="settings-note" id="apiSettingsStatus">API modu için sağlayıcı ve anahtar bekleniyor.</span>
+              </div>
+            </section>
+            <section class="settings-section">
+              <label>Motor durumu
+                <input id="settingsBridgeStatus" value="Bağlantı bekleniyor" readonly />
+              </label>
+            </section>
+            <section class="settings-section">
+              <label>Varsayılan çıktı konumu
+                <select id="settingsOutputTarget">
+                  <option>Masaüstü</option>
+                  <option>Belgeler</option>
+                  <option>Seçili klasör</option>
+                </select>
+              </label>
+            </section>
           </div>
-          <div class="ring"><b id="scoreValue">0</b></div>
-        </div>
+        </details>
         <button type="button" class="primary" id="exportBtn">Dışa Aktar</button>
       </div>
     </header>
@@ -1868,30 +2242,54 @@
         <button type="button" data-tab="revision">Revizyon</button>
       </nav>
       <div class="toolbar">
-        <select id="blockStyle" aria-label="Metin stili">
-          <option>Gövde Metni</option>
-          <option>Bölüm Başlığı</option>
-          <option>Alıntı</option>
-        </select>
-        <select id="fontSelect" aria-label="Yazı tipi">
-          <option>Garamond</option>
-          <option>Times New Roman</option>
-          <option>Georgia</option>
-          <option>Palatino Linotype</option>
-        </select>
-        <select id="fontSizeSelect" aria-label="Punto">
-          <option>11</option>
-          <option selected>11.5</option>
-          <option>12</option>
-        </select>
-        <button type="button" data-format="bold" title="Kalın">B</button>
-        <button type="button" data-format="italic" title="İtalik">I</button>
-        <button type="button" data-format="underline" title="Altı çizili">U</button>
-        <button type="button" data-align="left" title="Sola hizala">≡</button>
-        <button type="button" data-align="justify" title="İki yana yasla">▤</button>
+        <div class="tool-cluster" aria-label="Pano ve geçmiş">
+          <button type="button" data-edit="undo" title="Geri al">↶</button>
+          <button type="button" data-edit="redo" title="İleri al">↷</button>
+          <button type="button" data-edit="cut" title="Kes">Kes</button>
+          <button type="button" data-edit="copy" title="Kopyala">Kopyala</button>
+          <button type="button" data-edit="paste" title="Yapıştır">Yapıştır</button>
+        </div>
+        <div class="tool-cluster" aria-label="Yazı stili">
+          <select id="blockStyle" aria-label="Metin stili">
+            <option>Gövde Metni</option>
+            <option>Bölüm Başlığı</option>
+            <option>Alıntı</option>
+          </select>
+          <select id="fontSelect" aria-label="Yazı tipi">
+            <option>Garamond</option>
+            <option>Times New Roman</option>
+            <option>Georgia</option>
+            <option>Palatino Linotype</option>
+            <option>Courier New</option>
+          </select>
+          <select id="fontSizeSelect" aria-label="Punto">
+            <option>11</option>
+            <option selected>11.5</option>
+            <option>12</option>
+            <option>13</option>
+            <option>14</option>
+          </select>
+        </div>
+        <div class="tool-cluster" aria-label="Biçimlendirme">
+          <button type="button" data-format="bold" title="Kalın">B</button>
+          <button type="button" data-format="italic" title="İtalik">I</button>
+          <button type="button" data-format="underline" title="Altı çizili">U</button>
+          <button type="button" data-align="left" title="Sola hizala">≡</button>
+          <button type="button" data-align="justify" title="İki yana yasla">▤</button>
+        </div>
         <div class="spacer"></div>
-        <button type="button" class="support-button" data-support-tab="plan">Plan</button>
-        <button type="button" class="support-button" data-support-tab="revision">Revizyon</button>
+        <button type="button" class="focus-button" id="focusModeBtn">Odak</button>
+        <details class="control-menu" id="bookControlMenu">
+          <summary>Kitap Kontrolü</summary>
+          <div class="control-menu-list">
+            <button type="button" data-support-tab="cards">Bölüm Panosu</button>
+            <button type="button" data-support-tab="context">Bağlam Defteri</button>
+            <button type="button" data-support-tab="analysis">Tekrar Analizi</button>
+            <button type="button" data-support-tab="plan">Plan</button>
+            <button type="button" data-support-tab="revision">Revizyon</button>
+          </div>
+        </details>
+        <span class="genre-chip" id="genreModeChip">Genel Yazım</span>
         <span class="live-preview-chip">Canlı Ön İzleme</span>
       </div>
 
@@ -1971,7 +2369,7 @@
         <div class="type-group" data-type-panel="font">
           <h4>Yazı</h4>
           <label class="field">Yazı Tipi
-            <select id="typeFont"><option>Garamond</option><option>Times New Roman</option><option>Georgia</option><option>Palatino Linotype</option></select>
+            <select id="typeFont"><option>Garamond</option><option>Times New Roman</option><option>Georgia</option><option>Palatino Linotype</option><option>Courier New</option></select>
           </label>
           <label class="field">Punto
             <input id="typeSize" type="number" min="10" max="13" step="0.5" value="11.5" />
@@ -2096,10 +2494,25 @@
     const previewMeta = document.getElementById("previewMeta");
     const pageMeta = document.getElementById("pageMeta");
     const bookPage = document.getElementById("bookPage");
+    const pageStage = document.querySelector(".page-stage");
     const toggleNav = document.getElementById("toggleNav");
     const toggleType = document.getElementById("toggleType");
     const toggleAgents = document.getElementById("toggleAgents");
     const togglePreviewFocus = document.getElementById("togglePreviewFocus");
+    const toggleWritingTools = document.getElementById("toggleWritingTools");
+    const focusModeBtn = document.getElementById("focusModeBtn");
+    const genreModeChip = document.getElementById("genreModeChip");
+    const blockStyle = document.getElementById("blockStyle");
+    const bookControlMenu = document.getElementById("bookControlMenu");
+    const settingsOutputTarget = document.getElementById("settingsOutputTarget");
+    const apiProvider = document.getElementById("apiProvider");
+    const apiModel = document.getElementById("apiModel");
+    const apiBaseUrl = document.getElementById("apiBaseUrl");
+    const apiKeyInput = document.getElementById("apiKeyInput");
+    const apiSettingsStatus = document.getElementById("apiSettingsStatus");
+    const saveApiSettingsBtn = document.getElementById("saveApiSettingsBtn");
+    const testApiSettingsBtn = document.getElementById("testApiSettingsBtn");
+    const copyIdeCommandBtn = document.getElementById("copyIdeCommandBtn");
     const drawerToggle = document.getElementById("drawerToggle");
     const collapseAgents = document.getElementById("collapseAgents");
     const sideCollapseBtn = document.getElementById("sideCollapseBtn");
@@ -2107,12 +2520,11 @@
     const bindProjectBtn = document.getElementById("bindProjectBtn");
     const saveEpisodeBtn = document.getElementById("saveEpisodeBtn");
     const bookStats = document.getElementById("bookStats");
-    const projectName = document.getElementById("projectName");
-    const draftName = document.getElementById("draftName");
     const bookTitle = document.querySelector(".book-title");
     const liveStatus = document.querySelector(".statusbar .live");
     const scoreValue = document.getElementById("scoreValue");
     const qualityLabel = document.getElementById("qualityLabel");
+    const settingsBridgeStatus = document.getElementById("settingsBridgeStatus");
     const healthMeta = document.getElementById("healthMeta");
     const healthList = document.getElementById("healthList");
     const lifecycleMeta = document.getElementById("lifecycleMeta");
@@ -2157,12 +2569,33 @@
     let bridgeOnline = false;
     let bridgeProjectActive = false;
     const bridgeUrl = "http://127.0.0.1:8765";
+    const settingsStorageKey = "kithub-studio-settings";
+    const providerDefaults = {
+      openai: { model: "gpt-4.1", baseUrl: "https://api.openai.com/v1/chat/completions" },
+      anthropic: { model: "claude-3-5-sonnet-latest", baseUrl: "https://api.anthropic.com/v1/messages" },
+      gemini: { model: "gemini-1.5-pro", baseUrl: "https://generativelanguage.googleapis.com/v1beta" },
+      openrouter: { model: "openai/gpt-4.1", baseUrl: "https://openrouter.ai/api/v1/chat/completions" },
+      "custom-openai": { model: "", baseUrl: "" }
+    };
     let approvals = {};
     let currentBridgeSummary = null;
     let currentTab = "manuscript";
     let currentDesignDocs = [];
     let currentReports = [];
     let currentAlignment = "justify";
+    const previewPageLimit = 12;
+    const genreBlockOptions = {
+      "Senaryo": ["Sahne Başlığı", "Aksiyon", "Diyalog", "Parantez", "Geçiş"],
+      "Şiir kitabı": ["Şiir Başlığı", "Dize", "Kıta", "Epigraf"],
+      "Biyografi": ["Bölüm Başlığı", "Zaman Çizgisi", "Alıntı", "Kaynak Notu"],
+      "Araştırma kitabı": ["Bölüm Başlığı", "Alt Başlık", "Alıntı", "Dipnot"],
+      "Deneme": ["Gövde Metni", "Alt Başlık", "Alıntı"],
+      "Roman": ["Gövde Metni", "Bölüm Başlığı", "Alıntı"],
+      "Hikaye": ["Gövde Metni", "Bölüm Başlığı", "Alıntı"],
+      "Novella": ["Gövde Metni", "Bölüm Başlığı", "Alıntı"],
+      "Anı": ["Gövde Metni", "Tarih Notu", "Alıntı"],
+      "Çocuk kitabı": ["Gövde Metni", "Bölüm Başlığı", "Diyalog"]
+    };
 
     function renderChapters() {
       if (!chapters.length) {
@@ -2245,9 +2678,9 @@
 
     function renderQuality(quality) {
       const score = Number(quality?.score || 0);
-      scoreValue.textContent = String(score);
+      if (scoreValue) scoreValue.textContent = String(score);
       ribbonQualityState.textContent = String(score);
-      qualityLabel.textContent = score >= 86 ? "Yayına yakın" : score >= 60 ? "Revizyon ister" : "Proje bekliyor";
+      if (qualityLabel) qualityLabel.textContent = score >= 86 ? "Yayına yakın" : score >= 60 ? "Revizyon ister" : "Proje bekliyor";
       healthMeta.textContent = quality ? `${quality.passed || 0}/${quality.total || 0}` : "Bekler";
       const checks = quality?.checks || [
         { label: "Plan/onay zinciri", ok: false, detail: "proje bekleniyor" },
@@ -2304,6 +2737,163 @@
         .replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, "<u>$1</u>");
     }
 
+    function buildStoryCards() {
+      if (chapters.length) {
+        return chapters.map((chapter, index) => ({
+          title: chapter.title || `Bölüm ${index + 1}`,
+          body: chapter.summary || chapter.synopsis || `${chapter.id || `Bölüm ${index + 1}`} için yazım, tempo ve tutarlılık izlenir.`,
+          meta: chapter.words ? `${chapter.words.toLocaleString("tr-TR")} kelime` : (chapter.state === "done" ? "Yazıldı" : "Plan")
+        }));
+      }
+      const values = collectWizardValues();
+      return [
+        { title: "Konu Vaadi", body: values.premise || "Konu girildiğinde romanın ana vaadi burada kartlaşır.", meta: values.type || "Tür bekleniyor" },
+        { title: "Karakter Dengesi", body: values.characters ? `${values.characters} karakter için rol, arzu, korku ve çatışma dengesi kurulacak.` : "Karakter sayısı ve ana karakter bilgisi bekleniyor.", meta: values.characters ? `${values.characters} karakter` : "Eksik" },
+        { title: "Dönem ve Mekan", body: values.setting || "Dönem ve mekan girildiğinde atmosfer kartı oluşur.", meta: values.pages ? `${values.pages} sayfa hedefi` : "Sayfa hedefi bekleniyor" },
+        { title: "Final Vaadi", body: values.ending || "Final tipi seçildiğinde olay akışı ona göre kapanır.", meta: values.boundaries ? "Sınırlar var" : "Sınır bekleniyor" }
+      ];
+    }
+
+    function renderCardBoard() {
+      const cards = buildStoryCards();
+      notesTitle.textContent = "Kart Panosu";
+      notesContent.innerHTML = `<div class="story-card-grid">${cards.map(card => `
+        <article class="story-card" draggable="true">
+          <h4>${escapeHtml(card.title)}</h4>
+          <p>${escapeHtml(card.body)}</p>
+          <small>${escapeHtml(card.meta)}</small>
+        </article>
+      `).join("")}</div>`;
+      attachCardBoardDrag();
+      notesPanel.classList.add("open");
+      notesPanel.setAttribute("aria-hidden", "false");
+      setStatus("Motor olayı: kart panosu açıldı");
+    }
+
+    function attachCardBoardDrag() {
+      const grid = notesContent.querySelector(".story-card-grid");
+      if (!grid) return;
+      let dragged = null;
+      grid.querySelectorAll(".story-card").forEach(card => {
+        card.addEventListener("dragstart", () => {
+          dragged = card;
+          card.classList.add("dragging");
+        });
+        card.addEventListener("dragend", () => {
+          card.classList.remove("dragging");
+          dragged = null;
+          setStatus("Motor olayı: kart sırası panoda güncellendi; kaydetmek için plan revizyonu gerekir.");
+        });
+        card.addEventListener("dragover", event => {
+          event.preventDefault();
+          if (!dragged || dragged === card) return;
+          const rect = card.getBoundingClientRect();
+          const after = event.clientY > rect.top + rect.height / 2;
+          grid.insertBefore(dragged, after ? card.nextSibling : card);
+        });
+      });
+    }
+
+    function extractNamesFromText(text) {
+      const matches = text.match(/\b[A-ZÇĞİÖŞÜ][a-zçğıöşü]{2,}\b/g) || [];
+      const ignored = new Set(["KitHub", "Pera", "Palas", "İstanbul", "Türkçe", "Roman", "Bölüm"]);
+      const counts = new Map();
+      matches.forEach(name => {
+        if (ignored.has(name)) return;
+        counts.set(name, (counts.get(name) || 0) + 1);
+      });
+      return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+    }
+
+    function buildContextLedger() {
+      const values = collectWizardValues();
+      const text = manuscriptText.value || "";
+      const chapter = chapters[currentChapterIndex] || {};
+      const names = extractNamesFromText(`${values.premise} ${values.setting} ${text}`)
+        .map(([name, count]) => `${name} (${count})`)
+        .join(", ");
+      const promises = [
+        values.premise && `Ana vaat: ${values.premise}`,
+        values.ending && `Final yönü: ${values.ending}`,
+        values.boundaries && `Sınırlar: ${values.boundaries}`
+      ].filter(Boolean).join("\n");
+      return [
+        ["Tür", values.type || "Henüz seçilmedi"],
+        ["Hedef", values.pages ? `${values.pages} sayfa` : "Henüz belirlenmedi"],
+        ["Karakter", names || (values.characters ? `${values.characters} karakter planlanıyor` : "Karakter bilgisi bekleniyor")],
+        ["Mekan", values.setting || "Dönem ve mekan bekleniyor"],
+        ["Bölüm", chapter.title ? `${chapter.id || ""} ${chapter.title}`.trim() : "Henüz bölüm bağlı değil"],
+        ["Vaatler", promises || "Konu, final ve sınırlar netleşince burada izlenir"],
+        ["Durum", "Bu defter yazım boyunca karakter, olay ve mekan sürekliliğini izlemek için kullanılır"]
+      ];
+    }
+
+    function renderContextLedger() {
+      notesTitle.textContent = "Bağlam Defteri";
+      const rows = buildContextLedger();
+      notesContent.innerHTML = `<div class="ledger-grid">${rows.map(([label, value]) => `
+        <div class="ledger-row">
+          <b>${escapeHtml(label)}</b>
+          <span>${escapeHtml(value)}</span>
+        </div>
+      `).join("")}</div>`;
+      notesPanel.classList.add("open");
+      notesPanel.setAttribute("aria-hidden", "false");
+      setStatus("Motor olayı: bağlam defteri açıldı");
+    }
+
+    function analyzeRepetition(text) {
+      const stop = new Set("ve bir bu da de ile için gibi ama fakat çok daha en olan olarak sonra önce her hiç mi mu mü mı diye kadar içinde üzerine ancak çünkü".split(" "));
+      const words = (text.toLocaleLowerCase("tr-TR").match(/[a-zçğıöşüâîû]{4,}/gi) || [])
+        .map(word => word.toLocaleLowerCase("tr-TR"))
+        .filter(word => !stop.has(word));
+      const counts = new Map();
+      words.forEach(word => counts.set(word, (counts.get(word) || 0) + 1));
+      return [...counts.entries()]
+        .filter(([, count]) => count > 1)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 14);
+    }
+
+    function renderTextAnalysis() {
+      const raw = manuscriptText.value || "";
+      const repeated = analyzeRepetition(raw);
+      const paragraphs = cleanParagraphs(raw);
+      const longParagraphs = paragraphs.filter(paragraph => countWords(paragraph) > 95).length;
+      notesTitle.textContent = "Tekrar Analizi";
+      notesContent.innerHTML = `
+        <div class="analysis-list">
+          <div class="analysis-row"><b>Paragraf sayısı</b><span>${paragraphs.length}</span></div>
+          <div class="analysis-row"><b>Uzun paragraf riski</b><span>${longParagraphs}</span></div>
+          ${repeated.length ? repeated.map(([word, count]) => `
+            <div class="analysis-row"><b>${escapeHtml(word)}</b><span>${count} kez</span></div>
+          `).join("") : `<div class="analysis-row"><b>Tekrar riski</b><span>Düşük</span></div>`}
+        </div>
+      `;
+      notesPanel.classList.add("open");
+      notesPanel.setAttribute("aria-hidden", "false");
+      setStatus("Motor olayı: tekrar ve frekans analizi açıldı");
+    }
+
+    function splitPreviewPages(paragraphs) {
+      const pages = [];
+      let current = [];
+      let weight = 0;
+      paragraphs.forEach(paragraph => {
+        const words = paragraph.split(/\s+/).filter(Boolean).length;
+        const nextWeight = Math.max(45, words);
+        if (current.length && weight + nextWeight > 230) {
+          pages.push(current);
+          current = [];
+          weight = 0;
+        }
+        current.push(paragraph);
+        weight += nextWeight;
+      });
+      if (current.length) pages.push(current);
+      return pages.length ? pages : [[]];
+    }
+
     function replaceSelection(before, after = before, placeholder = "metin") {
       const start = manuscriptText.selectionStart;
       const end = manuscriptText.selectionEnd;
@@ -2315,6 +2905,52 @@
       manuscriptText.focus();
       manuscriptText.setSelectionRange(selectionStart, selectionEnd);
       renderPreview();
+    }
+
+    async function applyEditCommand(command) {
+      const start = manuscriptText.selectionStart || 0;
+      const end = manuscriptText.selectionEnd || start;
+      const selected = manuscriptText.value.slice(start, end);
+      if (command === "undo" || command === "redo") {
+        document.execCommand(command);
+        renderPreview();
+        setStatus(command === "undo" ? "Motor olayı: geri alındı" : "Motor olayı: ileri alındı");
+        return;
+      }
+      if (command === "copy") {
+        if (!selected) {
+          setStatus("Motor olayı: kopyalamak için önce metin seçin.");
+          return;
+        }
+        await navigator.clipboard.writeText(selected);
+        setStatus("Motor olayı: seçili metin kopyalandı");
+        return;
+      }
+      if (command === "cut") {
+        if (!selected) {
+          setStatus("Motor olayı: kesmek için önce metin seçin.");
+          return;
+        }
+        await navigator.clipboard.writeText(selected);
+        manuscriptText.value = manuscriptText.value.slice(0, start) + manuscriptText.value.slice(end);
+        manuscriptText.setSelectionRange(start, start);
+        renderPreview();
+        setStatus("Motor olayı: seçili metin kesildi");
+        return;
+      }
+      if (command === "paste") {
+        const text = await navigator.clipboard.readText();
+        if (!text) {
+          setStatus("Motor olayı: panoda metin yok.");
+          return;
+        }
+        manuscriptText.value = manuscriptText.value.slice(0, start) + text + manuscriptText.value.slice(end);
+        const cursor = start + text.length;
+        manuscriptText.focus();
+        manuscriptText.setSelectionRange(cursor, cursor);
+        renderPreview();
+        setStatus("Motor olayı: metin yapıştırıldı");
+      }
     }
 
     function transformCurrentLines(transform) {
@@ -2335,11 +2971,26 @@
     function applyBlockStyle(style) {
       transformCurrentLines(line => {
         const cleaned = line.replace(/^\s*(#{1,3}\s*|>\s*)/, "").trim();
-        if (style === "Bölüm Başlığı") return cleaned ? `# ${cleaned}` : "# Bölüm başlığı";
-        if (style === "Alıntı") return cleaned ? `> ${cleaned}` : "> Alıntı";
+        if (["Bölüm Başlığı", "Sahne Başlığı", "Şiir Başlığı", "Alt Başlık"].includes(style)) return cleaned ? `# ${cleaned}` : `# ${style}`;
+        if (["Alıntı", "Epigraf", "Kaynak Notu", "Dipnot"].includes(style)) return cleaned ? `> ${cleaned}` : `> ${style}`;
+        if (style === "Diyalog") return cleaned ? `- ${cleaned}` : "- Diyalog";
+        if (style === "Parantez") return cleaned ? `(${cleaned})` : "(Parantez)";
+        if (style === "Geçiş") return cleaned ? cleaned.toLocaleUpperCase("tr-TR") : "KESME:";
+        if (style === "Zaman Çizgisi" || style === "Tarih Notu") return cleaned ? `- ${cleaned}` : "- Tarih notu";
+        if (style === "Kıta" || style === "Dize") return cleaned;
         return cleaned;
       });
       setStatus(`Motor olayı: ${style} biçimi uygulandı`);
+    }
+
+    function applyGenreMode(type = wizardType.value.trim()) {
+      const options = genreBlockOptions[type] || genreBlockOptions.Roman;
+      blockStyle.innerHTML = options.map((option, index) => `<option${index === 0 ? " selected" : ""}>${escapeHtml(option)}</option>`).join("");
+      genreModeChip.textContent = type ? `${type} Modu` : "Genel Yazım";
+      const statusText = type
+        ? `Motor olayı: ${type} için editör biçimleri hazırlandı`
+        : "Motor olayı: genel yazım biçimleri hazırlandı";
+      setStatus(statusText);
     }
 
     function applyFormatCommand(command) {
@@ -2406,17 +3057,43 @@
       const chapter = chapters[currentChapterIndex] || chapters[0] || { id: "KitHub", title: "Proje Bekleniyor" };
       const chapterTitle = readerTitleFromMarkdown(raw, chapter.title);
       const bodyParagraphs = paragraphs.filter((paragraph, index) => !(index === 0 && /^#\s+/.test(paragraph)));
+      const previewPages = splitPreviewPages(bodyParagraphs);
+      const visiblePages = previewPages.slice(0, previewPageLimit);
       pageKicker.textContent = chapter.id.toUpperCase();
       pageTitle.textContent = chapterTitle;
-      pageBody.innerHTML = bodyParagraphs.slice(0, 5).map((paragraph, index) => {
+      pageBody.innerHTML = (visiblePages[0] || []).map((paragraph, index) => {
         const text = paragraph.replace(/^\s*(#{1,3}\s*|>\s*)/, "");
         return `<p class="${index === 0 ? "first" : ""}">${renderInlineMarkup(text)}</p>`;
       }).join("");
+      pageStage.querySelectorAll(".preview-extra, .preview-limit-note").forEach(node => node.remove());
+      visiblePages.slice(1).forEach((pageParagraphs, index) => {
+        const article = document.createElement("article");
+        article.className = "page preview-extra";
+        article.style.cssText = bookPage.style.cssText;
+        article.innerHTML = `
+          <div class="chapter-kicker">${escapeHtml(chapter.id.toUpperCase())}</div>
+          <h2>${escapeHtml(chapterTitle)}</h2>
+          <div class="ornament"></div>
+          <div>${pageParagraphs.map(paragraph => {
+            const text = paragraph.replace(/^\s*(#{1,3}\s*|>\s*)/, "");
+            return `<p>${renderInlineMarkup(text)}</p>`;
+          }).join("")}</div>
+          <div class="page-no">${index + 2}</div>
+        `;
+        pageStage.appendChild(article);
+      });
+      if (previewPages.length > previewPageLimit) {
+        const note = document.createElement("div");
+        note.className = "preview-limit-note";
+        note.textContent = `Önizleme performans için ilk ${previewPageLimit} sayfayı gösteriyor. Final DOCX tüm metni üretir.`;
+        pageStage.appendChild(note);
+      }
 
       const words = raw ? raw.split(/\s+/).filter(Boolean).length : 0;
+      const estimatedPages = words ? Math.max(previewPages.length, Math.ceil(words / 280)) : 0;
       wordCount.textContent = `${words.toLocaleString("tr-TR")} kelime`;
       charCount.textContent = `${raw.length.toLocaleString("tr-TR")} karakter`;
-      pageMeta.textContent = words ? `1 / ${Math.max(1, Math.ceil(words / 280))}` : "0 / 0";
+      pageMeta.textContent = words ? `1 / ${estimatedPages}` : "0 / 0";
       pageNo.textContent = words ? "1" : "-";
     }
 
@@ -2468,6 +3145,139 @@
 
     function setStatus(message) {
       liveStatus.textContent = message;
+    }
+
+    function readStudioSettings() {
+      try {
+        return JSON.parse(localStorage.getItem(settingsStorageKey) || "{}");
+      }
+      catch {
+        return {};
+      }
+    }
+
+    function writeStudioSettings(patch = {}) {
+      const next = {
+        mode: document.querySelector(".mode button.active")?.dataset.mode || "IDE",
+        outputTarget: settingsOutputTarget.value,
+        apiProvider: apiProvider.value,
+        apiModel: apiModel.value,
+        apiBaseUrl: apiBaseUrl.value,
+        ...readStudioSettings(),
+        ...patch
+      };
+      localStorage.setItem(settingsStorageKey, JSON.stringify(next));
+      return next;
+    }
+
+    function syncModePanels(mode) {
+      document.querySelectorAll("[data-mode-panel]").forEach(panel => {
+        panel.classList.toggle("active", panel.dataset.modePanel === mode);
+      });
+    }
+
+    function applyProviderDefaults(provider, force = false) {
+      const defaults = providerDefaults[provider] || providerDefaults.openai;
+      if (force || !apiModel.value.trim()) apiModel.value = defaults.model;
+      if (force || !apiBaseUrl.value.trim()) apiBaseUrl.value = defaults.baseUrl;
+    }
+
+    function getProviderPayload(includeKey = false) {
+      const payload = {
+        provider: apiProvider.value,
+        model: apiModel.value.trim(),
+        baseUrl: apiBaseUrl.value.trim()
+      };
+      if (includeKey && apiKeyInput.value.trim()) {
+        payload.apiKey = apiKeyInput.value.trim();
+      }
+      return payload;
+    }
+
+    function setApiStatus(message, good = false) {
+      apiSettingsStatus.textContent = message;
+      apiSettingsStatus.style.color = good ? "var(--green)" : "var(--gold)";
+    }
+
+    async function loadProviderSettings() {
+      if (!bridgeOnline) {
+        setApiStatus("API ayarlarını kaydetmek için Studio Bridge açık olmalı.");
+        return;
+      }
+      try {
+        const response = await fetch(`${bridgeUrl}/api/provider-settings`, { cache: "no-store" });
+        const result = await response.json();
+        if (!result.ok) {
+          setApiStatus(result.error || "API ayarı okunamadı.");
+          return;
+        }
+        if (result.provider) apiProvider.value = result.provider;
+        applyProviderDefaults(apiProvider.value, false);
+        if (result.model) apiModel.value = result.model;
+        if (result.baseUrl) apiBaseUrl.value = result.baseUrl;
+        setApiStatus(result.hasApiKey ? `${apiProvider.value} anahtarı kayıtlı.` : "API modu için anahtar bekleniyor.", result.hasApiKey);
+      }
+      catch (error) {
+        setApiStatus(`API ayarı okunamadı (${error.message})`);
+      }
+    }
+
+    async function saveProviderSettings(test = false) {
+      if (!bridgeOnline) {
+        setApiStatus("Önce Studio Bridge bağlantısı gerekli.");
+        return;
+      }
+      const payload = getProviderPayload(true);
+      if (!payload.model) {
+        setApiStatus("Model adı boş bırakılamaz.");
+        return;
+      }
+      if (test && !apiKeyInput.value.trim()) {
+        setApiStatus("Test için API anahtarını girin veya önce kayıtlı anahtar kullanın.");
+      }
+      try {
+        setApiStatus(test ? "API ayarı kaydediliyor ve test ediliyor..." : "API ayarı kaydediliyor...");
+        const response = await fetch(`${bridgeUrl}/api/provider-settings`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...payload, test })
+        });
+        const result = await response.json();
+        if (!result.ok) {
+          setApiStatus(result.error || "API ayarı kaydedilemedi.");
+          return;
+        }
+        apiKeyInput.value = "";
+        writeStudioSettings({
+          apiProvider: payload.provider,
+          apiModel: payload.model,
+          apiBaseUrl: payload.baseUrl,
+          mode: "API"
+        });
+        const testSuffix = result.tested ? " Bağlantı testi geçti." : "";
+        setApiStatus(`${payload.provider} ayarı hazır.${testSuffix}`, true);
+        setStatus("Motor olayı: API modu ayarları hazırlandı");
+      }
+      catch (error) {
+        setApiStatus(`API ayarı kaydedilemedi (${error.message})`);
+      }
+    }
+
+    function applyStudioSettings(settings = readStudioSettings()) {
+      if (settings.outputTarget) settingsOutputTarget.value = settings.outputTarget;
+      if (settings.apiProvider) apiProvider.value = settings.apiProvider;
+      applyProviderDefaults(apiProvider.value, false);
+      if (settings.apiModel) apiModel.value = settings.apiModel;
+      if (settings.apiBaseUrl) apiBaseUrl.value = settings.apiBaseUrl;
+      if (settings.mode) activateMode(settings.mode, false);
+      finalExportBtn.textContent = settingsOutputTarget.value === "Masaüstü" ? "Finali Masaüstüne Aktar" : "Finali Dışa Aktar";
+      exportBtn.textContent = settingsOutputTarget.value === "Masaüstü" ? "Dışa Aktar" : "Dışa Aktar";
+      applyTypography();
+      setStatus(`Motor olayı: ayarlar uygulandı (${settingsOutputTarget.value})`);
+    }
+
+    function getActiveMode() {
+      return document.querySelector(".mode button.active")?.dataset.mode || "IDE";
     }
 
     function syncBridgeButtons() {
@@ -2595,15 +3405,18 @@
         const response = await fetch(`${bridgeUrl}/api/health`, { cache: "no-store" });
         const data = await response.json();
         bridgeOnline = Boolean(data.ok);
-        setStatus(bridgeOnline ? "Motor olayı: Studio Bridge bağlı" : "Motor olayı: Studio Bridge bekleniyor");
+        if (settingsBridgeStatus) settingsBridgeStatus.value = bridgeOnline ? "Motor bağlı" : "Bağlantı bekleniyor";
+        setStatus(bridgeOnline ? "Motor olayı: motor bağlantısı hazır" : "Motor olayı: motor bağlantısı bekleniyor");
         syncBridgeButtons();
         if (bridgeOnline) {
           setRunLog(`Studio Bridge bağlı\nRepo: ${data.repoRoot}\nPort: ${data.port}`);
+          await loadProviderSettings();
         }
       }
       catch {
         bridgeOnline = false;
-        setStatus("Motor olayı: Studio Bridge kapalı; komut panoya kopyalanır");
+        if (settingsBridgeStatus) settingsBridgeStatus.value = "Bağlantı kapalı";
+        setStatus("Motor olayı: motor bağlantısı kapalı; komut panoya kopyalanır");
         setRunLog("Studio Bridge kapalı. scripts/start_studio.ps1 ile başlat.");
         syncBridgeButtons();
       }
@@ -2717,6 +3530,18 @@
         return;
       }
       manuscriptText.readOnly = false;
+      if (tab === "cards") {
+        renderCardBoard();
+        return;
+      }
+      if (tab === "context") {
+        renderContextLedger();
+        return;
+      }
+      if (tab === "analysis") {
+        renderTextAnalysis();
+        return;
+      }
       if (tab === "plan") {
         const text = currentDesignDocs.length
           ? currentDesignDocs.map(doc => `# ${doc.name}\n\n${doc.text}`).join("\n\n---\n\n")
@@ -2899,8 +3724,6 @@
       const targetPages = longformPlan?.target_pages ? `${longformPlan.target_pages} sayfa hedef` : "hedef bekliyor";
       const targetChapters = longformPlan?.target_chapters ? `${longformPlan.target_chapters} bölüm` : `${chapters.length} bölüm`;
 
-      projectName.textContent = project.name;
-      draftName.textContent = bookPlan?.plan_id || "Yerel proje";
       bookTitle.textContent = title;
       document.querySelector(".book-meta").firstChild.textContent = `${genre}`;
       bookStats.textContent = `${targetChapters} · ${targetPages}`;
@@ -3017,8 +3840,6 @@
       const targetPages = longformPlan.target_pages ? `${longformPlan.target_pages} sayfa hedef` : "hedef bekliyor";
       const targetChapters = longformPlan.target_chapters ? `${longformPlan.target_chapters} bölüm` : `${summary.chapters?.length || 0} bölüm`;
 
-      projectName.textContent = summary.name || "Yerel proje";
-      draftName.textContent = bookPlan.plan_id || "Bridge";
       bookTitle.textContent = title;
       document.querySelector(".book-meta").firstChild.textContent = genre;
       bookStats.textContent = `${targetChapters} · ${targetPages}`;
@@ -3319,6 +4140,11 @@
       if (bridgeOnline && currentProjectPathHint && currentProjectPathHint !== "." && !currentProjectPathHint.startsWith(".")) {
         try {
           setStatus(`Motor olayı: pipeline çalışıyor (${fromPhase} → ${toPhase})...`);
+          const activeMode = getActiveMode();
+          if (activeMode === "API" && !apiModel.value.trim()) {
+            setStatus("Motor olayı: API modu için önce model ayarını tamamla.");
+            return;
+          }
           const response = await fetch(`${bridgeUrl}/api/run-pipeline`, {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -3326,7 +4152,8 @@
               projectRoot: currentProjectPathHint,
               fromPhase,
               toPhase,
-              mode: document.querySelector(".mode button.active")?.dataset.mode === "API" ? "command" : "manual"
+              mode: activeMode === "API" ? "command" : "manual",
+              configPath: activeMode === "API" ? "runtime/runner-config.provider.template.json" : ""
             })
           });
           const result = await response.json();
@@ -3359,12 +4186,13 @@
         setStatus("Motor olayı: final aktarım için Studio Bridge ve gerçek proje yolu gerekli.");
         return;
       }
+      const outputTarget = settingsOutputTarget.value;
       try {
-        setStatus("Motor olayı: final DOCX masaüstüne aktarılıyor...");
+        setStatus(`Motor olayı: final DOCX aktarılıyor (${outputTarget})...`);
         const response = await fetch(`${bridgeUrl}/api/export-final`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ projectRoot: currentProjectPathHint })
+          body: JSON.stringify({ projectRoot: currentProjectPathHint, outputTarget })
         });
         const result = await response.json();
         if (!result.ok) {
@@ -3372,7 +4200,7 @@
           setStatus(`Motor olayı: final aktarım durdu (${result.error || "hata"})`);
           return;
         }
-        setRunLog(result.output || `Final çıktı: ${result.manifest?.final_output_path || "masaüstü"}`);
+        setRunLog(result.output || `Final çıktı: ${result.manifest?.final_output_path || outputTarget}`);
         setStatus("Motor olayı: final çıktı korundu; temizlik için kullanıcı okuma/bitti onayı gerekir.");
         await refreshProject();
       }
@@ -3535,15 +4363,22 @@
       const typeCollapsed = document.body.classList.contains("type-collapsed");
       const agentsCollapsed = document.body.classList.contains("agents-collapsed");
       const previewFocus = document.body.classList.contains("preview-focus");
+      const focusWriting = document.body.classList.contains("focus-writing");
+      const toolsCollapsed = document.body.classList.contains("tools-collapsed");
 
       toggleNav.classList.toggle("active", !navCollapsed);
       toggleType.classList.toggle("active", !typeCollapsed);
       toggleAgents.classList.toggle("active", !agentsCollapsed);
       togglePreviewFocus.classList.toggle("active", previewFocus);
+      focusModeBtn.classList.toggle("active", focusWriting);
+      toggleWritingTools.classList.toggle("active", !toolsCollapsed);
       toggleNav.setAttribute("aria-pressed", navCollapsed ? "false" : "true");
       toggleType.setAttribute("aria-pressed", typeCollapsed ? "false" : "true");
       toggleAgents.setAttribute("aria-pressed", agentsCollapsed ? "false" : "true");
       togglePreviewFocus.setAttribute("aria-pressed", previewFocus ? "true" : "false");
+      focusModeBtn.setAttribute("aria-pressed", focusWriting ? "true" : "false");
+      toggleWritingTools.setAttribute("aria-pressed", toolsCollapsed ? "false" : "true");
+      focusModeBtn.textContent = focusWriting ? "Çık" : "Odak";
       drawerToggle.textContent = typeCollapsed ? "Paneli Aç" : "Paneli Kapat";
       collapseAgents.textContent = agentsCollapsed ? "Aç" : "Daralt";
       sideCollapseBtn.textContent = navCollapsed ? "☰" : "☰";
@@ -3575,7 +4410,7 @@
       syncPanelButtons();
     }
 
-    function activateMode(mode) {
+    function activateMode(mode, persist = true) {
       const target = [...document.querySelectorAll(".mode button")].find(button => button.dataset.mode === mode);
       if (!target) return;
       document.querySelectorAll(".mode button").forEach(item => item.classList.remove("active"));
@@ -3585,6 +4420,8 @@
         button.classList.toggle("active", active);
         button.setAttribute("aria-pressed", active ? "true" : "false");
       });
+      syncModePanels(mode);
+      if (persist) writeStudioSettings({ mode });
       setStatus(`Motor olayı: ${mode} modu seçildi`);
     }
 
@@ -3657,11 +4494,53 @@
       });
     });
 
+    settingsOutputTarget.addEventListener("change", () => {
+      writeStudioSettings({ outputTarget: settingsOutputTarget.value });
+      applyStudioSettings();
+    });
+
+    apiProvider.addEventListener("change", () => {
+      applyProviderDefaults(apiProvider.value, true);
+      writeStudioSettings({
+        apiProvider: apiProvider.value,
+        apiModel: apiModel.value,
+        apiBaseUrl: apiBaseUrl.value
+      });
+      setApiStatus(`${apiProvider.value} sağlayıcısı seçildi. Anahtarı kaydedince API modu hazır olur.`);
+    });
+
+    [apiModel, apiBaseUrl].forEach(input => {
+      input.addEventListener("input", () => {
+        writeStudioSettings({
+          apiProvider: apiProvider.value,
+          apiModel: apiModel.value,
+          apiBaseUrl: apiBaseUrl.value
+        });
+      });
+    });
+
+    saveApiSettingsBtn.addEventListener("click", () => saveProviderSettings(false));
+    testApiSettingsBtn.addEventListener("click", () => saveProviderSettings(true));
+
+    copyIdeCommandBtn.addEventListener("click", async () => {
+      const projectRoot = projectPathInput.value.trim() || currentProjectPathHint || "<proje-klasoru>";
+      const command = `powershell -ExecutionPolicy Bypass -File scripts/ide_phase_prompt.ps1 -ProjectRoot "${projectRoot}" -Phase create`;
+      await navigator.clipboard.writeText(command);
+      setStatus("Motor olayı: IDE ajan komutu panoya kopyalandı");
+    });
+
     document.querySelectorAll("[data-ribbon-tab]").forEach(button => {
       button.addEventListener("click", () => showRibbonTab(button.dataset.ribbonTab));
     });
 
     document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && document.body.classList.contains("focus-writing")) {
+        event.preventDefault();
+        document.body.classList.remove("focus-writing");
+        syncPanelButtons();
+        setStatus("Motor olayı: odak yazım modu kapandı");
+        return;
+      }
       if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       const order = ["start", "writing", "plan", "agents", "layout", "publish"];
       const index = Number(event.key) - 1;
@@ -3719,12 +4598,33 @@
       syncPanelButtons();
     });
 
+    focusModeBtn.addEventListener("click", () => {
+      document.body.classList.toggle("focus-writing");
+      if (document.body.classList.contains("focus-writing")) {
+        renderSupportTab("manuscript");
+        manuscriptText.focus();
+        setStatus("Motor olayı: odak yazım modu açıldı");
+      }
+      else {
+        setStatus("Motor olayı: tam editör görünümüne dönüldü");
+      }
+      syncPanelButtons();
+    });
+
     togglePreviewFocus.addEventListener("click", () => {
       document.body.classList.toggle("preview-focus");
       syncPanelButtons();
       document.querySelector(".statusbar .live").textContent = document.body.classList.contains("preview-focus")
         ? "Motor olayı: büyük sayfa ön izlemesi açıldı"
         : "Motor olayı: editör ve ön izleme yan yana";
+    });
+
+    toggleWritingTools.addEventListener("click", () => {
+      document.body.classList.toggle("tools-collapsed");
+      syncPanelButtons();
+      setStatus(document.body.classList.contains("tools-collapsed")
+        ? "Motor olayı: yazım araçları gizlendi"
+        : "Motor olayı: yazım araçları açıldı");
     });
 
     zoomSelect.addEventListener("change", event => {
@@ -3794,6 +4694,7 @@
       button.addEventListener("click", () => {
         const nextTab = currentTab === button.dataset.supportTab ? "manuscript" : button.dataset.supportTab;
         renderSupportTab(nextTab);
+        if (bookControlMenu) bookControlMenu.open = false;
       });
     });
     closeNotesBtn.addEventListener("click", () => renderSupportTab("manuscript"));
@@ -3802,12 +4703,22 @@
       if (!button) return;
       focusTypeSection(button.dataset.typeSection);
     });
-    document.getElementById("blockStyle").addEventListener("change", event => {
+    blockStyle.addEventListener("change", event => {
       applyBlockStyle(event.target.value);
-      event.target.value = "Gövde Metni";
+      event.target.selectedIndex = 0;
     });
     document.querySelectorAll("[data-format]").forEach(button => {
       button.addEventListener("click", () => applyFormatCommand(button.dataset.format));
+    });
+    document.querySelectorAll("[data-edit]").forEach(button => {
+      button.addEventListener("click", async () => {
+        try {
+          await applyEditCommand(button.dataset.edit);
+        }
+        catch (error) {
+          setStatus(`Motor olayı: pano işlemi tamamlanamadı (${error.message})`);
+        }
+      });
     });
     document.querySelectorAll("[data-align]").forEach(button => {
       button.addEventListener("click", () => applyAlignment(button.dataset.align));
@@ -3847,7 +4758,10 @@
     saveWizardBtn.addEventListener("click", saveWizardRequest);
     [wizardType, wizardPages, wizardCharacters, wizardNarrator, wizardPremise, wizardSetting, wizardEnding, wizardStyle, wizardBoundaries].forEach(input => {
       input.addEventListener("input", () => validateWizard());
-      input.addEventListener("change", () => validateWizard());
+      input.addEventListener("change", () => {
+        validateWizard();
+        if (input === wizardType) applyGenreMode();
+      });
     });
     exportBtn.addEventListener("click", () => {
       if (exportBtn.classList.contains("is-offline")) {
@@ -3861,10 +4775,11 @@
     renderAgents();
     renderQuality(null);
     renderLifecycle(null);
+    applyGenreMode();
     validateWizard();
     manuscriptText.value = emptyManuscriptText;
     applyAlignment("justify");
-    applyTypography();
+    applyStudioSettings();
     showRibbonTab("start");
     syncPanelButtons();
     syncFormatButtons();

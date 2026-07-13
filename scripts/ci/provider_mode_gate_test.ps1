@@ -28,8 +28,12 @@ $providerConfig = Join-Path $RepoRoot "runtime/runner-config.provider.template.j
 
 Assert-File $providerScript
 Assert-File $providerConfig
-Assert-Contains -Path $providerScript -Pattern "KITHUB_PROVIDER_EXE" -Message "Provider wrapper must require KITHUB_PROVIDER_EXE."
-Assert-Contains -Path $providerScript -Pattern "Provider phase blocked" -Message "Provider wrapper must fail closed when provider is absent."
+Assert-Contains -Path $providerScript -Pattern "KITHUB_PROVIDER_EXE" -Message "Provider wrapper must still support external provider CLI commands."
+Assert-Contains -Path $providerScript -Pattern "KITHUB_API_KEY" -Message "Provider wrapper must support direct API provider mode."
+Assert-Contains -Path $providerScript -Pattern "KITHUB_API_MODEL" -Message "Provider wrapper must require a model in direct API mode."
+Assert-Contains -Path $providerScript -Pattern "Invoke-DirectProviderApi" -Message "Provider wrapper missing direct API invocation."
+Assert-Contains -Path $providerScript -Pattern "Write-ProviderFileMap" -Message "Provider wrapper must write provider-returned artifact files."
+Assert-Contains -Path $providerScript -Pattern "Provider phase blocked" -Message "Provider wrapper must fail closed when API provider settings are absent."
 Assert-Contains -Path $providerScript -Pattern "runtime/phase-contracts" -Message "Provider prompt must bind phase contracts."
 Assert-Contains -Path $providerScript -Pattern "agent_sequence" -Message "Provider prompt must require agent sequence."
 Assert-Contains -Path $providerConfig -Pattern '"execution_claim_mode"\s*:\s*"executed"' -Message "Provider config must use executed claim mode."

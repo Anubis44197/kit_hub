@@ -38,6 +38,159 @@ function Read-Utf8TextIfExists {
   return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
 }
 
+function Write-Utf8Json {
+  param([string]$Path, [object]$Value)
+  $dir = Split-Path -Parent $Path
+  if ($dir -and -not (Test-Path -LiteralPath $dir -PathType Container)) {
+    New-Item -ItemType Directory -Path $dir | Out-Null
+  }
+  [System.IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 20), [System.Text.UTF8Encoding]::new($true))
+}
+
+function Get-ProviderSettingsPath {
+  $appData = [Environment]::GetFolderPath("ApplicationData")
+  if (-not $appData.Trim()) {
+    $appData = Join-Path ([Environment]::GetFolderPath("UserProfile")) "AppData\Roaming"
+  }
+  return Join-Path (Join-Path $appData "KitHub") "provider-settings.json"
+}
+
+function Protect-ProviderSecret {
+  param([string]$Secret)
+  if (-not $Secret.Trim()) { return "" }
+  $secure = ConvertTo-SecureString -String $Secret -AsPlainText -Force
+  return ConvertFrom-SecureString -SecureString $secure
+}
+
+function Unprotect-ProviderSecret {
+  param([string]$ProtectedSecret)
+  if (-not $ProtectedSecret.Trim()) { return "" }
+  $secure = ConvertTo-SecureString -String $ProtectedSecret
+  $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+  try {
+    return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+  }
+  finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+  }
+}
+
+function Get-ProviderSettings {
+  $path = Get-ProviderSettingsPath
+  $settings = Read-Utf8JsonIfExists -Path $path
+  if (-not $settings) {
+    return [ordered]@{
+      ok = $true
+      provider = ""
+      model = ""
+      baseUrl = ""
+      hasApiKey = $false
+      settingsPath = $path
+    }
+  }
+  return [ordered]@{
+    ok = $true
+    provider = [string]$settings.provider
+    model = [string]$settings.model
+    baseUrl = [string]$settings.baseUrl
+    hasApiKey = -not [string]::IsNullOrWhiteSpace([string]$settings.apiKeyProtected)
+    settingsPath = $path
+  }
+}
+
+function Set-ProviderEnvironment {
+  param([object]$Settings, [string]$ApiKey)
+  $env:KITHUB_API_PROVIDER = [string]$Settings.provider
+  $env:KITHUB_API_MODEL = [string]$Settings.model
+  $env:KITHUB_API_BASE_URL = [string]$Settings.baseUrl
+  if ($ApiKey.Trim()) {
+    $env:KITHUB_API_KEY = $ApiKey
+  }
+  if (-not $env:KITHUB_PROVIDER_ARGS.Trim()) {
+    $env:KITHUB_PROVIDER_ARGS = "--project-root `"{project_root}`" --phase {phase} --run-id `"{run_id}`" --prompt-file `"{prompt_file}`""
+  }
+}
+
+function Test-ProviderConnection {
+  param([object]$Settings, [string]$ApiKey)
+  $provider = [string]$Settings.provider
+  $model = [string]$Settings.model
+  $baseUrl = [string]$Settings.baseUrl
+  if (-not $model.Trim()) { throw "API model is required." }
+  if (-not $ApiKey.Trim()) { throw "API key is required." }
+  if (-not $baseUrl.Trim()) {
+    if ($provider -eq "anthropic") { $baseUrl = "https://api.anthropic.com/v1/messages" }
+    elseif ($provider -eq "gemini") { $baseUrl = "https://generativelanguage.googleapis.com/v1beta" }
+    elseif ($provider -eq "openrouter") { $baseUrl = "https://openrouter.ai/api/v1/chat/completions" }
+    else { $baseUrl = "https://api.openai.com/v1/chat/completions" }
+  }
+
+  if ($provider -eq "anthropic") {
+    $headers = @{ "x-api-key" = $ApiKey; "anthropic-version" = "2023-06-01"; "content-type" = "application/json" }
+    $body = @{ model = $model; max_tokens = 16; messages = @(@{ role = "user"; content = "Reply with OK." }) } | ConvertTo-Json -Depth 10
+    [void](Invoke-RestMethod -Method Post -Uri $baseUrl -Headers $headers -Body $body -TimeoutSec 30)
+    return $true
+  }
+  if ($provider -eq "gemini") {
+    $uri = "$($baseUrl.TrimEnd('/'))/models/$model`:generateContent?key=$ApiKey"
+    $body = @{ contents = @(@{ parts = @(@{ text = "Reply with OK." }) }) } | ConvertTo-Json -Depth 10
+    [void](Invoke-RestMethod -Method Post -Uri $uri -ContentType "application/json" -Body $body -TimeoutSec 30)
+    return $true
+  }
+
+  $headers = @{ Authorization = "Bearer $ApiKey"; "content-type" = "application/json" }
+  if ($provider -eq "openrouter") {
+    $headers["HTTP-Referer"] = "http://127.0.0.1:8765"
+    $headers["X-Title"] = "KitHub Studio"
+  }
+  $body = @{
+    model = $model
+    max_tokens = 8
+    messages = @(@{ role = "user"; content = "Reply with OK." })
+  } | ConvertTo-Json -Depth 10
+  [void](Invoke-RestMethod -Method Post -Uri $baseUrl -Headers $headers -Body $body -TimeoutSec 30)
+  return $true
+}
+
+function Save-ProviderSettings {
+  param([object]$Payload)
+  $provider = if ($Payload.provider) { [string]$Payload.provider } else { "openai" }
+  $model = [string]$Payload.model
+  $baseUrl = [string]$Payload.baseUrl
+  $apiKey = [string]$Payload.apiKey
+  if (-not $model.Trim()) { throw "API model is required." }
+
+  $path = Get-ProviderSettingsPath
+  $existing = Read-Utf8JsonIfExists -Path $path
+  $protected = if ($apiKey.Trim()) { Protect-ProviderSecret -Secret $apiKey } elseif ($existing) { [string]$existing.apiKeyProtected } else { "" }
+  if (-not $protected.Trim()) { throw "API key is required for API mode." }
+
+  $settings = [ordered]@{
+    provider = $provider
+    model = $model
+    baseUrl = $baseUrl
+    apiKeyProtected = $protected
+    updatedAt = (Get-Date).ToString("o")
+  }
+  Write-Utf8Json -Path $path -Value $settings
+  $plainKey = if ($apiKey.Trim()) { $apiKey } else { Unprotect-ProviderSecret -ProtectedSecret $protected }
+  Set-ProviderEnvironment -Settings $settings -ApiKey $plainKey
+  $tested = $false
+  if ($Payload.test -eq $true) {
+    $tested = Test-ProviderConnection -Settings $settings -ApiKey $plainKey
+  }
+
+  return [ordered]@{
+    ok = $true
+    provider = $provider
+    model = $model
+    baseUrl = $baseUrl
+    hasApiKey = $true
+    tested = $tested
+    settingsPath = $path
+  }
+}
+
 function Get-WordCount {
   param([string]$Text)
   if (-not $Text.Trim()) { return 0 }
@@ -600,10 +753,21 @@ function Invoke-Pipeline {
     "-Mode", $mode
   )
 
+  if ($mode -eq "command" -and -not $Payload.configPath) {
+    $Payload | Add-Member -NotePropertyName configPath -NotePropertyValue (Join-Path $RepoRoot "runtime/runner-config.provider.template.json") -Force
+  }
+
   if ($Payload.configPath) {
     $configPath = [string]$Payload.configPath
     if (-not [System.IO.Path]::IsPathRooted($configPath)) {
-      $configPath = Join-Path $projectRoot $configPath
+      $projectRelativeConfig = Join-Path $projectRoot $configPath
+      $repoRelativeConfig = Join-Path $RepoRoot $configPath
+      if (Test-Path -LiteralPath $projectRelativeConfig -PathType Leaf) {
+        $configPath = $projectRelativeConfig
+      }
+      else {
+        $configPath = $repoRelativeConfig
+      }
     }
     if (-not (Test-Path -LiteralPath $configPath -PathType Leaf)) {
       throw "ConfigPath not found: $configPath"
@@ -850,6 +1014,17 @@ try {
             repoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
             port = $Port
           })
+          continue
+        }
+
+        if ($method -eq "GET" -and $path -eq "/api/provider-settings") {
+          Write-JsonHttpResponse -Stream $stream -Value (Get-ProviderSettings)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/provider-settings") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Save-ProviderSettings -Payload $payload)
           continue
         }
 
