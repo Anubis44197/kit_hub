@@ -157,6 +157,11 @@ Assert-File "scripts/ci/docx_export_gate_test.ps1"
 if ($LASTEXITCODE -ne 0) {
   throw "docx_export_gate_test.ps1 failed with exit code: $LASTEXITCODE"
 }
+Assert-File "scripts/ci/docx_layout_contract_test.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/docx_layout_contract_test.ps1"
+if ($LASTEXITCODE -ne 0) {
+  throw "docx_layout_contract_test.ps1 failed with exit code: $LASTEXITCODE"
+}
 Assert-File "scripts/ci/user_flow_docs_test.ps1"
 & powershell -ExecutionPolicy Bypass -File "scripts/ci/user_flow_docs_test.ps1"
 if ($LASTEXITCODE -ne 0) {
@@ -166,6 +171,11 @@ Assert-File "scripts/ci/studio_ui_bridge_test.ps1"
 & powershell -ExecutionPolicy Bypass -File "scripts/ci/studio_ui_bridge_test.ps1"
 if ($LASTEXITCODE -ne 0) {
   throw "studio_ui_bridge_test.ps1 failed with exit code: $LASTEXITCODE"
+}
+Assert-File "scripts/ci/studio_ui_ribbon_test.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/studio_ui_ribbon_test.ps1"
+if ($LASTEXITCODE -ne 0) {
+  throw "studio_ui_ribbon_test.ps1 failed with exit code: $LASTEXITCODE"
 }
 Assert-File "scripts/ci/small_e2e_user_flow_test.ps1"
 & powershell -ExecutionPolicy Bypass -File "scripts/ci/small_e2e_user_flow_test.ps1"
