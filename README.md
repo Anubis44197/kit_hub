@@ -270,10 +270,32 @@ The runner rejects a fake brief approval. The brief must contain structured `req
 | Optional dictionary verification | `powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot . -Phase polish -RunId RUN-LOCAL` |
 | Length fulfillment gate | `powershell -ExecutionPolicy Bypass -File scripts/ci/length_fulfillment_gate_test.ps1` |
 
+## KitHub Studio UI
+- Open the static studio preview directly when you only need layout/editing preview:
+  - `index.html`
+- Start the local Studio Bridge when the UI should call the real pipeline:
+  - `powershell -ExecutionPolicy Bypass -File scripts/start_studio.ps1`
+- The bridge listens on `http://127.0.0.1:8765/` and exposes only local health and pipeline endpoints.
+- In the Studio UI:
+  - use `Yeni Proje` to create a separate KitHub project through `scripts/new_project.ps1`,
+  - enter an absolute project path and use `Projeyi Bağla` to read it through the bridge,
+  - if the bridge is not running, `Projeyi Bağla` falls back to the browser folder picker when supported,
+  - write the initial book prompt in `Kitap isteği` and use `İsteği Kaydet` to create/update `runtime/book-request.md`,
+  - enter the absolute project path before running `Dışa Aktar`,
+  - use the `Plan` tab to review `design/*.md` before approving the book plan,
+  - use the `Revizyon` tab to review recent `revision/_workspace` reports,
+  - choose the `fromPhase` / `toPhase` range before running the pipeline,
+  - use the `Onaylar` panel to write explicit approval files under `runtime/approvals`,
+  - use `Bölümü Kaydet` to write the currently opened `episode/ep*.md`,
+  - use `Yenile` after pipeline runs to reload chapters, exports, approvals, and agent evidence,
+  - use `Dışa Aktar` to run `scripts/run_pipeline.ps1` through the local bridge.
+  - review `Çalıştırma Günlüğü` for the real pipeline output or bridge errors.
+- If the bridge is not running, `Dışa Aktar` copies the equivalent PowerShell command to the clipboard instead of pretending it ran.
+
 ## Local Preview Policy
-- Automatic localhost preview is disabled.
 - `scripts/start_app.ps1` only runs runtime bootstrap + readiness checks.
-- Production flow is pipeline-first (`/run` or `scripts/run_pipeline.ps1`).
+- `scripts/start_studio.ps1` starts the optional local UI bridge for user-driven Studio runs.
+- Production flow remains pipeline-first (`/run`, Studio Bridge, or `scripts/run_pipeline.ps1`).
 
 ## Runner Automation
 - Initialize runtime config:

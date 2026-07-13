@@ -1,349 +1,3209 @@
 <!doctype html>
-<html lang="en">
+<html lang="tr">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Word Preview Studio</title>
+  <title>KitHub Studio</title>
   <style>
     :root {
-      --bg: #f1f4f8;
-      --panel: #ffffff;
-      --line: #d5dce6;
-      --ink: #1f2630;
-      --muted: #5e6a79;
-      --accent: #1f5cc6;
-      --paper-w: 13.5cm;
-      --paper-h: 21cm;
-      --paper-pad: 1.8cm;
+      --bg: #071012;
+      --shell: #0b1518;
+      --panel: #101b1f;
+      --panel-2: #132126;
+      --paper: #f4ecdd;
+      --paper-ink: #211d18;
+      --line: #26363d;
+      --line-soft: #1d2b31;
+      --text: #e9efe9;
+      --muted: #91a09d;
+      --quiet: #657571;
+      --teal: #34c6c1;
+      --teal-deep: #1f7776;
+      --amber: #d8aa45;
+      --green: #68c486;
+      --red: #d86d62;
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+      --radius: 8px;
+      --ui: "Segoe UI", Arial, sans-serif;
+      --book: Garamond, "EB Garamond", "Times New Roman", serif;
+      --left-w: 292px;
+      --right-w: 330px;
+      --type-h: 218px;
+      --page-zoom: 1;
     }
 
     * { box-sizing: border-box; }
+
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(150, 166, 161, 0.46) rgba(6, 13, 15, 0.18);
+    }
+
+    *::-webkit-scrollbar {
+      width: 9px;
+      height: 9px;
+    }
+
+    *::-webkit-scrollbar-track {
+      background: rgba(6, 13, 15, 0.28);
+      border-radius: 999px;
+    }
+
+    *::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(143, 158, 154, 0.78), rgba(75, 93, 94, 0.82));
+      border: 2px solid rgba(6, 13, 15, 0.32);
+      border-radius: 999px;
+    }
+
+    *::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(178, 192, 187, 0.92), rgba(92, 118, 118, 0.92));
+    }
+
     body {
       margin: 0;
-      background: radial-gradient(circle at top left, #ffffff 0%, var(--bg) 45%, #e8edf4 100%);
-      color: var(--ink);
-      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    }
-
-    .layout {
-      max-width: 1320px;
-      margin: 0 auto;
-      padding: 24px;
-      display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 20px;
       min-height: 100vh;
-    }
-
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(25, 45, 78, 0.08);
-    }
-
-    .controls { padding: 16px; }
-    .title {
-      margin: 0 0 8px;
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: 0.2px;
-    }
-    .hint {
-      margin: 0 0 14px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.45;
-    }
-    label {
-      display: block;
-      margin: 10px 0 6px;
-      font-size: 12px;
-      font-weight: 600;
-      color: #2f3a49;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-    textarea {
-      width: 100%;
-      min-height: 380px;
-      resize: vertical;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 12px;
-      font: 15px/1.5 "Segoe UI", Arial, sans-serif;
-      color: var(--ink);
-      outline: none;
-    }
-    textarea:focus { border-color: var(--accent); }
-
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    input[type="number"] {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 8px 10px;
-      font-size: 14px;
-    }
-    .actions {
-      margin-top: 12px;
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    button {
-      border: 1px solid var(--line);
-      background: #f7f9fc;
-      color: #233043;
-      border-radius: 8px;
-      padding: 8px 10px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-    button.primary {
-      border-color: #1a4ea9;
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .meta {
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .preview-wrap { padding: 16px; overflow: auto; }
-    .preview-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .pages {
-      display: grid;
-      gap: 16px;
-      justify-content: center;
-      padding-bottom: 30px;
-    }
-    .page {
-      width: var(--paper-w);
-      min-height: var(--paper-h);
-      background: #fff;
-      border: 1px solid #d9dfeb;
-      box-shadow: 0 12px 26px rgba(15, 28, 52, 0.12);
-      padding: var(--paper-pad);
-      position: relative;
-      color: #242b34;
-      font-family: "Palatino Linotype", Palatino, "Book Antiqua", serif;
-      line-height: 1.34;
-      font-size: 11pt;
+      color: var(--text);
+      background:
+        linear-gradient(140deg, rgba(52, 198, 193, 0.08), transparent 30%),
+        radial-gradient(circle at 76% 18%, rgba(216, 170, 69, 0.08), transparent 24%),
+        var(--bg);
+      font-family: var(--ui);
       overflow: hidden;
     }
-    .page p {
-      margin: 0 0 0.8em;
-      text-align: justify;
-      text-indent: 1.2em;
-      white-space: pre-wrap;
-      word-break: normal;
-      overflow-wrap: break-word;
+
+    button, input, select, textarea {
+      font-family: inherit;
     }
-    .page p.dialogue {
-      text-indent: 0;
-      margin-left: 0.4em;
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #111d21;
+      color: var(--text);
+      min-height: 34px;
+      padding: 0 11px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
     }
-    .page p.heading {
-      text-indent: 0;
-      text-align: center;
+
+    button:hover {
+      border-color: var(--teal-deep);
+      background: #14262a;
+    }
+
+    button:active { transform: translateY(1px); }
+
+    button.primary {
+      border-color: rgba(52, 198, 193, 0.65);
+      background: linear-gradient(180deg, #236f70, #164b4d);
+      color: white;
+    }
+
+    button.ghost {
+      color: var(--muted);
+      background: transparent;
+    }
+
+    button.ghost.is-offline {
+      opacity: 0.46;
+      border-style: dashed;
+      cursor: not-allowed;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: var(--left-w) minmax(620px, 1fr) var(--right-w);
+      grid-template-rows: 64px minmax(0, 1fr) var(--type-h);
+      height: 100vh;
+      border: 1px solid #101d20;
+      background: rgba(7, 16, 18, 0.82);
+      transition: grid-template-columns 220ms ease, grid-template-rows 220ms ease;
+    }
+
+    .topbar {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: var(--left-w) 1fr var(--right-w);
+      border-bottom: 1px solid var(--line-soft);
+      background: rgba(6, 13, 15, 0.86);
+      backdrop-filter: blur(18px);
+      transition: grid-template-columns 220ms ease;
+    }
+
+    body.nav-collapsed { --left-w: 72px; }
+    body.agents-collapsed { --right-w: 74px; }
+    body.type-collapsed { --type-h: 40px; }
+
+    .brand {
+      padding: 14px 18px;
+      border-right: 1px solid var(--line-soft);
+    }
+
+    .brand strong {
+      display: block;
+      font: 700 23px/1 var(--book);
+      letter-spacing: 0.2px;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .crumbs {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 18px;
+      color: var(--muted);
+      font-size: 12px;
+      min-width: 0;
+    }
+
+    .mode {
+      margin-left: auto;
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      width: 202px;
+      height: 38px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: #0a1214;
+    }
+
+    .mode button {
+      min-height: 30px;
+      padding: 0;
+      border: 0;
+      border-radius: 18px;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .mode button.active {
+      background: linear-gradient(180deg, #2f8483, #1e5e60);
+      color: #efffff;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 0 18px;
+      border-left: 1px solid var(--line-soft);
+    }
+
+    .chrome-controls {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 8px;
+      border-left: 1px solid var(--line-soft);
+      border-right: 1px solid var(--line-soft);
+    }
+
+    .icon-button {
+      width: 34px;
+      min-width: 34px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .icon-button.active {
+      border-color: rgba(52, 198, 193, 0.5);
+      color: var(--teal);
+      background: rgba(52, 198, 193, 0.08);
+    }
+
+    .score {
+      display: grid;
+      grid-template-columns: auto 44px;
+      gap: 10px;
+      align-items: center;
+      min-width: 116px;
+    }
+
+    .score span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .score strong {
+      display: block;
+      color: var(--green);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .ring {
+      width: 39px;
+      height: 39px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: conic-gradient(var(--green) 0 86%, #233238 86% 100%);
+      color: white;
       font-weight: 700;
-      letter-spacing: 0.5px;
-      margin: 0.2em 0 1em;
+      position: relative;
     }
+
+    .ring::after {
+      content: "";
+      position: absolute;
+      inset: 4px;
+      border-radius: 50%;
+      background: #0b1518;
+      z-index: 0;
+    }
+
+    .ring b { position: relative; z-index: 1; }
+
+    .sidebar, .agents, .typography {
+      background: rgba(12, 22, 25, 0.92);
+    }
+
+    .sidebar {
+      grid-row: 2 / 4;
+      border-right: 1px solid var(--line-soft);
+      min-width: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.nav-collapsed .brand {
+      padding: 13px 8px;
+      text-align: center;
+    }
+
+    body.nav-collapsed .brand strong {
+      font-size: 20px;
+    }
+
+    body.nav-collapsed .brand strong::after {
+      content: "S";
+      font-size: 20px;
+    }
+
+    body.nav-collapsed .brand strong {
+      font-size: 0;
+    }
+
+    body.nav-collapsed .brand span,
+    body.nav-collapsed .side-head .label,
+    body.nav-collapsed .book-card,
+    body.nav-collapsed .nav-section,
+    body.nav-collapsed .side-footer {
+      display: none !important;
+    }
+
+    body.nav-collapsed .side-head {
+      justify-content: center;
+      padding: 0;
+    }
+
+    body.nav-collapsed .sidebar {
+      overflow: hidden;
+      scrollbar-gutter: auto;
+    }
+
+    body.nav-collapsed .sidebar > :not(.side-head) {
+      display: none !important;
+    }
+
+    body.nav-collapsed #sideCollapseBtn {
+      width: 42px;
+      height: 42px;
+      padding: 0;
+    }
+
+    .side-head, .agent-head, .type-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 48px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2.1px;
+    }
+
+    .book-card {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      gap: 12px;
+      padding: 12px 16px 14px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .cover {
+      width: 54px;
+      height: 76px;
+      border: 1px solid #31444a;
+      border-radius: 4px;
+      background:
+        linear-gradient(135deg, rgba(52,198,193,0.28), transparent 42%),
+        linear-gradient(180deg, #1d2a31, #080c0e);
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+
+    .cover::after {
+      content: "KH";
+      position: absolute;
+      inset: auto 8px 8px;
+      color: rgba(244, 236, 221, 0.72);
+      font: 700 16px/1 var(--book);
+      letter-spacing: 1px;
+    }
+
+    .book-title {
+      margin: 4px 0 4px;
+      font: 700 18px/1.15 var(--book);
+    }
+
+    .book-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .nav-section {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .nav-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px 8px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+    }
+
+    .chapter-list {
+      margin: 0;
+      padding: 0 8px;
+      list-style: none;
+    }
+
+    .chapter-list button {
+      width: 100%;
+      min-height: 32px;
+      border: 0;
+      border-radius: 5px;
+      display: grid;
+      grid-template-columns: 25px 1fr auto 12px;
+      gap: 7px;
+      align-items: center;
+      background: transparent;
+      color: var(--muted);
+      text-align: left;
+    }
+
+    .chapter-list button.active {
+      color: var(--text);
+      background: linear-gradient(90deg, rgba(52,198,193,0.2), rgba(255,255,255,0.04));
+      box-shadow: inset 3px 0 0 var(--teal);
+    }
+
+    .chapter-list small { color: var(--quiet); }
+
+    #chapterList button {
+      grid-template-columns: 25px 1fr auto auto 12px;
+    }
+
+    .risk-chip {
+      min-width: 44px;
+      padding: 2px 5px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--quiet);
+      font-size: 10px;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .risk-chip.ok { color: var(--green); border-color: rgba(133, 201, 129, 0.38); }
+    .risk-chip.low { color: var(--teal); border-color: rgba(52, 198, 193, 0.36); }
+    .risk-chip.medium { color: var(--amber); border-color: rgba(214, 169, 85, 0.45); }
+    .risk-chip.high { color: #f0b0a8; border-color: rgba(215, 94, 81, 0.55); }
+
+    .approval-list button {
+      grid-template-columns: 25px 1fr auto 66px;
+    }
+
+    .approval-list .approve-action {
+      min-height: 24px;
+      padding: 0 8px;
+      font-size: 11px;
+      color: var(--teal);
+      border-color: rgba(52, 198, 193, 0.35);
+      background: rgba(52, 198, 193, 0.06);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 1px solid var(--quiet);
+    }
+
+    .dot.done { background: var(--green); border-color: var(--green); }
+    .dot.wait { background: var(--amber); border-color: var(--amber); }
+
+    .side-footer {
+      margin-top: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .project-path {
+      grid-column: 1 / -1;
+      width: 100%;
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #0c171a;
+      color: var(--text);
+      padding: 0 9px;
+      font-size: 12px;
+    }
+
+    .book-request {
+      grid-column: 1 / -1;
+      width: 100%;
+      min-height: 86px;
+      max-height: 150px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #0c171a;
+      color: var(--text);
+      padding: 9px;
+      font: 12px/1.45 var(--ui);
+    }
+
+    .phase-controls {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .phase-controls select {
+      width: 100%;
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #0c171a;
+      color: var(--text);
+      padding: 0 8px;
+      font-size: 12px;
+    }
+
+    .workspace {
+      grid-column: 2;
+      grid-row: 2;
+      min-width: 0;
+      display: grid;
+      grid-template-rows: 48px 41px minmax(0, 1fr) 33px;
+      border-right: 1px solid var(--line-soft);
+      background: linear-gradient(180deg, rgba(14, 23, 27, 0.92), rgba(8, 14, 16, 0.96));
+    }
+
+    .tabs {
+      display: flex;
+      align-items: end;
+      gap: 22px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .tabs button {
+      min-height: 47px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      color: var(--muted);
+      background: transparent;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tabs button.active {
+      color: var(--teal);
+      border-bottom-color: var(--teal);
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-bottom: 1px solid var(--line-soft);
+      overflow: hidden;
+    }
+
+    .toolbar button {
+      min-width: 38px;
+    }
+
+    .toolbar button.active {
+      border-color: rgba(52, 198, 193, 0.58);
+      color: var(--teal);
+      background: rgba(52, 198, 193, 0.08);
+    }
+
+    .toolbar select, .toolbar input {
+      height: 29px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #0c171a;
+      color: var(--text);
+      padding: 0 8px;
+      font-size: 12px;
+    }
+
+    .toolbar .spacer { flex: 1; }
+
+    .editor-grid {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(300px, 0.95fr) minmax(330px, 1.05fr);
+      gap: 14px;
+      padding: 14px;
+    }
+
+    body.preview-focus .editor-grid {
+      grid-template-columns: minmax(0, 1fr);
+      padding: 18px 24px;
+    }
+
+    body.preview-focus .manuscript {
+      display: none;
+    }
+
+    .manuscript {
+      min-width: 0;
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.02), transparent),
+        #081013;
+      display: grid;
+      grid-template-rows: 1fr;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100%;
+      resize: none;
+      border: 0;
+      outline: none;
+      padding: 54px 42px;
+      background: transparent;
+      color: #d9ded8;
+      font: 18px/1.68 var(--book);
+      text-align: var(--editor-align, left);
+      scrollbar-color: rgba(150, 166, 161, 0.38) transparent;
+    }
+
+    .preview-shell {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 1fr 38px;
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      background: #0b1214;
+      overflow: hidden;
+    }
+
+    .page-stage {
+      min-height: 0;
+      display: grid;
+      align-items: start;
+      justify-items: center;
+      padding: 14px 22px 14px 14px;
+      overflow: auto;
+      scrollbar-color: rgba(150, 166, 161, 0.48) rgba(6, 13, 15, 0.16);
+    }
+
+    body.preview-focus .page-stage {
+      padding: 24px 34px 18px;
+    }
+
+    .page {
+      width: min(100%, calc(440px * var(--page-zoom)));
+      aspect-ratio: 148 / 210;
+      padding: 54px 58px 50px;
+      background:
+        linear-gradient(90deg, rgba(105, 82, 44, 0.08), transparent 12%, transparent 88%, rgba(105,82,44,0.06)),
+        var(--paper);
+      color: var(--paper-ink);
+      border: 1px solid #d7cbb7;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.42);
+      font-family: var(--book);
+      position: relative;
+      overflow: hidden;
+    }
+
+    body.preview-focus .page {
+      width: min(100%, calc(520px * var(--page-zoom)));
+    }
+
+    .page::before, .page::after {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-color: rgba(83, 70, 49, 0.28);
+      border-style: solid;
+    }
+
+    .page::before {
+      top: 34px;
+      left: 34px;
+      border-width: 1px 0 0 1px;
+    }
+
+    .page::after {
+      right: 34px;
+      bottom: 34px;
+      border-width: 0 1px 1px 0;
+    }
+
+    .page h2 {
+      margin: 8px 0 7px;
+      text-align: center;
+      font-size: 24px;
+      line-height: 1.1;
+      font-weight: 500;
+    }
+
+    .page .chapter-kicker {
+      margin-top: 8px;
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 6px;
+    }
+
+    .page .ornament {
+      width: 72px;
+      height: 1px;
+      margin: 14px auto 26px;
+      background: #5a4c38;
+      position: relative;
+    }
+
+    .page .ornament::after {
+      content: "";
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      left: 50%;
+      top: -3px;
+      transform: translateX(-50%) rotate(45deg);
+      border: 1px solid #5a4c38;
+      background: var(--paper);
+    }
+
+    .page p {
+      margin: 0 0 10px;
+      font-size: var(--preview-font-size, 17px);
+      line-height: var(--preview-line-height, 1.54);
+      text-align: var(--reader-align, justify);
+      text-indent: 1.25em;
+    }
+
+    .page p.first { text-indent: 0; }
+    .page p.first::first-letter {
+      float: left;
+      font-size: 48px;
+      line-height: 0.82;
+      padding: 7px 7px 0 0;
+    }
+
     .page-no {
       position: absolute;
       left: 0;
       right: 0;
-      bottom: 0.8cm;
+      bottom: 31px;
       text-align: center;
-      color: #6a7481;
-      font-size: 10pt;
+      font-size: 11px;
+      color: #6a5a41;
     }
 
-    @media (max-width: 1080px) {
-      .layout { grid-template-columns: 1fr; }
-      .page { width: 100%; min-height: auto; }
+    .preview-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 0 12px;
+      border-top: 1px solid var(--line-soft);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .preview-controls select {
+      height: 25px;
+      margin-right: 10px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #0c171a;
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .statusbar {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 0 18px;
+      border-top: 1px solid var(--line-soft);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .statusbar .live {
+      margin-left: auto;
+      color: var(--green);
+    }
+
+    #chapterAction {
+      color: var(--amber);
+      min-width: 120px;
+    }
+
+    .agents {
+      grid-column: 3;
+      grid-row: 2 / 4;
+      min-width: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.agents-collapsed .agent-head {
+      justify-content: center;
+      padding: 0;
+    }
+
+    body.agents-collapsed .agent-head .label,
+    body.agents-collapsed .agent h3,
+    body.agents-collapsed .agent p,
+    body.agents-collapsed .agent-foot,
+    body.agents-collapsed .agent-progress,
+    body.agents-collapsed .agent-summary {
+      display: none;
+    }
+
+    body.agents-collapsed .top-actions .score,
+    body.agents-collapsed .top-actions #exportBtn {
+      display: none;
+    }
+
+    body.agents-collapsed .agent-list {
+      padding: 10px 8px;
+      gap: 12px;
+      place-items: center;
+    }
+
+    body.agents-collapsed .agent {
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.035);
+    }
+
+    body.agents-collapsed .agent-num {
+      margin: 0;
+    }
+
+    .agent-list {
+      padding: 14px;
+      overflow: auto;
+      display: grid;
+      gap: 10px;
+      flex: 0 0 auto;
+      max-height: 208px;
+      min-height: 82px;
+    }
+
+    .agent {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.025);
+    }
+
+    .agent-num {
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      border: 1px solid var(--quiet);
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 1px;
+    }
+
+    .agent.done .agent-num { border-color: var(--green); color: var(--green); }
+    .agent.running .agent-num { border-color: var(--teal); color: var(--teal); }
+    .agent.review .agent-num { border-color: var(--amber); color: var(--amber); }
+
+    .agent h3 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .agent p {
+      margin: 5px 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.38;
+    }
+
+    .agent .agent-evidence {
+      margin-top: -2px;
+      color: #8ba19b;
+      font: 10.5px/1.35 Consolas, "Cascadia Mono", monospace;
+      word-break: break-word;
+    }
+
+    .agent-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .state {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .state::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--quiet);
+    }
+
+    .agent.done .state::before { background: var(--green); }
+    .agent.running .state::before { background: var(--teal); }
+    .agent.review .state::before { background: var(--amber); }
+
+    .agent-progress {
+      height: 4px;
+      width: 100%;
+      border-radius: 999px;
+      background: #203137;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .agent-progress span {
+      display: block;
+      height: 100%;
+      width: var(--p, 0%);
+      background: linear-gradient(90deg, var(--teal), var(--green));
+    }
+
+    .agent-summary {
+      margin-top: 0;
+      padding: 14px;
+      border-top: 1px solid var(--line-soft);
+      background: rgba(5, 11, 12, 0.35);
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .run-log {
+      margin-top: 12px;
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      background: #071012;
+      overflow: hidden;
+    }
+
+    .run-log header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 32px;
+      padding: 0 9px;
+      border-bottom: 1px solid var(--line-soft);
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+
+    .run-log pre {
+      margin: 0;
+      max-height: 150px;
+      overflow: auto;
+      padding: 10px;
+      color: #b9c7c2;
+      font: 11px/1.45 Consolas, "Cascadia Mono", monospace;
+      white-space: pre-wrap;
+    }
+
+    .audit-panel {
+      margin-top: 12px;
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.025);
+      overflow: hidden;
+    }
+
+    .audit-panel header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 32px;
+      padding: 0 9px;
+      border-bottom: 1px solid var(--line-soft);
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+    }
+
+    .audit-list {
+      display: grid;
+      gap: 7px;
+      padding: 9px;
+    }
+
+    .audit-row {
+      display: grid;
+      grid-template-columns: 12px 1fr;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .audit-row b {
+      display: block;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .audit-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 4px;
+      background: var(--quiet);
+    }
+
+    .audit-row.ok .audit-dot { background: var(--green); }
+    .audit-row.wait .audit-dot { background: var(--amber); }
+
+    .lifecycle-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 9px;
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .lifecycle-actions .danger {
+      border-color: rgba(215, 94, 81, 0.55);
+      color: #f0b0a8;
+    }
+
+    .progress-line {
+      height: 5px;
+      border-radius: 99px;
+      background: #203137;
+      overflow: hidden;
+      margin: 10px 0 10px;
+    }
+
+    .progress-line span {
+      display: block;
+      width: 68%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--teal), var(--amber));
+    }
+
+    .typography {
+      grid-column: 2;
+      grid-row: 3;
+      border-top: 1px solid var(--line-soft);
+      border-right: 1px solid var(--line-soft);
+      display: grid;
+      grid-template-rows: 39px 1fr;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    body.type-collapsed .typography {
+      grid-template-rows: 39px 0;
+    }
+
+    body.type-collapsed .type-body {
+      display: none;
+    }
+
+    .type-body {
+      display: grid;
+      grid-template-columns: 118px repeat(4, minmax(150px, 1fr));
+      min-width: 0;
+      overflow: auto;
+    }
+
+    .type-nav {
+      padding: 10px 14px;
+      border-right: 1px solid var(--line-soft);
+      display: grid;
+      align-content: start;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .type-nav button {
+      text-align: left;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      min-height: 24px;
+      color: var(--muted);
+    }
+
+    .type-nav button.active { color: var(--teal); }
+
+    .type-group {
+      padding: 10px 12px;
+      border-right: 1px solid var(--line-soft);
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .type-group h4 {
+      margin: 0 0 8px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .field {
+      display: grid;
+      grid-template-columns: 1fr 92px;
+      gap: 10px;
+      align-items: center;
+      min-height: 29px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      height: 28px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #0c171a;
+      color: var(--text);
+      padding: 0 8px;
+      font-size: 12px;
+    }
+
+    .mini-page {
+      width: 64px;
+      height: 78px;
+      margin: 2px auto 0;
+      border: 1px solid var(--line);
+      position: relative;
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      font: 22px/1 var(--book);
+    }
+
+    .mini-page span {
+      position: absolute;
+      font: 10px/1 var(--ui);
+      color: var(--muted);
+    }
+
+    .mini-page .t { top: -12px; }
+    .mini-page .b { bottom: -12px; }
+    .mini-page .l { left: -20px; }
+    .mini-page .r { right: -20px; }
+
+    .wizard-panel {
+      margin: 0 10px 10px;
+      padding: 8px;
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.025);
+      display: grid;
+      gap: 6px;
+    }
+
+    .wizard-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+    }
+
+    .wizard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .wizard-panel label {
+      display: grid;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .wizard-panel input,
+    .wizard-panel select,
+    .wizard-panel textarea {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #0c171a;
+      color: var(--text);
+      padding: 6px 8px;
+      font: 12px/1.35 var(--ui);
+    }
+
+    .wizard-panel textarea {
+      min-height: 44px;
+      resize: vertical;
+    }
+
+    .wizard-panel .wide { grid-column: 1 / -1; }
+
+    .wizard-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .wizard-missing {
+      color: #f0b0a8;
+      font-size: 11px;
+      line-height: 1.35;
+      min-height: 15px;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 1180px) {
+      body { overflow: auto; }
+      .app {
+        height: auto;
+        min-height: 100vh;
+        grid-template-columns: 260px minmax(0, 1fr);
+        grid-template-rows: 64px auto 360px auto;
+      }
+      .topbar { grid-template-columns: 260px 1fr; }
+      .top-actions { display: none; }
+      .agents { grid-column: 1 / -1; grid-row: 3; border-top: 1px solid var(--line-soft); }
+      .typography { grid-column: 1 / -1; grid-row: 4; }
+      .editor-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 780px) {
+      .app, .topbar { display: block; }
+      body { overflow: auto; }
+      .sidebar, .workspace, .agents, .typography { border: 0; }
+      .sidebar { max-height: none; }
+      .editor-grid { padding: 10px; }
+      textarea { min-height: 360px; padding: 28px; }
+      .type-body { grid-template-columns: 1fr; }
+      .type-nav { grid-template-columns: repeat(3, 1fr); border-right: 0; border-bottom: 1px solid var(--line-soft); }
     }
   </style>
 </head>
 <body>
-  <div class="layout">
-    <section class="panel controls">
-      <h1 class="title">Word Preview Studio</h1>
-      <p class="hint">
-        Paste chapter text on the left. The right side renders a live reading preview with estimated page breaks.
-      </p>
-
-      <label for="inputText">Manuscript Text</label>
-      <textarea id="inputText" spellcheck="false">BÖLÜM 1
-
-Göl sabahın erken saatlerinde neredeyse cam kadar sakindi. Kenan oltasını usulca suya bıraktı.
-
-"Bugün rüzgâr ters dönecek," dedi kendi kendine.
-
-Sözleri kıyıda yankılanıp kaybolurken, suyun yüzeyinde ince bir halka genişledi.</textarea>
-
-      <div class="row">
-        <div>
-          <label for="charsPerPage">Chars / Page</label>
-          <input id="charsPerPage" type="number" min="600" max="4500" step="100" value="1900" />
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <strong>KitHub Studio</strong>
+        <span>Yaz. Denetle. Diz. Yayına hazırla.</span>
+      </div>
+      <div class="crumbs">
+        <span>Projeler</span>
+        <span>›</span>
+        <span id="projectName">Proje Bekleniyor</span>
+        <span>›</span>
+        <span id="draftName">Studio</span>
+        <div class="chrome-controls" aria-label="Panel kontrolleri">
+          <button class="icon-button active" id="toggleNav" title="Kitap haritasını aç/kapat">☰</button>
+          <button class="icon-button active" id="toggleType" title="Dizgi panelini aç/kapat">▣</button>
+          <button class="icon-button active" id="toggleAgents" title="Ajan panelini aç/kapat">◎</button>
+          <button class="icon-button" id="togglePreviewFocus" title="Büyük ön izleme">⤢</button>
         </div>
+        <div class="mode" aria-label="Çalışma modu">
+          <button class="active" data-mode="IDE">IDE Modu</button>
+          <button data-mode="API">API Modu</button>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="score">
+          <div>
+            <span>Kalite Skoru</span>
+            <strong id="qualityLabel">Proje bekliyor</strong>
+          </div>
+          <div class="ring"><b id="scoreValue">0</b></div>
+        </div>
+        <button class="primary" id="exportBtn">Dışa Aktar</button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="side-head">
+        <span class="label">Kitap Haritası</span>
+        <button class="ghost" id="sideCollapseBtn" title="Kitap haritasını daralt">☰</button>
+      </div>
+      <section class="book-card">
+        <div class="cover"></div>
         <div>
-          <label for="fontSize">Font Size (pt)</label>
-          <input id="fontSize" type="number" min="10" max="14" step="1" value="11" />
+          <h1 class="book-title">Proje Bekleniyor</h1>
+          <div class="book-meta">KitHub projesi<br><span id="bookStats">bölüm ve hedef bekliyor</span></div>
+        </div>
+      </section>
+      <section class="wizard-panel" aria-label="Başlangıç sihirbazı">
+        <div class="wizard-head">
+          <span>Başlangıç Sihirbazı</span>
+          <span id="wizardCompleteness">0/8</span>
+        </div>
+        <div class="wizard-grid">
+          <label>Tür
+            <select id="wizardType">
+              <option value="">Seç</option>
+              <option>Roman</option>
+              <option>Hikaye</option>
+              <option>Novella</option>
+              <option>Deneme</option>
+              <option>Biyografi</option>
+              <option>Anı</option>
+              <option>Araştırma kitabı</option>
+              <option>Çocuk kitabı</option>
+              <option>Senaryo</option>
+              <option>Şiir kitabı</option>
+            </select>
+          </label>
+          <label>Hedef Sayfa
+            <input id="wizardPages" type="number" min="1" max="1200" placeholder="örn. 245" />
+          </label>
+          <label>Karakter
+            <input id="wizardCharacters" type="number" min="0" max="80" placeholder="örn. 6" />
+          </label>
+          <label>Anlatıcı
+            <select id="wizardNarrator">
+              <option value="">Seç</option>
+              <option>Üçüncü tekil sınırlı</option>
+              <option>Üçüncü tekil tanrısal</option>
+              <option>Birinci tekil</option>
+              <option>Çoklu bakış açısı</option>
+              <option>Mektup/günlük biçimi</option>
+            </select>
+          </label>
+          <label class="wide">Konu
+            <textarea id="wizardPremise" placeholder="Ana çatışma, tema, olay vaadi..."></textarea>
+          </label>
+          <label class="wide">Dönem ve Mekân
+            <input id="wizardSetting" placeholder="örn. 1930'lar İstanbul, Pera, Dolmabahçe..." />
+          </label>
+          <label>Final Tipi
+            <select id="wizardEnding">
+              <option value="">Seç</option>
+              <option>Kapalı ve net final</option>
+              <option>Yüzleşme finali</option>
+              <option>Acı-tatlı final</option>
+              <option>Açık uçlu final</option>
+              <option>Devam kitabına açık final</option>
+            </select>
+          </label>
+          <label>Üslup
+            <input id="wizardStyle" placeholder="edebi, akıcı, karanlık..." />
+          </label>
+          <label class="wide">Sınırlar / Yasaklar
+            <textarea id="wizardBoundaries" placeholder="İstenmeyen sahneler, sahte alıntı yasağı, tarihsel kişi kuralları..."></textarea>
+          </label>
+        </div>
+        <div class="wizard-missing" id="wizardMissing"></div>
+        <div class="wizard-actions">
+          <button class="ghost" id="buildRequestBtn" type="button">İsteği Oluştur</button>
+          <button class="primary" id="saveWizardBtn" type="button">Kaydet</button>
+        </div>
+      </section>
+      <section class="nav-section">
+        <div class="nav-title"><span>Yazı</span><span>Taslak 1</span></div>
+        <ul class="chapter-list" id="chapterList"></ul>
+      </section>
+      <section class="nav-section">
+        <div class="nav-title"><span>Varlıklar</span><span>Durum</span></div>
+        <ul class="chapter-list">
+          <li><button type="button" data-info="Karakter varlıkları: proje planından okunur."><span>◎</span><span>Karakterler</span><small>6</small><i class="dot done"></i></button></li>
+          <li><button type="button" data-info="Mekan varlıkları: dönem ve sahne planına bağlıdır."><span>⌖</span><span>Mekanlar</span><small>8</small><i class="dot done"></i></button></li>
+          <li><button type="button" data-info="Olay örgüsü: bölüm planı ve süreklilik defteriyle izlenir."><span>□</span><span>Olay Örgüsü</span><small>12</small><i class="dot wait"></i></button></li>
+          <li><button type="button" data-info="Araştırma: tarihsel ve tür referansları raporlanır."><span>≡</span><span>Araştırma</span><small>4</small><i class="dot wait"></i></button></li>
+        </ul>
+      </section>
+      <section class="nav-section">
+        <div class="nav-title"><span>Dışa Aktarım</span><span>Sonuç</span></div>
+        <ul class="chapter-list" id="exportList">
+          <li><button type="button" data-export-info="A5 baskı DOCX final export aşamasında üretilir."><span>◇</span><span>A5 Baskı DOCX</span><small>Hazır</small><i class="dot done"></i></button></li>
+          <li><button type="button" data-export-info="Kapak briefi kapak tasarım girdilerini taşır."><span>◇</span><span>Kapak Briefi</span><small>Hazır</small><i class="dot done"></i></button></li>
+          <li><button type="button" data-export-info="Temizlik onayı kullanıcı romanı bitirdim dediğinde çalışır."><span>◇</span><span>Temizlik Onayı</span><small>Bekler</small><i class="dot wait"></i></button></li>
+        </ul>
+      </section>
+      <section class="nav-section">
+        <div class="nav-title"><span>Onaylar</span><span>Kapı</span></div>
+        <ul class="chapter-list approval-list" id="approvalList"></ul>
+      </section>
+      <div class="side-footer">
+        <input class="project-path" id="projectPathInput" placeholder="Proje yolu: C:\Users\...\KitHubProjects\Kitap" />
+        <textarea class="book-request" id="bookRequestInput" placeholder="Kitap isteği: tür, konu, sayfa hedefi, dönem, karakterler, sınırlar..."></textarea>
+        <div class="phase-controls">
+          <select id="fromPhaseSelect" aria-label="Başlangıç fazı">
+            <option value="intake">intake</option>
+            <option value="propose">propose</option>
+            <option value="design-big">design-big</option>
+            <option value="design-small">design-small</option>
+            <option value="create">create</option>
+            <option value="polish">polish</option>
+            <option value="rewrite">rewrite</option>
+            <option value="export">export</option>
+          </select>
+          <select id="toPhaseSelect" aria-label="Bitiş fazı">
+            <option value="intake">intake</option>
+            <option value="propose">propose</option>
+            <option value="design-big">design-big</option>
+            <option value="design-small">design-small</option>
+            <option value="create">create</option>
+            <option value="polish">polish</option>
+            <option value="rewrite">rewrite</option>
+            <option value="export" selected>export</option>
+          </select>
+        </div>
+        <button class="ghost" id="newProjectBtn">Yeni Proje</button>
+        <button class="ghost" id="bindProjectBtn">Projeyi Bağla</button>
+        <button class="ghost" id="saveRequestBtn">İsteği Kaydet</button>
+        <button class="ghost" id="refreshProjectBtn">Yenile</button>
+        <button class="ghost" id="saveEpisodeBtn">Bölümü Kaydet</button>
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <nav class="tabs" aria-label="Çalışma sekmeleri">
+        <button class="active" data-tab="manuscript">Metin</button>
+        <button data-tab="preview">Sayfa Ön İzleme</button>
+        <button data-tab="plan">Plan</button>
+        <button data-tab="revision">Revizyon</button>
+      </nav>
+      <div class="toolbar">
+        <select id="blockStyle" aria-label="Metin stili">
+          <option>Gövde Metni</option>
+          <option>Bölüm Başlığı</option>
+          <option>Alıntı</option>
+        </select>
+        <select id="fontSelect" aria-label="Yazı tipi">
+          <option>Garamond</option>
+          <option>Times New Roman</option>
+          <option>Georgia</option>
+          <option>Palatino Linotype</option>
+        </select>
+        <select id="fontSizeSelect" aria-label="Punto">
+          <option>11</option>
+          <option selected>11.5</option>
+          <option>12</option>
+        </select>
+        <button type="button" data-format="bold" title="Kalın">B</button>
+        <button type="button" data-format="italic" title="İtalik">I</button>
+        <button type="button" data-format="underline" title="Altı çizili">U</button>
+        <button type="button" data-align="left" title="Sola hizala">≡</button>
+        <button type="button" data-align="justify" title="İki yana yasla">▤</button>
+        <div class="spacer"></div>
+        <button id="renderBtn">Ön İzle</button>
+      </div>
+
+      <div class="editor-grid">
+        <div class="manuscript">
+          <textarea id="manuscriptText" spellcheck="false"></textarea>
+        </div>
+        <div class="preview-shell">
+          <div class="page-stage">
+            <article class="page" id="bookPage">
+              <div class="chapter-kicker" id="pageKicker">BÖLÜM 7</div>
+              <h2 id="pageTitle">Veda</h2>
+              <div class="ornament"></div>
+              <div id="pageBody"></div>
+              <div class="page-no" id="pageNo">119</div>
+            </article>
+          </div>
+          <div class="preview-controls">
+            <span id="previewMeta">A5 · 148 x 210 mm · Garamond</span>
+            <span>
+              <select id="zoomSelect" aria-label="Ön izleme zoom">
+                <option value="0.9">%90</option>
+                <option value="1" selected>%100</option>
+                <option value="1.12">%112</option>
+                <option value="1.25">%125</option>
+              </select>
+              <span id="pageMeta">1 / 1</span>
+            </span>
+          </div>
         </div>
       </div>
 
-      <div class="actions">
-        <button class="primary" id="renderBtn">Render Preview</button>
-        <button id="clearBtn">Clear</button>
-        <button id="sampleBtn">Load Sample</button>
-      </div>
+      <footer class="statusbar">
+        <span id="wordCount">0 kelime</span>
+        <span id="charCount">0 karakter</span>
+        <span id="chapterAction">Aksiyon yok</span>
+        <span>Türkçe (Türkiye)</span>
+        <span class="live">Motor olayı: kullanıcı onayı bekleniyor</span>
+      </footer>
+    </section>
 
-      <div class="meta" id="metaInfo">
-        Characters: 0<br />
-        Words: 0<br />
-        Pages: 0
+    <section class="typography">
+      <div class="type-head">
+        <span class="label">Mizanpaj ve Tipografi</span>
+        <span>
+          <button id="drawerToggle" class="ghost">Paneli Kapat</button>
+          <button id="applyType" class="primary">Uygula</button>
+        </span>
+      </div>
+      <div class="type-body">
+        <nav class="type-nav" id="typeNav">
+          <button class="active" data-type-section="page">Sayfa</button>
+          <button data-type-section="font">Tipografi</button>
+          <button data-type-section="paragraph">Paragraf</button>
+          <button data-type-section="header">Üstbilgi</button>
+          <button data-type-section="numbering">Numaralandırma</button>
+        </nav>
+        <div class="type-group" data-type-panel="page">
+          <h4>Sayfa</h4>
+          <label class="field">Sayfa Boyutu
+            <select id="pageSize"><option>A5 (148 x 210 mm)</option><option>A4 (210 x 297 mm)</option></select>
+          </label>
+          <label class="field">Baskı Türü
+            <select id="printMode"><option>Tek taraf</option><option>Karşılıklı sayfa</option></select>
+          </label>
+          <label class="field">Ön Bölüm
+            <select id="frontMatter"><option>Künye + İçindekiler</option><option>Yalnız metin</option></select>
+          </label>
+        </div>
+        <div class="type-group" data-type-panel="font">
+          <h4>Yazı</h4>
+          <label class="field">Yazı Tipi
+            <select id="typeFont"><option>Garamond</option><option>Times New Roman</option><option>Georgia</option><option>Palatino Linotype</option></select>
+          </label>
+          <label class="field">Punto
+            <input id="typeSize" type="number" min="10" max="13" step="0.5" value="11.5" />
+          </label>
+          <label class="field">Satır Aralığı
+            <input id="lineHeight" type="number" min="1" max="1.8" step="0.05" value="1.15" />
+          </label>
+        </div>
+        <div class="type-group" data-type-panel="header">
+          <h4>Kenar Boşlukları</h4>
+          <label class="field">Üst
+            <input id="marginTop" type="number" min="10" max="35" value="18" />
+          </label>
+          <label class="field">İç
+            <input id="marginInside" type="number" min="10" max="35" value="20" />
+          </label>
+          <label class="field">Dış
+            <input id="marginOutside" type="number" min="10" max="35" value="16" />
+          </label>
+        </div>
+        <div class="type-group" data-type-panel="paragraph">
+          <h4>Paragraf</h4>
+          <label class="field">İlk Satır
+            <input id="indent" type="number" min="0" max="1.5" step="0.05" value="0.55" />
+          </label>
+          <label class="field">Paragraf Sonrası
+            <input id="after" type="number" min="0" max="12" value="0" />
+          </label>
+          <div class="mini-page"><span class="t">18</span><span class="b">20</span><span class="l">20</span><span class="r">16</span>A</div>
+        </div>
       </div>
     </section>
 
-    <section class="panel preview-wrap">
-      <div class="preview-header">
-        <strong>Book Reading Preview</strong>
-        <span id="previewStatus">Ready</span>
+    <aside class="agents">
+      <div class="agent-head">
+        <span class="label">Ajan Akışı</span>
+        <button id="collapseAgents" class="ghost">Daralt</button>
       </div>
-      <div id="pages" class="pages"></div>
-    </section>
-  </div>
+      <div class="agent-list" id="agentList"></div>
+      <div class="agent-summary">
+        <div class="label">Genel İlerleme</div>
+        <div class="progress-line"><span id="overallProgress"></span></div>
+        <div class="book-meta" id="agentSummary">9 ajandan 5'i tamamlandı. 2 onay bekliyor.</div>
+        <div class="audit-panel">
+          <header>
+            <span>Kitap Sağlığı</span>
+            <span id="healthMeta">Bekler</span>
+          </header>
+          <div class="audit-list" id="healthList"></div>
+        </div>
+        <div class="audit-panel">
+          <header>
+            <span>Yayın Paketi</span>
+            <span id="lifecycleMeta">Taslak</span>
+          </header>
+          <div class="audit-list" id="lifecycleList"></div>
+          <div class="lifecycle-actions">
+            <button class="ghost" id="finalExportBtn">Finali Masaüstüne Aktar</button>
+            <button class="ghost danger" id="cleanupProjectBtn">Bitti Onayıyla Temizle</button>
+          </div>
+        </div>
+        <div class="run-log">
+          <header>
+            <span>Çalıştırma Günlüğü</span>
+            <button class="ghost" id="copyRunLogBtn">Kopyala</button>
+          </header>
+          <pre id="runLogOutput">Studio Bridge bekleniyor.</pre>
+        </div>
+      </div>
+    </aside>
+  </main>
 
   <script>
-    const inputText = document.getElementById("inputText");
-    const charsPerPage = document.getElementById("charsPerPage");
-    const fontSize = document.getElementById("fontSize");
-    const pagesEl = document.getElementById("pages");
-    const metaInfo = document.getElementById("metaInfo");
-    const previewStatus = document.getElementById("previewStatus");
-    const renderBtn = document.getElementById("renderBtn");
-    const clearBtn = document.getElementById("clearBtn");
-    const sampleBtn = document.getElementById("sampleBtn");
-    const defaultSample = [
-      "BÖLÜM 1",
-      "",
-      "Göl sabahın erken saatlerinde neredeyse cam kadar sakindi. Kenan oltasını usulca suya bıraktı.",
-      "",
-      "\"Bugün rüzgar ters dönecek,\" dedi kendi kendine.",
-      "",
-      "Sözleri kıyıda yankılanıp kaybolurken, suyun yüzeyinde ince bir halka genişledi."
-    ].join("\n");
+    let chapters = [];
 
-    function paragraphKind(text) {
-      const t = text.trim();
-      const normalized = t.toLocaleLowerCase("tr-TR");
-      if (!t) return "empty";
-      if (/^b[öo]l[üu]m\s+\d+/i.test(normalized)) return "heading";
-      if (/^b[öo]l[üu]m\s+\d+/i.test(t) || /^chapter\s+\d+/i.test(t)) return "heading";
-      if (t.startsWith("\"") || t.startsWith("“") || t.startsWith("—") || t.startsWith("- ")) return "dialogue";
-      return "normal";
-    }
+    let agents = [
+      { name: "Brief Interviewer", text: "Kullanıcının konu, tür, hedef uzunluk ve sınırlarını toplar.", state: "idle", progress: 0 },
+      { name: "Proposal Generator", text: "Alternatif hikaye yönlerini ve riskleri çıkarır.", state: "idle", progress: 0 },
+      { name: "Character Architect", text: "Karakter arzusu, korkusu, sırları ve ilişki ağını kurar.", state: "idle", progress: 0 },
+      { name: "Episode Architect", text: "Sayfa hedefine göre bölüm planını ve kelime dağılımını yapar.", state: "idle", progress: 0 },
+      { name: "Episode Creator", text: "Onaylı plana bağlı kalarak sıradaki bölümü üretir.", state: "idle", progress: 0 },
+      { name: "Continuity Bridge", text: "Olay, bilgi, zaman ve karakter tutarlılığını kontrol eder.", state: "idle", progress: 0 },
+      { name: "TDK Polisher", text: "Türkçe karakter, noktalama ve yazım risklerini denetler.", state: "idle", progress: 0 },
+      { name: "Typography Layout Auditor", text: "A5, font, paragraf ve sayfa düzeni profilini doğrular.", state: "idle", progress: 0 },
+      { name: "Export Validator", text: "DOCX dosyasının içerik, temizlik ve bütünlük kapılarını çalıştırır.", state: "idle", progress: 0 }
+    ];
 
-    function splitPages(paragraphs, limit) {
-      const pages = [];
-      let current = [];
-      let currentLen = 0;
+    const defaultAgents = agents.map(agent => ({ ...agent }));
+    const approvalDefinitions = [
+      { key: "brief", file: "book-brief-approval.json", label: "Brief", phase: "propose" },
+      { key: "story", file: "story-choice.json", label: "Hikaye Seçimi", phase: "design-big" },
+      { key: "length", file: "length-depth-approval.json", label: "Uzunluk Riski", phase: "design-big" },
+      { key: "plan", file: "book-plan-approval.json", label: "Kitap Planı", phase: "design-small" },
+      { key: "freeze", file: "design-freeze.json", label: "Tasarım Kilidi", phase: "create" },
+      { key: "rewrite", file: "rewrite-approval.json", label: "Revizyon", phase: "rewrite" },
+      { key: "export", file: "export-approval.json", label: "Export", phase: "export" }
+    ];
 
-      for (const p of paragraphs) {
-        const len = p.length + 1;
-        if (currentLen + len > limit && current.length > 0) {
-          pages.push(current);
-          current = [];
-          currentLen = 0;
-        }
-        current.push(p);
-        currentLen += len;
+    const emptyManuscriptText = "Henüz gerçek bir bölüm bağlı değil.\n\nYeni proje oluşturun veya mevcut KitHub projesini bağlayın. Studio eski roman, örnek metin ya da test içeriğini başlangıç metni olarak yüklemez.";
+
+    const chapterList = document.getElementById("chapterList");
+    const agentList = document.getElementById("agentList");
+    const exportList = document.getElementById("exportList");
+    const approvalList = document.getElementById("approvalList");
+    const manuscriptText = document.getElementById("manuscriptText");
+    const pageBody = document.getElementById("pageBody");
+    const pageTitle = document.getElementById("pageTitle");
+    const pageKicker = document.getElementById("pageKicker");
+    const pageNo = document.getElementById("pageNo");
+    const wordCount = document.getElementById("wordCount");
+    const charCount = document.getElementById("charCount");
+    const chapterAction = document.getElementById("chapterAction");
+    const previewMeta = document.getElementById("previewMeta");
+    const pageMeta = document.getElementById("pageMeta");
+    const bookPage = document.getElementById("bookPage");
+    const toggleNav = document.getElementById("toggleNav");
+    const toggleType = document.getElementById("toggleType");
+    const toggleAgents = document.getElementById("toggleAgents");
+    const togglePreviewFocus = document.getElementById("togglePreviewFocus");
+    const drawerToggle = document.getElementById("drawerToggle");
+    const collapseAgents = document.getElementById("collapseAgents");
+    const sideCollapseBtn = document.getElementById("sideCollapseBtn");
+    const zoomSelect = document.getElementById("zoomSelect");
+    const bindProjectBtn = document.getElementById("bindProjectBtn");
+    const saveEpisodeBtn = document.getElementById("saveEpisodeBtn");
+    const bookStats = document.getElementById("bookStats");
+    const projectName = document.getElementById("projectName");
+    const draftName = document.getElementById("draftName");
+    const bookTitle = document.querySelector(".book-title");
+    const liveStatus = document.querySelector(".statusbar .live");
+    const scoreValue = document.getElementById("scoreValue");
+    const qualityLabel = document.getElementById("qualityLabel");
+    const healthMeta = document.getElementById("healthMeta");
+    const healthList = document.getElementById("healthList");
+    const lifecycleMeta = document.getElementById("lifecycleMeta");
+    const lifecycleList = document.getElementById("lifecycleList");
+    const finalExportBtn = document.getElementById("finalExportBtn");
+    const cleanupProjectBtn = document.getElementById("cleanupProjectBtn");
+    const projectPathInput = document.getElementById("projectPathInput");
+    const bookRequestInput = document.getElementById("bookRequestInput");
+    const fromPhaseSelect = document.getElementById("fromPhaseSelect");
+    const toPhaseSelect = document.getElementById("toPhaseSelect");
+    const newProjectBtn = document.getElementById("newProjectBtn");
+    const saveRequestBtn = document.getElementById("saveRequestBtn");
+    const refreshProjectBtn = document.getElementById("refreshProjectBtn");
+    const runLogOutput = document.getElementById("runLogOutput");
+    const copyRunLogBtn = document.getElementById("copyRunLogBtn");
+    const wizardType = document.getElementById("wizardType");
+    const wizardPages = document.getElementById("wizardPages");
+    const wizardCharacters = document.getElementById("wizardCharacters");
+    const wizardNarrator = document.getElementById("wizardNarrator");
+    const wizardPremise = document.getElementById("wizardPremise");
+    const wizardSetting = document.getElementById("wizardSetting");
+    const wizardEnding = document.getElementById("wizardEnding");
+    const wizardStyle = document.getElementById("wizardStyle");
+    const wizardBoundaries = document.getElementById("wizardBoundaries");
+    const wizardCompleteness = document.getElementById("wizardCompleteness");
+    const wizardMissing = document.getElementById("wizardMissing");
+    const buildRequestBtn = document.getElementById("buildRequestBtn");
+    const saveWizardBtn = document.getElementById("saveWizardBtn");
+
+    let projectHandle = null;
+    let currentChapterIndex = 0;
+    let currentEpisodeHandle = null;
+    let currentProjectPathHint = ".";
+    let bridgeOnline = false;
+    let bridgeProjectActive = false;
+    const bridgeUrl = "http://127.0.0.1:8765";
+    let approvals = {};
+    let currentBridgeSummary = null;
+    let currentTab = "manuscript";
+    let currentDesignDocs = [];
+    let currentReports = [];
+
+    function renderChapters() {
+      if (!chapters.length) {
+        chapterList.innerHTML = `
+          <li>
+            <button type="button" data-info="Önce proje oluştur veya mevcut KitHub proje klasörünü bağla.">
+              <span>§</span>
+              <span>Proje bağlı değil</span>
+              <small>Bekler</small>
+              <i class="dot wait"></i>
+            </button>
+          </li>
+        `;
+        return;
       }
-      if (current.length > 0) pages.push(current);
-      return pages;
+      chapterList.innerHTML = chapters.map((chapter, index) => `
+        <li>
+          <button type="button" class="${index === currentChapterIndex ? "active" : ""}" data-chapter="${index}">
+            <span>§</span>
+            <span>${chapter.id} - ${chapter.title}</span>
+            <small>${chapter.words ? chapter.words.toLocaleString("tr-TR") : "Plan"}</small>
+            <b class="risk-chip ${chapter.heat?.level || "ok"}" title="${escapeHtml((chapter.heat?.reasons || ["Risk yok"]).join(" "))}">${chapter.heat ? `${chapter.heat.risk}%` : "-"}</b>
+            <i class="dot ${chapter.state === "done" ? "done" : chapter.state === "wait" ? "wait" : ""}"></i>
+          </button>
+        </li>
+      `).join("");
     }
 
-    function updatePreview() {
-      const raw = inputText.value.replace(/\r\n/g, "\n");
-      const cleaned = raw.replace(/[ \t]+\n/g, "\n").trim();
-      const limit = Math.max(600, Math.min(4500, Number(charsPerPage.value) || 1900));
-      const pt = Math.max(10, Math.min(14, Number(fontSize.value) || 11));
+    function stateLabel(state) {
+      if (state === "done") return "Tamamlandı";
+      if (state === "running") return "Çalışıyor";
+      if (state === "review") return "Onay gerekiyor";
+      return "Beklemede";
+    }
 
-      document.documentElement.style.setProperty("--paper-font-size", pt + "pt");
-      const paragraphs = cleaned ? cleaned.split(/\n{2,}/).map(x => x.trim()).filter(Boolean) : [];
-      const pages = splitPages(paragraphs, limit);
+    function renderAgents() {
+      agentList.innerHTML = agents.map((agent, index) => `
+        <article class="agent ${agent.state}" data-agent="${index}">
+          <div class="agent-num">${index + 1}</div>
+          <div>
+            <h3>${agent.name}</h3>
+            <p>${agent.text}</p>
+            ${agent.evidence?.length ? `<p class="agent-evidence">${agent.evidence.slice(0, 3).map(item => escapeHtml(item.name || item.relativePath || item)).join("<br>")}</p>` : ""}
+            <div class="agent-foot">
+              <span class="state">${stateLabel(agent.state)}</span>
+              ${agent.state === "review" ? `<button data-approve="${index}">Onayla</button>` : ""}
+            </div>
+            ${agent.progress ? `<div class="agent-progress"><span style="--p:${agent.progress}%"></span></div>` : ""}
+          </div>
+        </article>
+      `).join("");
 
-      pagesEl.innerHTML = "";
-      pages.forEach((content, idx) => {
-        const page = document.createElement("article");
-        page.className = "page";
-        page.style.fontSize = pt + "pt";
+      const done = agents.filter(agent => agent.state === "done").length;
+      const review = agents.filter(agent => agent.state === "review").length;
+      const percent = agents.length ? Math.round((done / agents.length) * 100) : 0;
+      document.getElementById("overallProgress").style.width = `${Math.max(12, percent)}%`;
+      document.getElementById("agentSummary").textContent = `${agents.length} ajandan ${done}'i tamamlandı. ${review} onay bekliyor.`;
+    }
 
-        content.forEach((line) => {
-          const p = document.createElement("p");
-          const kind = paragraphKind(line);
-          if (kind === "dialogue") p.classList.add("dialogue");
-          if (kind === "heading") p.classList.add("heading");
-          p.textContent = line;
-          page.appendChild(p);
+    function renderQuality(quality) {
+      const score = Number(quality?.score || 0);
+      scoreValue.textContent = String(score);
+      qualityLabel.textContent = score >= 86 ? "Yayına yakın" : score >= 60 ? "Revizyon ister" : "Proje bekliyor";
+      healthMeta.textContent = quality ? `${quality.passed || 0}/${quality.total || 0}` : "Bekler";
+      const checks = quality?.checks || [
+        { label: "Plan/onay zinciri", ok: false, detail: "proje bekleniyor" },
+        { label: "Bölüm doluluğu", ok: false, detail: "proje bekleniyor" },
+        { label: "Final DOCX", ok: false, detail: "export bekleniyor" }
+      ];
+      healthList.innerHTML = checks.map(item => `
+        <div class="audit-row ${item.ok ? "ok" : "wait"}">
+          <span class="audit-dot"></span>
+          <span><b>${escapeHtml(item.label || "Kontrol")}</b>${escapeHtml(item.detail || "")}</span>
+        </div>
+      `).join("");
+    }
+
+    function renderLifecycle(lifecycle) {
+      const status = lifecycle?.status || {};
+      const finalExport = lifecycle?.finalExport || null;
+      const cleanupApproval = lifecycle?.cleanupApproval || null;
+      const exported = Boolean(finalExport?.final_output_path || status?.final_output_path);
+      const cleanupApproved = cleanupApproval?.approved === true && cleanupApproval?.user_confirmed_book_finished === true;
+      const cleaned = status?.status === "cleaned";
+      lifecycleMeta.textContent = cleaned ? "Temizlendi" : exported ? "Okuma onayı bekler" : "Taslak";
+      lifecycleList.innerHTML = [
+        { label: "Final dışa aktarıldı", ok: exported, detail: exported ? (finalExport?.final_output_path || status?.final_output_path || "harici çıktı var") : "önce export ve final aktarım gerekir" },
+        { label: "Kullanıcı kitabı bitirdi dedi", ok: cleanupApproved, detail: cleanupApproved ? "temizlik onayı yazıldı" : "roman bitti onayı bekleniyor" },
+        { label: "Çalışma alanı temizliği", ok: cleaned, detail: cleaned ? "çalışma dosyaları kaldırıldı" : "onay olmadan çalışmaz" }
+      ].map(item => `
+        <div class="audit-row ${item.ok ? "ok" : "wait"}">
+          <span class="audit-dot"></span>
+          <span><b>${escapeHtml(item.label)}</b>${escapeHtml(item.detail)}</span>
+        </div>
+      `).join("");
+    }
+
+    function setSelectIfPresent(id, value) {
+      if (!value) return;
+      const select = document.getElementById(id);
+      if (!select) return;
+      const match = [...select.options].find(option => option.value === value || option.textContent === value);
+      if (match) select.value = match.value;
+    }
+
+    function cleanParagraphs(text) {
+      return text
+        .split(/\n\s*\n/g)
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+
+    function renderInlineMarkup(value) {
+      return escapeHtml(value)
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/_([^_\n]+)_/g, "<em>$1</em>")
+        .replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, "<u>$1</u>");
+    }
+
+    function replaceSelection(before, after = before, placeholder = "metin") {
+      const start = manuscriptText.selectionStart;
+      const end = manuscriptText.selectionEnd;
+      const selected = manuscriptText.value.slice(start, end) || placeholder;
+      const next = `${manuscriptText.value.slice(0, start)}${before}${selected}${after}${manuscriptText.value.slice(end)}`;
+      manuscriptText.value = next;
+      const selectionStart = start + before.length;
+      const selectionEnd = selectionStart + selected.length;
+      manuscriptText.focus();
+      manuscriptText.setSelectionRange(selectionStart, selectionEnd);
+      renderPreview();
+    }
+
+    function transformCurrentLines(transform) {
+      const value = manuscriptText.value;
+      const start = manuscriptText.selectionStart;
+      const end = manuscriptText.selectionEnd;
+      const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+      const nextBreak = value.indexOf("\n", end);
+      const lineEnd = nextBreak === -1 ? value.length : nextBreak;
+      const block = value.slice(lineStart, lineEnd);
+      const transformed = block.split("\n").map(transform).join("\n");
+      manuscriptText.value = value.slice(0, lineStart) + transformed + value.slice(lineEnd);
+      manuscriptText.focus();
+      manuscriptText.setSelectionRange(lineStart, lineStart + transformed.length);
+      renderPreview();
+    }
+
+    function applyBlockStyle(style) {
+      transformCurrentLines(line => {
+        const cleaned = line.replace(/^\s*(#{1,3}\s*|>\s*)/, "").trim();
+        if (style === "Bölüm Başlığı") return cleaned ? `# ${cleaned}` : "# Bölüm başlığı";
+        if (style === "Alıntı") return cleaned ? `> ${cleaned}` : "> Alıntı";
+        return cleaned;
+      });
+      setStatus(`Motor olayı: ${style} biçimi uygulandı`);
+    }
+
+    function applyFormatCommand(command) {
+      if (command === "bold") replaceSelection("**", "**", "kalın metin");
+      if (command === "italic") replaceSelection("_", "_", "italik metin");
+      if (command === "underline") replaceSelection("<u>", "</u>", "altı çizili metin");
+      setStatus(`Motor olayı: ${command} biçimi uygulandı`);
+    }
+
+    function applyAlignment(alignment) {
+      const readerAlign = alignment === "justify" ? "justify" : "left";
+      document.documentElement.style.setProperty("--reader-align", readerAlign);
+      document.documentElement.style.setProperty("--editor-align", readerAlign);
+      document.querySelectorAll("[data-align]").forEach(button => {
+        button.classList.toggle("active", button.dataset.align === alignment);
+      });
+      renderPreview();
+      setStatus(alignment === "justify" ? "Motor olayı: metin iki yana yaslandı" : "Motor olayı: metin sola hizalandı");
+    }
+
+    function focusTypeSection(section) {
+      const targetSection = section === "numbering" ? "paragraph" : section;
+      document.querySelectorAll("[data-type-section]").forEach(button => {
+        button.classList.toggle("active", button.dataset.typeSection === section);
+      });
+      const panel = document.querySelector(`[data-type-panel="${targetSection}"]`);
+      if (panel) panel.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      const labels = {
+        page: "sayfa ayarları",
+        font: "tipografi ayarları",
+        paragraph: "paragraf ayarları",
+        header: "kenar/üstbilgi ayarları",
+        numbering: "sayfa numarası ön izlemesi"
+      };
+      setStatus(`Motor olayı: ${labels[section] || "dizgi bölümü"} açıldı`);
+    }
+
+    function renderPreview() {
+      const raw = manuscriptText.value.trim();
+      const paragraphs = cleanParagraphs(raw);
+      const firstLine = paragraphs[0] || "Bölüm";
+      const chapter = chapters[currentChapterIndex] || chapters[0] || { id: "KitHub", title: "Proje Bekleniyor" };
+      const chapterTitle = chapter.title;
+      pageKicker.textContent = chapter.id.toUpperCase();
+      pageTitle.textContent = chapterTitle;
+      pageBody.innerHTML = paragraphs.slice(0, 5).map((paragraph, index) => {
+        const text = paragraph.replace(/^\s*(#{1,3}\s*|>\s*)/, "");
+        return `<p class="${index === 0 ? "first" : ""}">${renderInlineMarkup(text)}</p>`;
+      }).join("");
+
+      const words = raw ? raw.split(/\s+/).filter(Boolean).length : 0;
+      wordCount.textContent = `${words.toLocaleString("tr-TR")} kelime`;
+      charCount.textContent = `${raw.length.toLocaleString("tr-TR")} karakter`;
+      pageMeta.textContent = words ? `1 / ${Math.max(1, Math.ceil(words / 280))}` : "0 / 0";
+      pageNo.textContent = words ? "1" : "-";
+    }
+
+    function renderChapterAction(chapter) {
+      const heat = chapter?.heat;
+      if (!heat) {
+        chapterAction.textContent = "Aksiyon yok";
+        return;
+      }
+      if (heat.level === "ok" || heat.action === "ok") {
+        chapterAction.textContent = "Aksiyon: yok";
+        return;
+      }
+      chapterAction.textContent = `Aksiyon: ${heat.recommended_phase}`;
+      if (heat.recommended_phase && heat.recommended_phase !== "none") {
+        fromPhaseSelect.value = heat.recommended_phase;
+        toPhaseSelect.value = heat.recommended_phase;
+      }
+      setRunLog([
+        `${chapter.id} - ${chapter.title}`,
+        `Risk: ${heat.risk}% (${heat.level})`,
+        `Önerilen aksiyon: ${heat.action}`,
+        `Önerilen faz: ${heat.recommended_phase}`,
+        "",
+        "Nedenler:",
+        ...(heat.reasons || []).map(reason => `- ${reason}`)
+      ].join("\n"));
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[char]));
+    }
+
+    function countWords(text) {
+      return text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+    }
+
+    function readerTitleFromMarkdown(text, fallback) {
+      const title = text.split(/\r?\n/).map(line => line.trim()).find(line => /^#\s+/.test(line));
+      if (!title) return fallback;
+      return title.replace(/^#\s+/, "").replace(/\bEP\d+\b\s*-?\s*/i, "").trim() || fallback;
+    }
+
+    function setStatus(message) {
+      liveStatus.textContent = message;
+    }
+
+    function syncBridgeButtons() {
+      const projectText = (projectPathInput.value || currentProjectPathHint || "").trim();
+      const hasLocalProject = Boolean(projectHandle);
+      const hasBridgeProject = bridgeOnline && Boolean(projectText);
+      const saveAvailable = bridgeOnline || hasLocalProject;
+
+      newProjectBtn.classList.toggle("is-offline", !bridgeOnline);
+      finalExportBtn.classList.toggle("is-offline", !hasBridgeProject);
+      cleanupProjectBtn.classList.toggle("is-offline", !hasBridgeProject);
+      saveRequestBtn.classList.toggle("is-offline", !saveAvailable);
+
+      newProjectBtn.title = bridgeOnline ? "Studio Bridge ile yeni proje olusturur." : "Studio Bridge kapali: yeni proje motor komutu gerektirir.";
+      saveRequestBtn.title = saveAvailable ? "runtime/book-request.md dosyasini kaydeder." : "Once Studio Bridge ac veya proje klasoru bagla.";
+      finalExportBtn.title = hasBridgeProject ? "Final DOCX dosyasini masaustune aktarir." : "Studio Bridge ve gercek proje yolu gerekli.";
+      cleanupProjectBtn.title = hasBridgeProject ? "Kullanici onayindan sonra calisma dosyalarini temizler." : "Studio Bridge ve gercek proje yolu gerekli.";
+    }
+
+    function setRunLog(message) {
+      runLogOutput.textContent = message || "Çıktı yok.";
+    }
+
+    function collectWizardValues() {
+      return {
+        type: wizardType.value.trim(),
+        pages: wizardPages.value.trim(),
+        characters: wizardCharacters.value.trim(),
+        narrator: wizardNarrator.value.trim(),
+        premise: wizardPremise.value.trim(),
+        setting: wizardSetting.value.trim(),
+        ending: wizardEnding.value.trim(),
+        style: wizardStyle.value.trim(),
+        boundaries: wizardBoundaries.value.trim()
+      };
+    }
+
+    function validateWizard(values = collectWizardValues()) {
+      const checks = [
+        ["Tür", values.type],
+        ["Hedef sayfa", values.pages],
+        ["Konu", values.premise],
+        ["Karakterler", values.characters],
+        ["Dönem ve mekân", values.setting],
+        ["Anlatıcı", values.narrator],
+        ["Final", values.ending],
+        ["Sınırlar", values.boundaries]
+      ];
+      const missing = checks.filter(([, value]) => !String(value || "").trim()).map(([label]) => label);
+      wizardCompleteness.textContent = `${checks.length - missing.length}/${checks.length}`;
+      wizardMissing.textContent = missing.length ? `Eksik: ${missing.join(", ")}` : "Hazır: kitap isteği plana dönüştürülebilir.";
+      return { complete: missing.length === 0, missing };
+    }
+
+    function buildWizardRequestText() {
+      const values = collectWizardValues();
+      const validation = validateWizard(values);
+      const text = [
+        "# Kitap İsteği",
+        "",
+        "## Zorunlu Cevaplar",
+        `- Tür: ${values.type}`,
+        `- Hedef sayfa: ${values.pages}`,
+        `- Konu: ${values.premise}`,
+        `- Karakterler: ${values.characters}`,
+        `- Dönem ve mekân: ${values.setting}`,
+        `- Anlatıcı: ${values.narrator}`,
+        `- Final: ${values.ending}`,
+        `- Sınırlar: ${values.boundaries}`,
+        "",
+        "## Üslup ve Üretim Kuralları",
+        `- Üslup: ${values.style || "Konuya ve türe uygun, tutarlı, akıcı, yayın dosyasına yakışır."}`,
+        "- Plan zorunluluğu: Yazıma başlamadan önce karakterler, olay akışı, bölüm dağılımı, sayfa hedefi ve tutarlılık ledgeri çıkarılacak.",
+        "- Tutarlılık: Her bölüm önceki bölüm özetleri, karakter durumu, olay ledgeri ve vaat/karşılık listesiyle uyumlu olacak.",
+        "- Uzunluk: Hedef sayfa sayısına göre bölüm ve kelime dağılımı yapılacak; hedef tutmadan kitap bitmiş sayılmayacak.",
+        "- Okur çıktısı: EP001, sahne etiketi, ajan notu, yayın notu, teknik rapor veya kodsal iz okuyucu metnine girmeyecek.",
+        "- Yayın paketi: DOCX, ön bölüm, içindekiler, kapak briefi, arka kapak yazısı ve final kontrol raporları üretilecek."
+      ].join("\n");
+      bookRequestInput.value = text;
+      setRunLog(`Başlangıç sihirbazı kitap isteği oluşturdu.\nDurum: ${validation.complete ? "tam" : "eksik"}\nEksik: ${validation.missing.join(", ") || "yok"}`);
+      setStatus(validation.complete ? "Motor olayı: kitap isteği hazır; kaydedilebilir." : "Motor olayı: kitap isteği eksik alanlar içeriyor.");
+      return { text, validation };
+    }
+
+    async function saveWizardRequest() {
+      const built = buildWizardRequestText();
+      if (!built.validation.complete) {
+        setStatus("Motor olayı: sihirbaz tamamlanmadan kitap isteği kaydedilmedi.");
+        return;
+      }
+      await saveBookRequestViaBridge();
+    }
+
+    async function copyRunLog() {
+      try {
+        await navigator.clipboard.writeText(runLogOutput.textContent);
+        setStatus("Motor olayı: çalıştırma günlüğü kopyalandı");
+      }
+      catch {
+        setStatus("Motor olayı: günlük kopyalanamadı");
+      }
+    }
+
+    async function detectBridge() {
+      try {
+        const response = await fetch(`${bridgeUrl}/api/health`, { cache: "no-store" });
+        const data = await response.json();
+        bridgeOnline = Boolean(data.ok);
+        setStatus(bridgeOnline ? "Motor olayı: Studio Bridge bağlı" : "Motor olayı: Studio Bridge bekleniyor");
+        syncBridgeButtons();
+        if (bridgeOnline) {
+          setRunLog(`Studio Bridge bağlı\nRepo: ${data.repoRoot}\nPort: ${data.port}`);
+        }
+      }
+      catch {
+        bridgeOnline = false;
+        setStatus("Motor olayı: Studio Bridge kapalı; komut panoya kopyalanır");
+        setRunLog("Studio Bridge kapalı. scripts/start_studio.ps1 ile başlat.");
+        syncBridgeButtons();
+      }
+    }
+
+    async function getOptionalDir(handle, pathParts) {
+      let current = handle;
+      for (const part of pathParts) {
+        try {
+          current = await current.getDirectoryHandle(part);
+        }
+        catch {
+          return null;
+        }
+      }
+      return current;
+    }
+
+    async function getOptionalFile(handle, pathParts) {
+      const fileName = pathParts[pathParts.length - 1];
+      const dir = await getOptionalDir(handle, pathParts.slice(0, -1));
+      if (!dir) return null;
+      try {
+        return await dir.getFileHandle(fileName);
+      }
+      catch {
+        return null;
+      }
+    }
+
+    async function getOrCreateDir(handle, pathParts) {
+      let current = handle;
+      for (const part of pathParts) {
+        current = await current.getDirectoryHandle(part, { create: true });
+      }
+      return current;
+    }
+
+    async function readTextFile(fileHandle) {
+      const file = await fileHandle.getFile();
+      return await file.text();
+    }
+
+    async function readJsonFile(project, pathParts) {
+      const fileHandle = await getOptionalFile(project, pathParts);
+      if (!fileHandle) return null;
+      try {
+        return JSON.parse(await readTextFile(fileHandle));
+      }
+      catch {
+        return null;
+      }
+    }
+
+    async function writeJsonFile(project, pathParts, value) {
+      const fileName = pathParts[pathParts.length - 1];
+      const dir = await getOrCreateDir(project, pathParts.slice(0, -1));
+      const fileHandle = await dir.getFileHandle(fileName, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify(value, null, 2));
+      await writable.close();
+    }
+
+    async function writeTextProjectFile(project, pathParts, text) {
+      const fileName = pathParts[pathParts.length - 1];
+      const dir = await getOrCreateDir(project, pathParts.slice(0, -1));
+      const fileHandle = await dir.getFileHandle(fileName, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(text);
+      await writable.close();
+    }
+
+    async function listFiles(dirHandle, matcher) {
+      const files = [];
+      if (!dirHandle) return files;
+      for await (const [name, handle] of dirHandle.entries()) {
+        if (handle.kind === "file" && (!matcher || matcher(name))) {
+          files.push({ name, handle });
+        }
+      }
+      return files.sort((a, b) => a.name.localeCompare(b.name, "tr"));
+    }
+
+    async function selectChapter(index) {
+      currentChapterIndex = index;
+      const chapter = chapters[index];
+      if (!chapter) return;
+      currentEpisodeHandle = chapter.handle || null;
+      if (chapter.handle && typeof chapter.text !== "string") {
+        chapter.text = await readTextFile(chapter.handle);
+      }
+      manuscriptText.value = chapter.text || "";
+      pageKicker.textContent = chapter.id.toUpperCase();
+      pageTitle.textContent = chapter.title;
+      renderChapters();
+      renderPreview();
+      renderChapterAction(chapter);
+      setStatus(`Motor olayı: ${chapter.id} açıldı`);
+    }
+
+    function renderSupportTab(tab) {
+      currentTab = tab;
+      manuscriptText.readOnly = tab !== "manuscript";
+      if (tab === "manuscript") {
+        const chapter = chapters[currentChapterIndex] || chapters[0];
+        manuscriptText.value = chapter?.text || emptyManuscriptText;
+        renderPreview();
+        return;
+      }
+      if (tab === "plan") {
+        const text = currentDesignDocs.length
+          ? currentDesignDocs.map(doc => `# ${doc.name}\n\n${doc.text}`).join("\n\n---\n\n")
+          : "Henüz design/*.md plan dosyası yok. Önce intake/propose/design-big aşamalarını çalıştır.";
+        manuscriptText.value = text;
+        renderPreview();
+        setStatus("Motor olayı: plan ön izlemesi açıldı");
+        return;
+      }
+      if (tab === "revision") {
+        const text = currentReports.length
+          ? currentReports.map(report => `# ${report.name}\n\n${report.text}`).join("\n\n---\n\n")
+          : "Henüz revision/_workspace raporu yok.";
+        manuscriptText.value = text;
+        renderPreview();
+        setStatus("Motor olayı: revizyon/rapor ön izlemesi açıldı");
+        return;
+      }
+      renderPreview();
+    }
+
+    function renderExports(exports) {
+      if (!exports || exports.length === 0) {
+        exportList.innerHTML = `
+          <li><button type="button" data-export-info="Henüz export yok"><span>◇</span><span>Henüz export yok</span><small>Bekler</small><i class="dot wait"></i></button></li>
+        `;
+        return;
+      }
+      exportList.innerHTML = exports.map(item => `
+        <li>
+          <button type="button" title="${escapeHtml(item.name)}" data-export-info="${escapeHtml(item.name)}">
+            <span>◇</span>
+            <span>${escapeHtml(item.label)}</span>
+            <small>${item.kind}</small>
+            <i class="dot done"></i>
+          </button>
+        </li>
+      `).join("");
+    }
+
+    function renderApprovals() {
+      approvalList.innerHTML = approvalDefinitions.map(item => {
+        const data = approvals[item.key];
+        const approved = data?.approved === true;
+        const extra = item.key === "story" && data?.selected_option ? `#${data.selected_option}` : item.phase;
+        return `
+          <li>
+            <button type="button" data-approval-row="${item.key}">
+              <span>${approved ? "✓" : "!"}</span>
+              <span>${item.label}</span>
+              <small>${extra}</small>
+              <span class="approve-action" data-approval="${item.key}">${approved ? "Yazıldı" : "Onayla"}</span>
+            </button>
+          </li>
+        `;
+      }).join("");
+    }
+
+    async function loadApprovals(project) {
+      approvals = {};
+      for (const item of approvalDefinitions) {
+        approvals[item.key] = await readJsonFile(project, ["runtime", "approvals", item.file]);
+      }
+      renderApprovals();
+    }
+
+    async function buildApprovalPayload(key) {
+      const now = new Date().toISOString();
+      const base = {
+        ...(approvals[key] || {}),
+        approved: true,
+        approved_by: "KitHub Studio",
+        approved_at: now,
+        note: "Approved explicitly from KitHub Studio UI."
+      };
+
+      if (key === "brief") {
+        const existing = base.accepted_answers || {};
+        base.accepted_answers = {
+          writing_type: existing.writing_type || "novel",
+          premise: existing.premise || manuscriptText.value.slice(0, 220) || "User-approved KitHub Studio brief",
+          target_length: existing.target_length || "user-approved target from intake",
+          target_reader: existing.target_reader || "general adult reader",
+          genre: existing.genre || document.querySelector(".book-meta").firstChild.textContent || "book",
+          character_policy: existing.character_policy || "user-approved character policy",
+          setting_period: existing.setting_period || "user-approved setting",
+          pov_tense: existing.pov_tense || "user-approved POV and tense",
+          style_tone: existing.style_tone || "user-approved style and tone",
+          boundaries: existing.boundaries || "no fake sources, no fake quotes, no technical labels in reader output",
+          publication_package: existing.publication_package || "A5 DOCX, front matter, cover brief, table of contents"
+        };
+      }
+
+      if (key === "story") {
+        base.selected_option = base.selected_option || 1;
+      }
+
+      if (key === "length") {
+        base.risk_acknowledged = true;
+      }
+
+      if (key === "plan") {
+        const bookPlan = bridgeProjectActive
+          ? currentBridgeSummary?.bookPlan
+          : await readJsonFile(projectHandle, ["revision", "_state", "book-plan.json"]);
+        const longformPlan = bridgeProjectActive
+          ? currentBridgeSummary?.longformPlan
+          : await readJsonFile(projectHandle, ["revision", "_state", "longform-plan.json"]);
+        if (!bookPlan || !longformPlan) {
+          throw new Error("book-plan.json veya longform-plan.json yok; önce design-big çalışmalı.");
+        }
+        base.accepted_writing_type = bookPlan.writing_type || "novel";
+        base.accepted_genre = bookPlan.genre || "book";
+        base.approved_plan_id = bookPlan.plan_id || "";
+        base.accepted_targets = {
+          target_pages: Number(longformPlan.target_pages || bookPlan.target_pages || 0),
+          target_words: Number(longformPlan.target_words || bookPlan.target_words || 0),
+          target_chapters: Number(longformPlan.target_chapters || bookPlan.chapter_count || 0)
+        };
+      }
+
+      if (key === "freeze") {
+        base.design_frozen = true;
+      }
+
+      if (key === "export") {
+        base.export_confirmed = true;
+      }
+
+      return base;
+    }
+
+    async function approveGate(key) {
+      if (!projectHandle && !bridgeProjectActive) {
+        setStatus("Motor olayı: onay yazmak için önce proje bağla.");
+        return;
+      }
+      const item = approvalDefinitions.find(entry => entry.key === key);
+      if (!item) return;
+      try {
+        const payload = await buildApprovalPayload(key);
+        if (bridgeProjectActive) {
+          const response = await fetch(`${bridgeUrl}/api/write-approval`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              projectRoot: currentProjectPathHint,
+              file: item.file,
+              approval: payload
+            })
+          });
+          const result = await response.json();
+          if (!result.ok) throw new Error(result.error || "write-approval failed");
+          setRunLog(`Onay yazıldı\nDosya: runtime/approvals/${item.file}`);
+        }
+        else {
+          await writeJsonFile(projectHandle, ["runtime", "approvals", item.file], payload);
+          setRunLog(`Onay yazıldı\nDosya: runtime/approvals/${item.file}`);
+        }
+        approvals[key] = payload;
+        renderApprovals();
+        setStatus(`Motor olayı: ${item.label} onayı yazıldı`);
+      }
+      catch (error) {
+        setStatus(`Motor olayı: onay yazılamadı (${error.message})`);
+      }
+    }
+
+    async function loadProjectMetadata(project) {
+      const bookPlan = await readJsonFile(project, ["revision", "_state", "book-plan.json"]);
+      const longformPlan = await readJsonFile(project, ["revision", "_state", "longform-plan.json"]);
+      const layoutPlan = await readJsonFile(project, ["revision", "_state", "layout-plan.json"]);
+
+      const title = bookPlan?.title_working || project.name;
+      const genre = bookPlan?.genre || bookPlan?.writing_type || "Kitap projesi";
+      const targetPages = longformPlan?.target_pages ? `${longformPlan.target_pages} sayfa hedef` : "hedef bekliyor";
+      const targetChapters = longformPlan?.target_chapters ? `${longformPlan.target_chapters} bölüm` : `${chapters.length} bölüm`;
+
+      projectName.textContent = project.name;
+      draftName.textContent = bookPlan?.plan_id || "Yerel proje";
+      bookTitle.textContent = title;
+      document.querySelector(".book-meta").firstChild.textContent = `${genre}`;
+      bookStats.textContent = `${targetChapters} · ${targetPages}`;
+
+      setSelectIfPresent("pageSize", layoutPlan?.page_size);
+      setSelectIfPresent("printMode", layoutPlan?.print_mode);
+      setSelectIfPresent("frontMatter", layoutPlan?.front_matter);
+      if (layoutPlan?.font_family) {
+        document.getElementById("typeFont").value = layoutPlan.font_family;
+        document.getElementById("fontSelect").value = layoutPlan.font_family;
+      }
+      if (layoutPlan?.font_size_pt) {
+        document.getElementById("typeSize").value = layoutPlan.font_size_pt;
+        document.getElementById("fontSizeSelect").value = String(layoutPlan.font_size_pt);
+      }
+      if (layoutPlan?.line_spacing) document.getElementById("lineHeight").value = layoutPlan.line_spacing;
+      if (layoutPlan?.margin_top_mm) document.getElementById("marginTop").value = layoutPlan.margin_top_mm;
+      if (layoutPlan?.margin_inside_mm) document.getElementById("marginInside").value = layoutPlan.margin_inside_mm;
+      if (layoutPlan?.margin_outside_mm) document.getElementById("marginOutside").value = layoutPlan.margin_outside_mm;
+      applyTypography();
+    }
+
+    async function loadProjectChapters(project) {
+      const episodeDir = await getOptionalDir(project, ["episode"]);
+      const files = await listFiles(episodeDir, name => /^ep\d+\.md$/i.test(name));
+      if (files.length === 0) return false;
+
+      const loaded = [];
+      for (const file of files) {
+        const text = await readTextFile(file.handle);
+        const number = file.name.match(/\d+/)?.[0] || String(loaded.length + 1);
+        loaded.push({
+          id: `Bölüm ${Number(number)}`,
+          title: readerTitleFromMarkdown(text, file.name.replace(/\.md$/i, "")),
+          words: countWords(text),
+          state: countWords(text) > 0 ? "done" : "empty",
+          handle: file.handle,
+          filename: file.name,
+          text
         });
+      }
 
-        const no = document.createElement("div");
-        no.className = "page-no";
-        no.textContent = String(idx + 1);
-        page.appendChild(no);
-        pagesEl.appendChild(page);
+      chapters = loaded;
+      currentChapterIndex = 0;
+      renderChapters();
+      await selectChapter(0);
+      return true;
+    }
+
+    async function loadProjectExports(project) {
+      const exportDir = await getOptionalDir(project, ["revision", "export"]);
+      const files = await listFiles(exportDir, name => /\.(docx|pdf|zip|md|json)$/i.test(name));
+      renderExports(files.map(file => ({
+        name: file.name,
+        label: file.name.length > 28 ? `${file.name.slice(0, 25)}...` : file.name,
+        kind: file.name.split(".").pop().toUpperCase()
+      })));
+    }
+
+    async function loadProjectAgents(project) {
+      const complianceDir = await getOptionalDir(project, ["runtime", "agent-compliance"]);
+      const workspaceDir = await getOptionalDir(project, ["revision", "_workspace"]);
+      const complianceFiles = await listFiles(complianceDir, name => /\.(json|md)$/i.test(name));
+      const workspaceFiles = await listFiles(workspaceDir, name => /\.(json|md)$/i.test(name));
+      const fileNames = [...complianceFiles, ...workspaceFiles].map(file => file.name.toLowerCase()).join("\n");
+
+      agents = defaultAgents.map(agent => {
+        const key = agent.name.toLowerCase().replace(/\s+/g, "-");
+        const words = agent.name.toLowerCase().split(/\s+/);
+        const matched = fileNames.includes(key) || words.every(word => fileNames.includes(word));
+        if (matched) {
+          return { ...agent, state: "done", progress: 100, text: `${agent.text} Gerçek proje raporu bulundu.` };
+        }
+        return { ...agent, state: "idle", progress: 0 };
       });
 
-      const charCount = cleaned.length;
-      const wordCount = cleaned ? cleaned.split(/\s+/).filter(Boolean).length : 0;
-      metaInfo.innerHTML =
-        "Characters: " + charCount + "<br />" +
-        "Words: " + wordCount + "<br />" +
-        "Pages: " + pages.length;
-      previewStatus.textContent = pages.length ? ("Estimated " + pages.length + " page(s)") : "No content";
+      const hasCreate = fileNames.includes("create");
+      const hasExport = fileNames.includes("export");
+      if (hasCreate && agents[4]) agents[4] = { ...agents[4], state: "done", progress: 100 };
+      if (hasExport && agents[8]) agents[8] = { ...agents[8], state: "done", progress: 100 };
+      if (fileNames.includes("review_required") || fileNames.includes("approval")) {
+        const firstIdle = agents.findIndex(agent => agent.state === "idle");
+        if (firstIdle >= 0) agents[firstIdle] = { ...agents[firstIdle], state: "review", progress: 50 };
+      }
+
+      renderAgents();
+      const done = agents.filter(agent => agent.state === "done").length;
+      renderQuality({
+        score: Math.max(0, Math.min(90, done * 10)),
+        passed: done,
+        total: agents.length,
+        checks: [
+          { label: "Ajan kanıtı", ok: done > 0, detail: `${done} ajan raporu bulundu` },
+          { label: "Bridge doğrulaması", ok: false, detail: "tam sağlık skoru için Studio Bridge kullan" },
+          { label: "Final DOCX", ok: false, detail: "export özeti bridge ile okunmalı" }
+        ]
+      });
     }
 
-    renderBtn.addEventListener("click", updatePreview);
-    inputText.addEventListener("input", updatePreview);
-    charsPerPage.addEventListener("change", updatePreview);
-    fontSize.addEventListener("change", updatePreview);
+    function applySummaryToUi(summary) {
+      currentBridgeSummary = summary;
+      bridgeProjectActive = true;
+      projectHandle = null;
+      currentProjectPathHint = summary.projectRoot || currentProjectPathHint;
+      projectPathInput.value = currentProjectPathHint;
+      bookRequestInput.value = summary.bookRequest || bookRequestInput.value;
+      syncBridgeButtons();
 
-    clearBtn.addEventListener("click", () => {
-      inputText.value = "";
-      updatePreview();
+      const bookPlan = summary.bookPlan || {};
+      const longformPlan = summary.longformPlan || {};
+      const layoutPlan = summary.layoutPlan || {};
+      const title = bookPlan.title_working || summary.name || "KitHub Projesi";
+      const genre = bookPlan.genre || bookPlan.writing_type || "Kitap projesi";
+      const targetPages = longformPlan.target_pages ? `${longformPlan.target_pages} sayfa hedef` : "hedef bekliyor";
+      const targetChapters = longformPlan.target_chapters ? `${longformPlan.target_chapters} bölüm` : `${summary.chapters?.length || 0} bölüm`;
+
+      projectName.textContent = summary.name || "Yerel proje";
+      draftName.textContent = bookPlan.plan_id || "Bridge";
+      bookTitle.textContent = title;
+      document.querySelector(".book-meta").firstChild.textContent = genre;
+      bookStats.textContent = `${targetChapters} · ${targetPages}`;
+
+      const heatByFile = {};
+      (summary.chapterHeatmap || []).forEach(item => {
+        if (item.filename) heatByFile[item.filename] = item;
+      });
+      chapters = (summary.chapters || []).map((chapter, index) => ({
+        id: chapter.id || `Bölüm ${index + 1}`,
+        title: chapter.title || chapter.filename || `Bölüm ${index + 1}`,
+        words: Number(chapter.words || 0),
+        state: Number(chapter.words || 0) > 0 ? "done" : "empty",
+        filename: chapter.filename,
+        text: chapter.text || "",
+        heat: heatByFile[chapter.filename] || null,
+        bridgeBacked: true
+      }));
+      currentChapterIndex = 0;
+      renderChapters();
+      if (chapters.length > 0) {
+        manuscriptText.value = chapters[0].text || "";
+        renderPreview();
+        renderChapterAction(chapters[0]);
+      }
+      else {
+        chapterAction.textContent = "Aksiyon yok";
+      }
+
+      renderExports((summary.exports || []).map(file => ({
+        name: file.name,
+        label: file.name.length > 28 ? `${file.name.slice(0, 25)}...` : file.name,
+        kind: file.kind || "FILE"
+      })));
+
+      currentDesignDocs = summary.designDocs || [];
+      currentReports = summary.reports || [];
+      renderSupportTab(currentTab);
+      renderQuality(summary.quality);
+      renderLifecycle(summary.lifecycle);
+
+      approvals = {};
+      for (const def of approvalDefinitions) {
+        approvals[def.key] = summary.approvals?.[def.file] || null;
+      }
+      renderApprovals();
+
+      setSelectIfPresent("pageSize", layoutPlan.page_size);
+      setSelectIfPresent("printMode", layoutPlan.print_mode);
+      setSelectIfPresent("frontMatter", layoutPlan.front_matter);
+      if (layoutPlan.font_family) {
+        document.getElementById("typeFont").value = layoutPlan.font_family;
+        if ([...document.getElementById("fontSelect").options].some(option => option.value === layoutPlan.font_family)) {
+          document.getElementById("fontSelect").value = layoutPlan.font_family;
+        }
+      }
+      if (layoutPlan.font_size_pt) document.getElementById("typeSize").value = layoutPlan.font_size_pt;
+      if (layoutPlan.line_spacing) document.getElementById("lineHeight").value = layoutPlan.line_spacing;
+      if (layoutPlan.margin_top_mm) document.getElementById("marginTop").value = layoutPlan.margin_top_mm;
+      if (layoutPlan.margin_inside_mm) document.getElementById("marginInside").value = layoutPlan.margin_inside_mm;
+      if (layoutPlan.margin_outside_mm) document.getElementById("marginOutside").value = layoutPlan.margin_outside_mm;
+      applyTypography();
+
+      const evidenceItems = summary.evidence || [];
+      const evidenceText = evidenceItems.map(item => item.name.toLowerCase()).join("\n");
+      agents = defaultAgents.map(agent => {
+        const key = agent.name.toLowerCase().replace(/\s+/g, "-");
+        const words = agent.name.toLowerCase().split(/\s+/);
+        const matchedEvidence = evidenceItems.filter(item => {
+          const name = item.name.toLowerCase();
+          return name.includes(key) || words.every(word => name.includes(word)) || words.some(word => word.length > 6 && name.includes(word));
+        });
+        const matched = matchedEvidence.length > 0 || evidenceText.includes(key);
+        return matched
+          ? { ...agent, state: "done", progress: 100, text: `${agent.text} Bridge proje kanıtı bulundu.`, evidence: matchedEvidence.slice(0, 4) }
+          : { ...agent, state: "idle", progress: 0 };
+      });
+      renderAgents();
+    }
+
+    async function loadProjectViaBridge() {
+      const projectRoot = projectPathInput.value.trim();
+      if (!bridgeOnline || !projectRoot) return false;
+      const response = await fetch(`${bridgeUrl}/api/project-summary`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ projectRoot })
+      });
+      const summary = await response.json();
+      if (!summary.ok) {
+        throw new Error(summary.error || "project-summary failed");
+      }
+      applySummaryToUi(summary);
+      setStatus(`Motor olayı: ${summary.name} bridge üzerinden bağlandı`);
+      return true;
+    }
+
+    async function createProjectViaBridge() {
+      if (!bridgeOnline) {
+        setStatus("Motor olayı: yeni proje için Studio Bridge açık olmalı.");
+        return;
+      }
+      const typedPath = projectPathInput.value.trim();
+      let payload = {};
+      if (typedPath && /^[a-zA-Z]:[\\/]/.test(typedPath)) {
+        payload.projectRoot = typedPath;
+      }
+      else {
+        const name = typedPath || window.prompt("Yeni kitap projesi adı", "Yeni Roman");
+        if (!name) {
+          setStatus("Motor olayı: yeni proje iptal edildi");
+          return;
+        }
+        payload.name = name;
+      }
+      try {
+        setStatus("Motor olayı: yeni proje oluşturuluyor...");
+        const response = await fetch(`${bridgeUrl}/api/new-project`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (!result.ok) {
+          setRunLog(result.output || result.error || "Yeni proje hatası.");
+          throw new Error(result.error || result.output || "new-project failed");
+        }
+        setRunLog(result.output || `Yeni proje oluşturuldu: ${result.projectRoot}`);
+        projectPathInput.value = result.projectRoot;
+        currentProjectPathHint = result.projectRoot;
+        await loadProjectViaBridge();
+        setStatus(`Motor olayı: yeni proje oluşturuldu (${result.projectRoot})`);
+      }
+      catch (error) {
+        setStatus(`Motor olayı: yeni proje başarısız (${error.message})`);
+      }
+    }
+
+    async function saveBookRequestViaBridge() {
+      if (!bridgeOnline) {
+        if (!projectHandle) {
+          setStatus("Motor olayı: kitap isteğini kaydetmek için Studio Bridge aç veya proje klasörü bağla.");
+          syncBridgeButtons();
+          return;
+        }
+        try {
+          await writeTextProjectFile(projectHandle, ["runtime", "book-request.md"], bookRequestInput.value);
+          const wordCount = bookRequestInput.value.trim().split(/\s+/).filter(Boolean).length;
+          setRunLog(`Kitap isteği kaydedildi\nYöntem: bağlı klasör\nDosya: runtime/book-request.md\nKelime: ${wordCount}`);
+          setStatus(`Motor olayı: kitap isteği bağlı klasöre kaydedildi (${wordCount} kelime)`);
+          syncBridgeButtons();
+        }
+        catch (error) {
+          setStatus(`Motor olayı: kitap isteği klasöre yazılamadı (${error.message})`);
+        }
+        return;
+      }
+      currentProjectPathHint = projectPathInput.value.trim() || currentProjectPathHint;
+      if (!currentProjectPathHint || currentProjectPathHint === ".") {
+        setStatus("Motor olayı: önce proje yolu yaz veya proje oluştur.");
+        syncBridgeButtons();
+        return;
+      }
+      try {
+        const response = await fetch(`${bridgeUrl}/api/save-book-request`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            projectRoot: currentProjectPathHint,
+            text: bookRequestInput.value
+          })
+        });
+        const result = await response.json();
+        if (!result.ok) throw new Error(result.error || "save-book-request failed");
+        const missing = result.checklist?.missing || [];
+        setRunLog(`Kitap isteği kaydedildi\nDosya: runtime/book-request.md\nKelime: ${result.words}\nKarakter: ${result.characters}\nZorunlu alanlar: ${missing.length ? "eksik - " + missing.join(", ") : "tam"}`);
+        setStatus(missing.length ? "Motor olayı: kitap isteği kaydedildi ama sihirbaz alanları eksik." : `Motor olayı: kitap isteği kaydedildi (${result.words} kelime)`);
+        syncBridgeButtons();
+      }
+      catch (error) {
+        setStatus(`Motor olayı: kitap isteği kaydedilemedi (${error.message})`);
+      }
+    }
+
+    async function bindProject() {
+      try {
+        if (await loadProjectViaBridge()) return;
+      }
+      catch (error) {
+        setStatus(`Motor olayı: bridge proje okuma başarısız (${error.message})`);
+      }
+      if (!window.showDirectoryPicker) {
+        setStatus("Motor olayı: Bu tarayıcı klasör bağlamayı desteklemiyor. Chrome/Edge ile aç.");
+        return;
+      }
+      try {
+        projectHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+        bridgeProjectActive = false;
+        currentProjectPathHint = projectHandle.name;
+        if (!projectPathInput.value.trim()) {
+          projectPathInput.value = projectHandle.name;
+        }
+        syncBridgeButtons();
+        setStatus("Motor olayı: proje okunuyor...");
+        await loadProjectMetadata(projectHandle);
+        const hasChapters = await loadProjectChapters(projectHandle);
+        if (!hasChapters) setStatus("Motor olayı: episode klasörü bulunamadı veya boş.");
+        await loadProjectExports(projectHandle);
+        await loadProjectAgents(projectHandle);
+        await loadApprovals(projectHandle);
+        setStatus(`Motor olayı: ${projectHandle.name} bağlandı`);
+      }
+      catch (error) {
+        setStatus(`Motor olayı: proje bağlanmadı (${error.message})`);
+      }
+    }
+
+    async function refreshProject() {
+      try {
+        if (bridgeProjectActive && await loadProjectViaBridge()) return;
+      }
+      catch (error) {
+        setStatus(`Motor olayı: bridge yenileme başarısız (${error.message})`);
+      }
+      if (!projectHandle) {
+        setStatus("Motor olayı: önce Projeyi Bağla ile klasör seç.");
+        return;
+      }
+      try {
+        setStatus("Motor olayı: proje yenileniyor...");
+        await loadProjectMetadata(projectHandle);
+        await loadProjectChapters(projectHandle);
+        await loadProjectExports(projectHandle);
+        await loadProjectAgents(projectHandle);
+        await loadApprovals(projectHandle);
+        setStatus(`Motor olayı: ${projectHandle.name} yenilendi`);
+      }
+      catch (error) {
+        setStatus(`Motor olayı: yenileme başarısız (${error.message})`);
+      }
+    }
+
+    async function saveCurrentEpisode() {
+      const chapter = chapters[currentChapterIndex];
+      if (bridgeProjectActive && chapter?.filename) {
+        try {
+          const response = await fetch(`${bridgeUrl}/api/save-episode`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              projectRoot: currentProjectPathHint,
+              filename: chapter.filename,
+              text: manuscriptText.value
+            })
+          });
+          const result = await response.json();
+          if (!result.ok) throw new Error(result.error || "save-episode failed");
+          setRunLog(`Bölüm kaydedildi\nDosya: episode/${chapter.filename}\nKelime: ${result.words}`);
+          chapter.text = manuscriptText.value;
+          chapter.words = Number(result.words || countWords(manuscriptText.value));
+          chapter.state = chapter.words > 0 ? "done" : "empty";
+          renderChapters();
+          renderPreview();
+          setStatus(`Motor olayı: ${chapter.filename} bridge ile kaydedildi`);
+          return;
+        }
+        catch (error) {
+          setStatus(`Motor olayı: bridge kayıt başarısız (${error.message})`);
+          return;
+        }
+      }
+      if (!chapter || !chapter.handle) {
+        setStatus("Motor olayı: kaydedilecek gerçek bölüm dosyası yok.");
+        return;
+      }
+      try {
+        const writable = await chapter.handle.createWritable();
+        await writable.write(manuscriptText.value);
+        await writable.close();
+        chapter.text = manuscriptText.value;
+        chapter.words = countWords(manuscriptText.value);
+        chapter.state = chapter.words > 0 ? "done" : "empty";
+        renderChapters();
+        renderPreview();
+        setRunLog(`Bölüm kaydedildi\nDosya: ${chapter.filename}\nKelime: ${chapter.words}`);
+        setStatus(`Motor olayı: ${chapter.filename} kaydedildi`);
+      }
+      catch (error) {
+        setStatus(`Motor olayı: kayıt başarısız (${error.message})`);
+      }
+    }
+
+    async function copyPipelineCommand() {
+      currentProjectPathHint = projectPathInput.value.trim() || currentProjectPathHint;
+      const fromPhase = fromPhaseSelect.value;
+      const toPhase = toPhaseSelect.value;
+      const command = `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot "${currentProjectPathHint}" -FromPhase ${fromPhase} -ToPhase ${toPhase}`;
+      if (bridgeOnline && currentProjectPathHint && currentProjectPathHint !== "." && !currentProjectPathHint.startsWith(".")) {
+        try {
+          setStatus(`Motor olayı: pipeline çalışıyor (${fromPhase} → ${toPhase})...`);
+          const response = await fetch(`${bridgeUrl}/api/run-pipeline`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              projectRoot: currentProjectPathHint,
+              fromPhase,
+              toPhase,
+              mode: document.querySelector(".mode button.active")?.dataset.mode === "API" ? "command" : "manual"
+            })
+          });
+          const result = await response.json();
+          if (!result.ok) {
+            setRunLog(result.output || result.error || "Pipeline hata verdi.");
+            setStatus(`Motor olayı: pipeline durdu (${result.error || result.output || "hata"})`);
+            return;
+          }
+          setRunLog(result.output || `Pipeline tamamlandı: ${fromPhase} → ${toPhase}`);
+          setStatus("Motor olayı: pipeline tamamlandı; proje dosyaları yenileniyor...");
+          await refreshProject();
+          return;
+        }
+        catch (error) {
+          setStatus(`Motor olayı: bridge çağrısı başarısız (${error.message})`);
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(command);
+        setStatus("Motor olayı: pipeline komutu panoya kopyalandı");
+      }
+      catch {
+        setStatus(`Motor olayı: komut hazır: ${command}`);
+      }
+    }
+
+    async function exportFinalViaBridge() {
+      currentProjectPathHint = projectPathInput.value.trim() || currentProjectPathHint;
+      if (!bridgeOnline || !currentProjectPathHint || currentProjectPathHint === ".") {
+        setStatus("Motor olayı: final aktarım için Studio Bridge ve gerçek proje yolu gerekli.");
+        return;
+      }
+      try {
+        setStatus("Motor olayı: final DOCX masaüstüne aktarılıyor...");
+        const response = await fetch(`${bridgeUrl}/api/export-final`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ projectRoot: currentProjectPathHint })
+        });
+        const result = await response.json();
+        if (!result.ok) {
+          setRunLog(result.output || result.error || "Final export başarısız.");
+          setStatus(`Motor olayı: final aktarım durdu (${result.error || "hata"})`);
+          return;
+        }
+        setRunLog(result.output || `Final çıktı: ${result.manifest?.final_output_path || "masaüstü"}`);
+        setStatus("Motor olayı: final çıktı korundu; temizlik için kullanıcı okuma/bitti onayı gerekir.");
+        await refreshProject();
+      }
+      catch (error) {
+        setStatus(`Motor olayı: final aktarım başarısız (${error.message})`);
+      }
+    }
+
+    async function cleanupProjectViaBridge() {
+      currentProjectPathHint = projectPathInput.value.trim() || currentProjectPathHint;
+      if (!bridgeOnline || !currentProjectPathHint || currentProjectPathHint === ".") {
+        setStatus("Motor olayı: temizlik için Studio Bridge ve gerçek proje yolu gerekli.");
+        return;
+      }
+      const confirmation = window.prompt("Çalışma dosyaları ancak kitabı okuduktan sonra temizlenir. Eminsen tam olarak yaz: roman bitti");
+      if (confirmation !== "roman bitti") {
+        setStatus("Motor olayı: temizlik iptal edildi; açık kullanıcı onayı yok.");
+        return;
+      }
+      try {
+        setStatus("Motor olayı: temizlik onayı yazılıyor...");
+        const approvalResponse = await fetch(`${bridgeUrl}/api/approve-cleanup`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ projectRoot: currentProjectPathHint, confirmation })
+        });
+        const approvalResult = await approvalResponse.json();
+        if (!approvalResult.ok) throw new Error(approvalResult.error || "cleanup approval failed");
+
+        setStatus("Motor olayı: çalışma dosyaları güvenli kapıdan temizleniyor...");
+        const cleanupResponse = await fetch(`${bridgeUrl}/api/cleanup-project`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ projectRoot: currentProjectPathHint })
+        });
+        const cleanupResult = await cleanupResponse.json();
+        if (!cleanupResult.ok) {
+          setRunLog(cleanupResult.output || cleanupResult.error || "Temizlik başarısız.");
+          setStatus(`Motor olayı: temizlik durdu (${cleanupResult.error || "hata"})`);
+          return;
+        }
+        setRunLog(cleanupResult.output || "Çalışma dosyaları temizlendi.");
+        setStatus("Motor olayı: proje çalışma dosyaları temizlendi; final çıktı korunuyor.");
+        await refreshProject();
+      }
+      catch (error) {
+        setStatus(`Motor olayı: temizlik başarısız (${error.message})`);
+      }
+    }
+
+    function applyTypography() {
+      const font = document.getElementById("typeFont").value;
+      const size = Number(document.getElementById("typeSize").value || 11.5);
+      const line = Number(document.getElementById("lineHeight").value || 1.15);
+      const top = Number(document.getElementById("marginTop").value || 18);
+      const inside = Number(document.getElementById("marginInside").value || 20);
+      const outside = Number(document.getElementById("marginOutside").value || 16);
+      const pageSize = document.getElementById("pageSize").value;
+      const isA4 = pageSize.includes("A4");
+
+      document.documentElement.style.setProperty("--book", `${font}, Garamond, "Times New Roman", serif`);
+      document.documentElement.style.setProperty("--preview-font-size", `${Math.round(size * 1.45)}px`);
+      document.documentElement.style.setProperty("--preview-line-height", `${Math.max(1.25, line + 0.34)}`);
+      bookPage.style.aspectRatio = isA4 ? "210 / 297" : "148 / 210";
+      bookPage.style.paddingTop = `${Math.max(38, top * 2.7)}px`;
+      bookPage.style.paddingLeft = `${Math.max(42, inside * 2.55)}px`;
+      bookPage.style.paddingRight = `${Math.max(38, outside * 2.55)}px`;
+      previewMeta.textContent = `${isA4 ? "A4 · 210 x 297 mm" : "A5 · 148 x 210 mm"} · ${font} ${size} pt`;
+      renderPreview();
+    }
+
+    function collectLayoutPlanFromUi() {
+      return {
+        page_size: document.getElementById("pageSize").value,
+        print_mode: document.getElementById("printMode").value,
+        front_matter: document.getElementById("frontMatter").value,
+        font_family: document.getElementById("typeFont").value,
+        font_size_pt: Number(document.getElementById("typeSize").value || 11.5),
+        line_spacing: Number(document.getElementById("lineHeight").value || 1.15),
+        margin_top_mm: Number(document.getElementById("marginTop").value || 18),
+        margin_inside_mm: Number(document.getElementById("marginInside").value || 20),
+        margin_outside_mm: Number(document.getElementById("marginOutside").value || 16),
+        paragraph_first_line_indent_cm: Number(document.getElementById("indent").value || 0.55),
+        paragraph_spacing_after_pt: Number(document.getElementById("after").value || 0)
+      };
+    }
+
+    async function applyAndSaveTypography() {
+      applyTypography();
+      const layout = collectLayoutPlanFromUi();
+      if (bridgeProjectActive && bridgeOnline && currentProjectPathHint && currentProjectPathHint !== ".") {
+        try {
+          const response = await fetch(`${bridgeUrl}/api/save-layout-plan`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ projectRoot: currentProjectPathHint, ...layout })
+          });
+          const result = await response.json();
+          if (!result.ok) throw new Error(result.error || "save-layout-plan failed");
+          setRunLog(`Dizgi kaydedildi\nDosya: ${result.relativePath}\nFont: ${layout.font_family} ${layout.font_size_pt} pt\nSatır: ${layout.line_spacing}`);
+          setStatus("Motor olayı: dizgi ayarları layout-plan.json dosyasına kaydedildi.");
+          await refreshProject();
+          return;
+        }
+        catch (error) {
+          setStatus(`Motor olayı: dizgi kaydedilemedi (${error.message})`);
+          return;
+        }
+      }
+      if (projectHandle) {
+        try {
+          const existing = await readJsonFile(projectHandle, ["revision", "_state", "layout-plan.json"]) || {};
+          await writeJsonFile(projectHandle, ["revision", "_state", "layout-plan.json"], {
+            ...existing,
+            ...layout,
+            schema_version: existing.schema_version || "1.0.0",
+            run_id: existing.run_id || "studio-layout",
+            width_mm: existing.width_mm || 148,
+            height_mm: existing.height_mm || 210,
+            margin_bottom_mm: existing.margin_bottom_mm || layout.margin_top_mm,
+            justification: existing.justification || "both",
+            studio_updated_at: new Date().toISOString()
+          });
+          setRunLog(`Dizgi kaydedildi\nDosya: revision/_state/layout-plan.json\nFont: ${layout.font_family} ${layout.font_size_pt} pt`);
+          setStatus("Motor olayı: dizgi ayarları klasör izniyle kaydedildi.");
+          return;
+        }
+        catch (error) {
+          setStatus(`Motor olayı: dizgi kaydedilemedi (${error.message})`);
+          return;
+        }
+      }
+      setStatus("Motor olayı: dizgi ön izlemesi uygulandı; kaydetmek için proje bağla.");
+    }
+
+    function setPanelState(className, control, collapsed, openText, closedText) {
+      document.body.classList.toggle(className, collapsed);
+      if (control) {
+        control.classList.toggle("active", !collapsed);
+        if (openText && closedText) {
+          control.textContent = collapsed ? closedText : openText;
+        }
+      }
+    }
+
+    function togglePanel(className, control, openText, closedText) {
+      const collapsed = !document.body.classList.contains(className);
+      setPanelState(className, control, collapsed, openText, closedText);
+      document.querySelector(".statusbar .live").textContent = collapsed
+        ? "Motor olayı: çalışma alanı genişletildi"
+        : "Motor olayı: panel görünümü geri açıldı";
+    }
+
+    function syncPanelButtons() {
+      const navCollapsed = document.body.classList.contains("nav-collapsed");
+      const typeCollapsed = document.body.classList.contains("type-collapsed");
+      const agentsCollapsed = document.body.classList.contains("agents-collapsed");
+      const previewFocus = document.body.classList.contains("preview-focus");
+
+      toggleNav.classList.toggle("active", !navCollapsed);
+      toggleType.classList.toggle("active", !typeCollapsed);
+      toggleAgents.classList.toggle("active", !agentsCollapsed);
+      togglePreviewFocus.classList.toggle("active", previewFocus);
+      drawerToggle.textContent = typeCollapsed ? "Paneli Aç" : "Paneli Kapat";
+      collapseAgents.textContent = agentsCollapsed ? "Aç" : "Daralt";
+      sideCollapseBtn.textContent = navCollapsed ? "☰" : "☰";
+    }
+
+    document.querySelectorAll(".mode button").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".mode button").forEach(item => item.classList.remove("active"));
+        button.classList.add("active");
+        document.querySelector(".statusbar .live").textContent = `Motor olayı: ${button.dataset.mode} modu seçildi`;
+      });
     });
 
-    sampleBtn.addEventListener("click", () => {
-      inputText.value = "BÖLÜM 3\n\nKenan oltanın misinasını sessizce sararken gölün üstüne ince bir sis indi.\n\n\"Bugün balık yok,\" dedi yaşlı adam, \"ama su bize bir şey anlatıyor.\"\n\nKıyıya vuran dalgalar kısa aralıklarla taşlara çarpıyor, sanki uzak bir saate ritim tutuyordu.";
-      updatePreview();
+    document.querySelectorAll(".tabs button").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".tabs button").forEach(item => item.classList.remove("active"));
+        button.classList.add("active");
+        renderSupportTab(button.dataset.tab);
+      });
     });
 
-    sampleBtn.addEventListener("click", () => {
-      inputText.value = defaultSample;
-      updatePreview();
+    toggleNav.addEventListener("click", () => {
+      togglePanel("nav-collapsed", toggleNav);
+      syncPanelButtons();
     });
 
-    inputText.value = defaultSample;
-    updatePreview();
+    sideCollapseBtn.addEventListener("click", () => {
+      togglePanel("nav-collapsed", toggleNav);
+      syncPanelButtons();
+    });
+
+    toggleAgents.addEventListener("click", () => {
+      togglePanel("agents-collapsed", toggleAgents);
+      syncPanelButtons();
+    });
+
+    collapseAgents.addEventListener("click", () => {
+      togglePanel("agents-collapsed", toggleAgents);
+      syncPanelButtons();
+    });
+
+    toggleType.addEventListener("click", () => {
+      togglePanel("type-collapsed", toggleType);
+      syncPanelButtons();
+    });
+
+    drawerToggle.addEventListener("click", () => {
+      togglePanel("type-collapsed", toggleType);
+      syncPanelButtons();
+    });
+
+    togglePreviewFocus.addEventListener("click", () => {
+      document.body.classList.toggle("preview-focus");
+      syncPanelButtons();
+      document.querySelector(".statusbar .live").textContent = document.body.classList.contains("preview-focus")
+        ? "Motor olayı: büyük sayfa ön izlemesi açıldı"
+        : "Motor olayı: editör ve ön izleme yan yana";
+    });
+
+    zoomSelect.addEventListener("change", event => {
+      document.documentElement.style.setProperty("--page-zoom", event.target.value);
+      document.querySelector(".statusbar .live").textContent = `Motor olayı: ön izleme ${Math.round(Number(event.target.value) * 100)}%`;
+    });
+
+    agentList.addEventListener("click", event => {
+      const approve = event.target.closest("[data-approve]");
+      if (approve) {
+        const index = Number(approve.dataset.approve);
+        agents[index].state = "done";
+        agents[index].progress = 100;
+        const next = agents[index + 1];
+        if (next && next.state === "idle") {
+          next.state = "running";
+          next.progress = 24;
+        }
+        renderAgents();
+        return;
+      }
+      const card = event.target.closest("[data-agent]");
+      if (!card) return;
+      const agent = agents[Number(card.dataset.agent)];
+      if (!agent) return;
+      const evidence = agent.evidence?.length
+        ? agent.evidence.map(item => `- ${item.relativePath || item.name}`).join("\n")
+        : "- Kanıt dosyası henüz bulunmadı.";
+      setRunLog(`${agent.name}\nDurum: ${stateLabel(agent.state)}\n\nKanıtlar:\n${evidence}`);
+      setStatus(`Motor olayı: ${agent.name} kanıtları gösteriliyor`);
+    });
+
+    document.querySelectorAll("[data-info]").forEach(button => {
+      button.addEventListener("click", () => {
+        setRunLog(button.dataset.info || button.textContent.trim());
+        setStatus("Motor olayı: kitap haritası bilgisi gösteriliyor");
+      });
+    });
+
+    exportList.addEventListener("click", event => {
+      const item = event.target.closest("[data-export-info]");
+      if (!item) return;
+      setRunLog(`Dışa aktarım\n${item.dataset.exportInfo || item.textContent.trim()}`);
+      setStatus("Motor olayı: dışa aktarım bilgisi gösteriliyor");
+    });
+
+    approvalList.addEventListener("click", event => {
+      const approval = event.target.closest("[data-approval], [data-approval-row]");
+      if (!approval) return;
+      event.preventDefault();
+      event.stopPropagation();
+      approveGate(approval.dataset.approval || approval.dataset.approvalRow);
+    });
+
+    chapterList.addEventListener("click", event => {
+      const button = event.target.closest("[data-chapter]");
+      if (!button) return;
+      chapterList.querySelectorAll("button").forEach(item => item.classList.remove("active"));
+      button.classList.add("active");
+      selectChapter(Number(button.dataset.chapter));
+      document.querySelectorAll(".tabs button").forEach(item => item.classList.remove("active"));
+      document.querySelector('[data-tab="manuscript"]').classList.add("active");
+      renderSupportTab("manuscript");
+    });
+
+    document.getElementById("renderBtn").addEventListener("click", renderPreview);
+    document.getElementById("typeNav").addEventListener("click", event => {
+      const button = event.target.closest("[data-type-section]");
+      if (!button) return;
+      focusTypeSection(button.dataset.typeSection);
+    });
+    document.getElementById("blockStyle").addEventListener("change", event => {
+      applyBlockStyle(event.target.value);
+      event.target.value = "Gövde Metni";
+    });
+    document.querySelectorAll("[data-format]").forEach(button => {
+      button.addEventListener("click", () => applyFormatCommand(button.dataset.format));
+    });
+    document.querySelectorAll("[data-align]").forEach(button => {
+      button.addEventListener("click", () => applyAlignment(button.dataset.align));
+    });
+    document.getElementById("applyType").addEventListener("click", applyAndSaveTypography);
+    document.getElementById("fontSelect").addEventListener("change", event => {
+      document.getElementById("typeFont").value = event.target.value;
+      applyTypography();
+    });
+    document.getElementById("fontSizeSelect").addEventListener("change", event => {
+      document.getElementById("typeSize").value = event.target.value;
+      applyTypography();
+    });
+    ["pageSize", "printMode", "frontMatter", "typeFont", "typeSize", "lineHeight", "marginTop", "marginInside", "marginOutside", "indent", "after"].forEach(id => {
+      const control = document.getElementById(id);
+      if (!control) return;
+      control.addEventListener("input", applyTypography);
+      control.addEventListener("change", applyTypography);
+    });
+    manuscriptText.addEventListener("input", renderPreview);
+    projectPathInput.addEventListener("input", syncBridgeButtons);
+    newProjectBtn.addEventListener("click", createProjectViaBridge);
+    bindProjectBtn.addEventListener("click", bindProject);
+    saveRequestBtn.addEventListener("click", saveBookRequestViaBridge);
+    refreshProjectBtn.addEventListener("click", refreshProject);
+    saveEpisodeBtn.addEventListener("click", saveCurrentEpisode);
+    copyRunLogBtn.addEventListener("click", copyRunLog);
+    finalExportBtn.addEventListener("click", exportFinalViaBridge);
+    cleanupProjectBtn.addEventListener("click", cleanupProjectViaBridge);
+    buildRequestBtn.addEventListener("click", buildWizardRequestText);
+    saveWizardBtn.addEventListener("click", saveWizardRequest);
+    [wizardType, wizardPages, wizardCharacters, wizardNarrator, wizardPremise, wizardSetting, wizardEnding, wizardStyle, wizardBoundaries].forEach(input => {
+      input.addEventListener("input", () => validateWizard());
+      input.addEventListener("change", () => validateWizard());
+    });
+    document.getElementById("exportBtn").addEventListener("click", copyPipelineCommand);
+
+    renderChapters();
+    renderAgents();
+    renderQuality(null);
+    renderLifecycle(null);
+    validateWizard();
+    manuscriptText.value = emptyManuscriptText;
+    applyAlignment("justify");
+    applyTypography();
+    syncPanelButtons();
+    syncBridgeButtons();
+    detectBridge();
   </script>
 </body>
 </html>
