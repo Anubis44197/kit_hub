@@ -831,11 +831,6 @@
       background: rgba(52, 198, 193, 0.08);
     }
 
-    .toolbar .support-button {
-      min-width: 76px;
-      color: var(--muted);
-    }
-
     .toolbar .focus-button {
       min-width: 64px;
       color: var(--soft);
@@ -914,29 +909,6 @@
       width: 100%;
       min-height: 32px;
       text-align: left;
-    }
-
-    .live-preview-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      height: 29px;
-      padding: 0 10px;
-      border: 1px solid rgba(102, 221, 178, 0.3);
-      border-radius: 999px;
-      color: var(--mint);
-      background: rgba(102, 221, 178, 0.06);
-      font-size: 12px;
-      white-space: nowrap;
-    }
-
-    .live-preview-chip::before {
-      content: "";
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      background: currentColor;
-      box-shadow: 0 0 12px rgba(102, 221, 178, 0.8);
     }
 
     .editor-grid {
@@ -1109,18 +1081,6 @@
     .analysis-row span {
       color: var(--gold);
       font-size: 12px;
-    }
-
-    .genre-chip {
-      display: inline-flex;
-      align-items: center;
-      height: 29px;
-      padding: 0 10px;
-      border: 1px solid var(--line-soft);
-      border-radius: 999px;
-      color: var(--muted);
-      font-size: 12px;
-      white-space: nowrap;
     }
 
     textarea {
@@ -2280,7 +2240,7 @@
         <div class="spacer"></div>
         <button type="button" class="focus-button" id="focusModeBtn">Odak</button>
         <details class="control-menu" id="bookControlMenu">
-          <summary>Kitap Kontrolü</summary>
+          <summary>Kontrol</summary>
           <div class="control-menu-list">
             <button type="button" data-support-tab="cards">Bölüm Panosu</button>
             <button type="button" data-support-tab="context">Bağlam Defteri</button>
@@ -2289,8 +2249,6 @@
             <button type="button" data-support-tab="revision">Revizyon</button>
           </div>
         </details>
-        <span class="genre-chip" id="genreModeChip">Genel Yazım</span>
-        <span class="live-preview-chip">Canlı Ön İzleme</span>
       </div>
 
       <div class="editor-grid">
@@ -2501,7 +2459,6 @@
     const togglePreviewFocus = document.getElementById("togglePreviewFocus");
     const toggleWritingTools = document.getElementById("toggleWritingTools");
     const focusModeBtn = document.getElementById("focusModeBtn");
-    const genreModeChip = document.getElementById("genreModeChip");
     const blockStyle = document.getElementById("blockStyle");
     const bookControlMenu = document.getElementById("bookControlMenu");
     const settingsOutputTarget = document.getElementById("settingsOutputTarget");
@@ -2986,7 +2943,6 @@
     function applyGenreMode(type = wizardType.value.trim()) {
       const options = genreBlockOptions[type] || genreBlockOptions.Roman;
       blockStyle.innerHTML = options.map((option, index) => `<option${index === 0 ? " selected" : ""}>${escapeHtml(option)}</option>`).join("");
-      genreModeChip.textContent = type ? `${type} Modu` : "Genel Yazım";
       const statusText = type
         ? `Motor olayı: ${type} için editör biçimleri hazırlandı`
         : "Motor olayı: genel yazım biçimleri hazırlandı";
