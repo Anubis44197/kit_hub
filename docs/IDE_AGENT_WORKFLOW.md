@@ -111,9 +111,11 @@ The runner does not accept vague completion. Each phase must write real files:
 
 If files are missing, malformed, too short/long, repetitive, mojibake-corrupted, publication metadata is falsely claimed, or the exported DOCX does not contain the current episode text, the runner fails the phase.
 
-Before any chapter writing, `design-big` must produce `revision/_state/book-plan.json`, `revision/_state/open-source-story-model.json`, `revision/_state/chapter-plan.json`, and `revision/_state/layout-plan.json`. `design-small` is blocked until the user approves `runtime/approvals/book-plan-approval.json`; do not write around this gate by manually creating chapter files early.
+Before any chapter writing, `design-big` must produce `revision/_state/book-plan.json`, `revision/_state/open-source-story-model.json`, `revision/_state/story-bible.json`, `revision/_state/chapter-plan.json`, `revision/_state/chapter-continuity-chain.json`, `revision/_state/context-saliency-map.json`, and `revision/_state/layout-plan.json`. `design-small` is blocked until the user approves `runtime/approvals/book-plan-approval.json`; do not write around this gate by manually creating chapter files early.
 
 `open-source-story-model.json` is the mandatory story planning model. The IDE agent must load it before `design-small`, `create`, `polish`, `rewrite`, and `export`. It binds Manuskript-style character/plot/world/outline fields, novelWriter-style synopsis/tag/cross-reference rules, bibisco-style premise/fabula/setting rules, and STORM-style pre-writing/source rules into the current book project.
+
+`story-bible.json`, `chapter-continuity-chain.json`, and `context-saliency-map.json` are the mandatory context boundary. The IDE agent must not feed the writer model the whole project folder, old exports, sample stories, future-only reveals, or the full raw Story Bible. For each chapter batch, run the `context-saliency-gate` role and write `revision/_workspace/context-saliency-gate_EP{RANGE}.json` plus `.md` before drafting or rewriting.
 
 The IDE agent must write the compliance manifest last:
 
@@ -127,14 +129,17 @@ The IDE agent must write the compliance manifest last:
   "loaded_state_files": [
     "revision/_state/book-plan.json",
     "revision/_state/open-source-story-model.json",
+    "revision/_state/story-bible.json",
     "revision/_state/chapter-plan.json",
     "revision/_state/layout-plan.json",
     "revision/_state/longform-plan.json",
     "revision/_state/character-state.json",
     "revision/_state/plot-ledger.json",
-    "revision/_state/continuity-ledger.json"
+    "revision/_state/continuity-ledger.json",
+    "revision/_state/chapter-continuity-chain.json",
+    "revision/_state/context-saliency-map.json"
   ],
-  "output_artifacts": ["episode/ep001.md"],
+  "output_artifacts": ["revision/_workspace/context-saliency-gate_EP001.json", "revision/_workspace/context-saliency-gate_EP001.md", "episode/ep001.md"],
   "artifact_hashes": [
     {
       "path": "episode/ep001.md",
@@ -151,7 +156,7 @@ The IDE agent must write the compliance manifest last:
 Recommended helper:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/ci/write_agent_compliance.ps1 -ProjectRoot . -Phase create -RunId RUN-... -RequiredAgents episode-creator,tdk-polisher,tdk-layout-agent,quality-verifier -RequiredReferences skills/create/SKILL.md -LoadedStateFiles revision/_state/book-plan.json,revision/_state/open-source-story-model.json,revision/_state/chapter-plan.json,revision/_state/layout-plan.json,revision/_state/longform-plan.json,revision/_state/character-state.json,revision/_state/plot-ledger.json,revision/_state/continuity-ledger.json -OutputArtifacts episode/ep001.md -PhaseAuthority manual_ide_agent
+powershell -ExecutionPolicy Bypass -File scripts/ci/write_agent_compliance.ps1 -ProjectRoot . -Phase create -RunId RUN-... -RequiredAgents episode-architect,continuity-bridge,context-saliency-gate,episode-creator,tdk-polisher,tdk-layout-agent,quality-verifier,chief-editor-orchestrator,tdk-rule-auditor -RequiredReferences skills/create/SKILL.md,skills/polish/references/context-saliency-contract.md -LoadedStateFiles revision/_state/book-plan.json,revision/_state/open-source-story-model.json,revision/_state/story-bible.json,revision/_state/chapter-plan.json,revision/_state/layout-plan.json,revision/_state/longform-plan.json,revision/_state/character-state.json,revision/_state/plot-ledger.json,revision/_state/continuity-ledger.json,revision/_state/chapter-continuity-chain.json,revision/_state/context-saliency-map.json -OutputArtifacts revision/_workspace/context-saliency-gate_EP001.json,revision/_workspace/context-saliency-gate_EP001.md,episode/ep001.md -PhaseAuthority manual_ide_agent
 ```
 
 ## Output

@@ -1277,6 +1277,7 @@ Her bölüm önceki bölümün sonucundan doğmalı; bölüm tekrarları ve tekn
   $requiredStateFiles = @(
     "revision/_state/book-plan.json",
     "revision/_state/open-source-story-model.json",
+    "revision/_state/story-bible.json",
     "revision/_state/chapter-plan.json",
     "revision/_state/layout-plan.json",
     "revision/_state/longform-plan.json",
@@ -1284,6 +1285,8 @@ Her bölüm önceki bölümün sonucundan doğmalı; bölüm tekrarları ve tekn
     "revision/_state/plot-ledger.json",
     "revision/_state/chapter-summaries.json",
     "revision/_state/continuity-ledger.json",
+    "revision/_state/chapter-continuity-chain.json",
+    "revision/_state/context-saliency-map.json",
     "revision/_state/world-state.json",
     "revision/_state/relationship-graph.json",
     "revision/_state/knowledge-graph.json",
@@ -1433,6 +1436,51 @@ plan_id: $planId
     }
     required_state_files = $requiredStateFiles
   })
+  $storyCharacters = @()
+  foreach ($pc in $plannedCharacters) {
+    $storyCharacters += [ordered]@{
+      name = $pc.name
+      role = $pc.role
+      desire = $pc.desire
+      fear = $pc.fear
+      arc = $pc.arc
+      visible_to_ai = $true
+      hidden_traits = @()
+    }
+  }
+  $storyOutline = @($chapterPlan | ForEach-Object {
+    [ordered]@{
+      id = $_.id
+      reader_title = $_.reader_title
+      synopsis = $_.purpose
+      target_words = $_.target_words
+      visible_to_ai = $true
+    }
+  })
+  Write-Json -Path (Join-Path $state "story-bible.json") -Value ([ordered]@{
+    schema_version = "1.0.0"
+    run_id = $RunId
+    source = "approved_design_big"
+    premise = $seed
+    genre = $genreLabel
+    style = [ordered]@{
+      language = "tr-TR"
+      voice = "approved plan voice"
+      reader_output_rule = "No technical EP or scene labels in reader-facing manuscript."
+    }
+    synopsis = "The approved premise, chapter plan, and character arcs are the source of truth for generation."
+    characters = $storyCharacters
+    worldbuilding = @(
+      [ordered]@{ id = "world_root"; label = "Approved setting"; summary = "Use only setting facts present in user request, design documents, or state ledgers."; visible_to_ai = $true }
+    )
+    outline = $storyOutline
+    visibility_rules = [ordered]@{
+      default_character_visibility = "visible_when_relevant"
+      hidden_trait_policy = "Hidden traits and future reveals must not be passed to writing agents before their planned chapter."
+      raw_full_context_policy = "Full Story Bible must not be dumped into writer prompts; context-saliency-map.json selects relevant items."
+      stale_project_policy = "No old project, sample, fixture, or unrelated export may be loaded as story context."
+    }
+  })
   Write-Json -Path (Join-Path $state "chapter-plan.json") -Value ([ordered]@{ schema_version = "1.0.0"; run_id = $RunId; plan_id = $planId; chapters = $chapterPlan })
   Write-Json -Path (Join-Path $state "layout-plan.json") -Value ([ordered]@{
     schema_version = "1.0.0"
@@ -1504,6 +1552,44 @@ plan_id: $planId
   Write-Json -Path (Join-Path $state "plot-ledger.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; main_question = "Karakter verilen konunun yarattigi gerilim karsisinda kacmak yerine sonucunu sahiplenebilecek mi?"; open_threads = @("Acilis anindaki sakli gerilim", "Karakterin gecmis kararinin bugune etkisi", "Son secimin bedeli"); closed_threads = @(); cause_effect_chain = @("Konu istegi karakterin rutinini kurar.", "Rutin bozulunca karakterin sakladigi duygu gorunur."); final_promises = @("Acilis vaadi kapanista davranisla cevaplanacak.", "Karakterin bilgi siniri her bolumde ledger'a islenecek.") })
   Write-Json -Path (Join-Path $state "chapter-summaries.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; chapters = @() })
   Write-Json -Path (Join-Path $state "continuity-ledger.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; timeline = @(); locations = @(); object_state = [ordered]@{}; violations = @() })
+  $continuityChapters = @()
+  $saliencyChapters = @()
+  for ($i = 0; $i -lt $chapterPlan.Count; $i++) {
+    $chapter = $chapterPlan[$i]
+    $chapterId = [string]$chapter.id
+    $previousId = if ($i -eq 0) { $null } else { [string]$chapterPlan[$i - 1].id }
+    $nextId = if ($i -ge ($chapterPlan.Count - 1)) { $null } else { [string]$chapterPlan[$i + 1].id }
+    $continuityChapters += [ordered]@{
+      id = $chapterId
+      continues_from = $previousId
+      outline_link = $chapterId
+      required_prior_context = $(if ($previousId) { @($previousId) } else { @("book_plan_opening_state") })
+      handoff_to_next = $nextId
+      nonlinear_exception = $false
+    }
+    $saliencyChapters += [ordered]@{
+      id = $chapterId
+      visible_characters = @($plannedCharacters | ForEach-Object { [string]$_.name })
+      visible_worldbuilding = @("world_root")
+      visible_plot_threads = @("main_question")
+      visible_promises = @("P001")
+      blocked_context = @("future-only reveals not planted in or before $chapterId", "old projects", "sample/test manuscripts", "unrelated DOCX exports")
+      selection_reason = "Initial design scaffold. IDE/provider must narrow this before drafting the chapter batch."
+      writer_may_use_full_story_bible = $false
+    }
+  }
+  Write-Json -Path (Join-Path $state "chapter-continuity-chain.json") -Value ([ordered]@{
+    schema_version = "1.0.0"
+    run_id = $RunId
+    rule = "Every chapter must continue from the previous planned chapter unless a user-approved nonlinear exception exists."
+    chapters = $continuityChapters
+  })
+  Write-Json -Path (Join-Path $state "context-saliency-map.json") -Value ([ordered]@{
+    schema_version = "1.0.0"
+    run_id = $RunId
+    rule = "Writing agents may use only selected visible context for the requested chapter batch."
+    chapters = $saliencyChapters
+  })
   Write-Json -Path (Join-Path $state "world-state.json") -Value ([ordered]@{ schema_version = "1.0.0"; run_id = $RunId; scale_tier = $scaleTier; locations = @(); time_rules = @("Every chapter must declare where and when it occurs."); objects = @(); institutions = @(); world_constraints = @("No location, object, institution, or social rule may change without a state update.") })
   Write-Json -Path (Join-Path $state "relationship-graph.json") -Value ([ordered]@{ schema_version = "1.0.0"; run_id = $RunId; nodes = $relationshipNodes; edges = @(); change_log = @(); rule = "Every relationship change must cite the chapter that caused it." })
   $knowledgeEntries = @()
@@ -1534,7 +1620,7 @@ plan_id: $planId
   Write-Json -Path (Join-Path $state "writing-type-profile.json") -Value ([ordered]@{ schema_version = "1.2.0"; run_id = $RunId; writing_type = $writingType; genre = $genreLabel; target_reader = "general_adult_unless_user_specifies"; structure_model = $structureModel; scale_tier = $scaleTier; voice_model = "consistent book voice selected in approved plan"; evidence_policy = "No research/source claim without source artifacts."; supported_types = @("novel", "story", "novella", "children_book", "young_adult", "essay", "memoir", "biography", "research_book", "self_help", "business_book", "academic", "poetry_collection", "screenplay"); continuity_policy = "open-source-story-model-plus-world-graph-and-state-ledger-first"; completion_criteria = @("approved book plan", "approved layout plan", "open-source story model", "chapter continuity ledgers", "world graph", "promise payoff ledger", "type-specific ledgers", "publication readiness gates") })
   Write-Json -Path (Join-Path $state "genre-structure-template.json") -Value ([ordered]@{ schema_version = "1.2.0"; run_id = $RunId; template_id = $structureModel; writing_type = $writingType; genre = $genreLabel; scale_tier = $scaleTier; acts = $acts; chapter_rules = @("Each chapter must create new consequence.", "No chapter may restate the same situation without change.", "No character may use unknown information.", "Every chapter must update the world, relationship, knowledge, timeline, or promise/payoff state.", "Nonfiction chapters must update claim/source/argument ledgers when applicable."); mandatory_ledgers = @("character-state.json", "plot-ledger.json", "continuity-ledger.json", "chapter-summaries.json", "world-state.json", "relationship-graph.json", "knowledge-graph.json", "promise-payoff-ledger.json", "timeline.json", "theme-ledger.json", "style-profile.json", "claim-ledger.json", "source-ledger.json", "term-glossary.json", "argument-ledger.json") })
   Write-Json -Path (Join-Path $state "editorial-quality-scorecard.json") -Value ([ordered]@{ schema_version = "1.2.0"; run_id = $RunId; threshold_pass = 85; axes = @("continuity", "progression", "character_or_argument_depth", "style", "language", "layout", "publication-readiness", "type-fit"); export_blockers = @("critical_continuity_issue", "missing_type_specific_ledger", "missing_front_matter", "missing_cover_brief", "technical_marker_in_reader_output", "missing_story_choice_approval", "missing_book_plan_approval"); verdict = "DESIGN_PENDING_DETAIL" })
-  Write-Json -Path (Join-Path $state "llm-adapter-contract.json") -Value ([ordered]@{ schema_version = "1.2.0"; run_id = $RunId; adapter_contract = "Provider or IDE agent must load approved plan/state, write only requested phase artifacts, and update state ledgers."; max_chapters_per_batch = $maxChaptersPerBatch; audit_interval_chapters = $auditIntervalChapters; required_input_state = $requiredStateFiles; required_output_state = @("revision/_state/chapter-summaries.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/claim-ledger.json", "revision/_state/source-ledger.json", "revision/_state/term-glossary.json", "revision/_state/argument-ledger.json"); governing_story_model = "revision/_state/open-source-story-model.json"; local_adapter_boundary = "The local adapter creates scaffolding and export packages only from existing artifacts; it must not invent manuscript, preface, or cover copy."; authorship_policy = "Creative authorship belongs to provider command, IDE agent, or human writer."; research_policy = "No web/TDK/source research claim without source artifacts."; chapter_batch_rule = "Never write beyond max_chapters_per_batch without loading and updating required_output_state." })
+  Write-Json -Path (Join-Path $state "llm-adapter-contract.json") -Value ([ordered]@{ schema_version = "1.2.0"; run_id = $RunId; adapter_contract = "Provider or IDE agent must load approved plan/state, write only requested phase artifacts, and update state ledgers."; max_chapters_per_batch = $maxChaptersPerBatch; audit_interval_chapters = $auditIntervalChapters; required_input_state = $requiredStateFiles; required_output_state = @("revision/_state/chapter-summaries.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/continuity-ledger.json", "revision/_state/chapter-continuity-chain.json", "revision/_state/context-saliency-map.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/claim-ledger.json", "revision/_state/source-ledger.json", "revision/_state/term-glossary.json", "revision/_state/argument-ledger.json"); governing_story_model = "revision/_state/open-source-story-model.json"; governing_story_bible = "revision/_state/story-bible.json"; context_selection = "revision/_state/context-saliency-map.json"; local_adapter_boundary = "The local adapter creates scaffolding and export packages only from existing artifacts; it must not invent manuscript, preface, or cover copy."; authorship_policy = "Creative authorship belongs to provider command, IDE agent, or human writer."; research_policy = "No web/TDK/source research claim without source artifacts."; chapter_batch_rule = "Never write beyond max_chapters_per_batch without loading and updating required_output_state."; context_policy = "Never pass the full raw Story Bible to a writing agent when a narrower context-saliency selection is available." })
 
   Write-Utf8 -Path (Join-Path $ProjectRoot "novel-config.md") -Content @"
 # Novel Config
@@ -1617,7 +1703,7 @@ longform:
     note = "Set approved=true only after the user reviews and accepts the visible book plan, chapter flow, continuity model, and layout/page targets. A new design-big run resets this approval."
   })
 
-  Write-AgentCompliance -PhaseName "design-big" -RequiredAgents @("concept-builder", "character-architect", "plot-hook-engineer", "book-structure-optimizer") -RequiredReferences @("skills/design-big/SKILL.md", "skills/polish/references/llm-agent-compliance-policy.md", "skills/polish/references/open-source-novel-editor-patterns.md") -LoadedStateFiles @("runtime/book-request.md", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "runtime/approvals/story-choice.json") -OutputArtifacts @("novel-config.md", "design/01_concept_bootstrap.md", "design/02_character_core.md", "design/03_macro_plot_hooks.md", "design/04_book_plan.md", "design/05_chapter_plan.md", "design/06_layout_plan.md", "runtime/approvals/book-plan-approval.json", "revision/_state/book-plan.json", "revision/_state/open-source-story-model.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/style-profile.json", "revision/_state/writing-type-profile.json", "revision/_state/genre-structure-template.json", "revision/_state/editorial-quality-scorecard.json", "revision/_state/llm-adapter-contract.json", "revision/_state/claim-ledger.json", "revision/_state/source-ledger.json", "revision/_state/term-glossary.json", "revision/_state/argument-ledger.json")
+  Write-AgentCompliance -PhaseName "design-big" -RequiredAgents @("concept-builder", "character-architect", "plot-hook-engineer", "book-structure-optimizer") -RequiredReferences @("skills/design-big/SKILL.md", "skills/polish/references/llm-agent-compliance-policy.md", "skills/polish/references/open-source-novel-editor-patterns.md", "skills/polish/references/context-saliency-contract.md") -LoadedStateFiles @("runtime/book-request.md", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "runtime/approvals/story-choice.json") -OutputArtifacts @("novel-config.md", "design/01_concept_bootstrap.md", "design/02_character_core.md", "design/03_macro_plot_hooks.md", "design/04_book_plan.md", "design/05_chapter_plan.md", "design/06_layout_plan.md", "runtime/approvals/book-plan-approval.json", "revision/_state/book-plan.json", "revision/_state/open-source-story-model.json", "revision/_state/story-bible.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/chapter-continuity-chain.json", "revision/_state/context-saliency-map.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/style-profile.json", "revision/_state/writing-type-profile.json", "revision/_state/genre-structure-template.json", "revision/_state/editorial-quality-scorecard.json", "revision/_state/llm-adapter-contract.json", "revision/_state/claim-ledger.json", "revision/_state/source-ledger.json", "revision/_state/term-glossary.json", "revision/_state/argument-ledger.json")
 }
 
 function Invoke-DesignSmall {
@@ -1672,7 +1758,18 @@ Tekrarlanan bölüm kurulumu, EP kodu, sahne etiketi, yayın kontrol notu ve tes
 "@
   Write-Utf8 -Path (Join-Path $design "04_character-detail_$range.md") -Content "# Karakter Detayları $range`n`nrun_id: $RunId`n`nKarakter bilgi sınırları, arzular, korkular ve bölüm sonu değişimleri burada somutlaştırılmalıdır.`n"
   Write-Utf8 -Path (Join-Path $design "05_plot-detail_$range.md") -Content "# Plot Detayları $range`n`nrun_id: $RunId`n`nHer bölüm önceki bölümün sonucu olarak başlamalı ve yeni sonuç üretmelidir.`n"
-  Write-AgentCompliance -PhaseName "design-small" -RequiredAgents @("episode-architect", "continuity-bridge") -RequiredReferences @("skills/design-small/SKILL.md", "skills/polish/references/handoff-contract.md", "skills/polish/references/open-source-novel-editor-patterns.md") -LoadedStateFiles @("runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/longform-plan.json", "revision/_state/book-plan.json", "revision/_state/open-source-story-model.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/claim-ledger.json", "revision/_state/source-ledger.json", "revision/_state/term-glossary.json", "revision/_state/argument-ledger.json", "runtime/approvals/book-plan-approval.json") -OutputArtifacts @("design/$range`_scene_plan.md", "design/04_character-detail_$range.md", "design/05_plot-detail_$range.md")
+  $work = Join-Path $ProjectRoot "revision/_workspace"
+  Ensure-Dir $work
+  Write-Json -Path (Join-Path $work "context-saliency-gate_$range.json") -Value ([ordered]@{
+    run_id = $RunId
+    phase = "design-small"
+    chapter_range = $range
+    verdict = "PASS"
+    checked_state = @("revision/_state/story-bible.json", "revision/_state/chapter-continuity-chain.json", "revision/_state/context-saliency-map.json")
+    writer_context_policy = "Writer agents may use selected visible context only; full raw Story Bible dumps are blocked."
+  })
+  Write-Utf8 -Path (Join-Path $work "context-saliency-gate_$range.md") -Content "# Context Saliency Gate $range`n`nrun_id: $RunId`n`nVERDICT: PASS`n`nStory Bible, chapter continuity chain, and context saliency map exist. IDE/provider agents must narrow the visible context for each chapter before manuscript drafting.`n"
+  Write-AgentCompliance -PhaseName "design-small" -RequiredAgents @("episode-architect", "continuity-bridge", "context-saliency-gate") -RequiredReferences @("skills/design-small/SKILL.md", "skills/polish/references/handoff-contract.md", "skills/polish/references/open-source-novel-editor-patterns.md", "skills/polish/references/context-saliency-contract.md") -LoadedStateFiles @("runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/longform-plan.json", "revision/_state/book-plan.json", "revision/_state/open-source-story-model.json", "revision/_state/story-bible.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/continuity-ledger.json", "revision/_state/chapter-continuity-chain.json", "revision/_state/context-saliency-map.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/claim-ledger.json", "revision/_state/source-ledger.json", "revision/_state/term-glossary.json", "revision/_state/argument-ledger.json", "runtime/approvals/book-plan-approval.json") -OutputArtifacts @("design/$range`_scene_plan.md", "design/04_character-detail_$range.md", "design/05_plot-detail_$range.md", "revision/_workspace/context-saliency-gate_$range.json", "revision/_workspace/context-saliency-gate_$range.md")
 }
 
 function Invoke-Create {

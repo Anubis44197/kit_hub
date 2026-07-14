@@ -12,6 +12,7 @@
                                 "skills/design-big/SKILL.md",
                                 "skills/polish/references/llm-agent-compliance-policy.md",
                                 "skills/polish/references/open-source-novel-editor-patterns.md",
+                                "skills/polish/references/context-saliency-contract.md",
                                 "skills/polish/references/chief-editor-orchestrator-contract.md"
                             ],
     "required_state_files":  [

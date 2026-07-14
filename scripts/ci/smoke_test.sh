@@ -25,6 +25,8 @@ test -f skills/create/SKILL.md
 test -f skills/polish/SKILL.md
 test -f skills/rewrite/SKILL.md
 test -f skills/export-word/SKILL.md
+test -f scripts/revision_proposals.ps1
+test -f scripts/apply_revision.ps1
 
 echo "[smoke] checking runtime references..."
 test -f skills/polish/references/run-summary-schema.md

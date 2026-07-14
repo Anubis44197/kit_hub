@@ -4,12 +4,14 @@
     "required_agents":  [
                             "episode-architect",
                             "continuity-bridge",
+                            "context-saliency-gate",
                             "chief-editor-orchestrator"
                         ],
     "required_references":  [
                                 "skills/design-small/SKILL.md",
                                 "skills/polish/references/handoff-contract.md",
                                 "skills/polish/references/open-source-novel-editor-patterns.md",
+                                "skills/polish/references/context-saliency-contract.md",
                                 "skills/polish/references/chief-editor-orchestrator-contract.md"
                             ],
     "required_state_files":  [
@@ -19,12 +21,15 @@
                                  "runtime/approvals/book-brief-approval.json",
                                  "revision/_state/book-plan.json",
                                  "revision/_state/open-source-story-model.json",
+                                 "revision/_state/story-bible.json",
                                  "revision/_state/chapter-plan.json",
                                  "revision/_state/layout-plan.json",
                                  "revision/_state/longform-plan.json",
                                  "revision/_state/character-state.json",
                                  "revision/_state/plot-ledger.json",
                                  "revision/_state/continuity-ledger.json",
+                                 "revision/_state/chapter-continuity-chain.json",
+                                 "revision/_state/context-saliency-map.json",
                                  "revision/_state/world-state.json",
                                  "revision/_state/relationship-graph.json",
                                  "revision/_state/knowledge-graph.json",
@@ -37,8 +42,9 @@
     "required_approvals":  [
                                "runtime/approvals/book-plan-approval.json"
                            ],
-    "allowed_write_roots":  [
+                            "allowed_write_roots":  [
                                 "design",
+                                "revision/_workspace",
                                 "revision/_state",
                                 "runtime/agent-compliance"
                             ],
@@ -46,6 +52,8 @@
                                     "design/*scene_plan*.md",
                                     "design/*_character-detail_*.md",
                                     "design/*_plot-detail_*.md",
+                                    "revision/_workspace/context-saliency-gate_*.md",
+                                    "revision/_workspace/context-saliency-gate_*.json",
                                     "revision/_state/*.json",
                                     "runtime/agent-compliance/chief-editor-orchestrator_*"
                                 ],
@@ -57,6 +65,7 @@
     "agent_sequence":  [
                            "episode-architect",
                            "continuity-bridge",
+                           "context-saliency-gate",
                            "chief-editor-orchestrator"
                        ]
 }

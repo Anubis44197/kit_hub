@@ -63,6 +63,7 @@ Long-form AI fiction commonly fails in four areas. This repository addresses eac
 |---|---|---|
 | Character Depth Drift | Characters become generic over many episodes | Character constraints from design docs + continuity checks (`continuity-bridge`, `episode-creator`, `revision-reviewer`) |
 | Story Coherence Breakdown | Timeline, cause-effect, and foreshadowing drift | `novel-config.md` as source-of-truth + `rule-checker` and `quality-verifier` gates |
+| Context Drift | LLM pulls in old projects, future reveals, or unrelated details | `story-bible.json`, `chapter-continuity-chain.json`, `context-saliency-map.json`, and `context-saliency-gate` restrict visible chapter context |
 | Language/Mechanics Degradation | Punctuation, dialogue flow, readability degrade | `tdk-polisher` + `tdk-layout-agent` + canonical writeback restrictions |
 | Book Package Incompleteness | Missing preface, TOC, cover copy, or print blockers | `front-matter-editor`, `cover-designer`, export manifest gates |
 
@@ -123,10 +124,11 @@ Reference documents:
 6. Optional bootstrap:
    - `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
 
-The default readiness check is intentionally fast enough for normal use. Long-form and production sample tests are available separately:
+The default readiness check covers contract, UI, lifecycle, long-form, and production sample export gates. For a stricter pre-release run that also checks every writing type profile:
+- `powershell -ExecutionPolicy Bypass -File scripts/ci/extended_readiness_check.ps1`
+
+Writing-type profile checks are also available separately:
 - `powershell -ExecutionPolicy Bypass -File scripts/ci/writing_type_profiles_gate_test.ps1`
-- `powershell -ExecutionPolicy Bypass -File scripts/ci/longform_scalability_gate_test.ps1`
-- `powershell -ExecutionPolicy Bypass -File scripts/ci/production_sample_export_test.ps1`
 
 ## Standard User Flow (Required)
 Do not write a book directly in the application repository root. Create one isolated project per book:
@@ -155,7 +157,7 @@ You do not need to give this repository an API key. If your IDE already has an a
    - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase intake -ToPhase export`
 5. After `intake`, answer or accept the questions/options in `runtime/book-brief.json`, `runtime/book-dna.json`, and `runtime/layout-profile.json`; set `runtime/approvals/book-brief-approval.json` to `approved=true` only when the writing brief and page/layout package are acceptable. `approved=true` is not enough by itself: the brief must include accepted answers for writing type, target length/pages, target reader, genre, character policy, style/tone, and publication package.
 6. After `propose`, choose one story direction in `runtime/approvals/story-choice.json` by setting `selected_option` and `approved=true`.
-7. After `design-big`, review `design/04_book_plan.md`, `design/05_chapter_plan.md`, `design/06_layout_plan.md`, and the matching `revision/_state/book-plan.json`, `revision/_state/open-source-story-model.json`, `revision/_state/chapter-plan.json`, `revision/_state/layout-plan.json`, and `revision/_state/volume-plan.json`; set `runtime/approvals/book-plan-approval.json` to `approved=true` only if the plan, page target, chapter target, continuity model, open-source story model, and layout are acceptable.
+7. After `design-big`, review `design/04_book_plan.md`, `design/05_chapter_plan.md`, `design/06_layout_plan.md`, and the matching `revision/_state/book-plan.json`, `revision/_state/open-source-story-model.json`, `revision/_state/story-bible.json`, `revision/_state/chapter-plan.json`, `revision/_state/chapter-continuity-chain.json`, `revision/_state/context-saliency-map.json`, `revision/_state/layout-plan.json`, and `revision/_state/volume-plan.json`; set `runtime/approvals/book-plan-approval.json` to `approved=true` only if the plan, page target, chapter target, continuity model, Story Bible, context saliency map, open-source story model, and layout are acceptable.
 7. When the runner pauses, ask your IDE agent to complete the current phase.
 8. Optional phase prompt helper:
    - `powershell -ExecutionPolicy Bypass -File scripts/ide_phase_prompt.ps1 -Phase create`
@@ -169,6 +171,9 @@ Agent orchestration is contract-bound:
 - `runtime/phase-contracts/*.json` defines mandatory agents, state files, approvals, allowed outputs, and denied outputs.
 - `runtime/runs/{run_id}/run-journal.jsonl` records phase audit events.
 - `revision/_state/open-source-story-model.json` binds Manuskript, novelWriter, bibisco, and STORM-inspired planning patterns into the current book's outline, character, plot, world, cross-reference, research, and export rules.
+- `revision/_state/story-bible.json` is the project-specific source of truth for premise, genre, style, synopsis, characters, worldbuilding, outline, and visibility rules.
+- `revision/_state/chapter-continuity-chain.json` links every planned chapter to its prior chapter and outline entry.
+- `revision/_state/context-saliency-map.json` states which story facts a writer/rewrite agent may see for each chapter; full raw Story Bible dumps, old projects, future-only reveals, and unrelated sample content are blocked.
 
 Each phase must also write an agent compliance manifest:
 - `runtime/agent-compliance/{phase}.json`
@@ -220,6 +225,37 @@ The provider must write the exact artifacts required by `runtime/phase-contracts
 | `/rewrite` | Structural revision after design drift | Rewritten canonical content |
 | `/export-word` | Approval-gated export | DOCX artifact + validator reports |
 
+## Proposal-First Revision
+After a book draft exists, revision must start with a locked draft and reviewable proposal cards. The engine must not silently overwrite `episode/` files.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/revision_proposals.ps1 -ProjectRoot .
+```
+
+Outputs:
+- `revision/_workspace/draft-v1-lock.json`
+- `revision/_workspace/revision-proposals.json`
+- `revision/_workspace/revision-proposals.md`
+
+To apply a revision, the user or Studio must approve exact proposal IDs in:
+
+```text
+runtime/approvals/revision-proposals-approval.json
+```
+
+Then apply only the approved card:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/apply_revision.ps1 -ProjectRoot . -ProposalId REV-001
+```
+
+`apply_revision.ps1` backs up the original chapter, blocks technical labels/control text/mojibake in replacement text, and only writes the approved target chapter.
+
+The `rewrite` phase contract also requires the draft lock, proposal set, and proposal approval before the phase can pass:
+- `revision/_workspace/draft-v1-lock.json`
+- `revision/_workspace/revision-proposals.json`
+- `runtime/approvals/revision-proposals-approval.json`
+
 ## Pipeline Contracts
 - `tdk-polisher` is mandatory in create/polish/rewrite episode flows.
 - `tdk-layout-agent` is mandatory when `book_mode.enabled=true`.
@@ -269,6 +305,7 @@ The runner rejects a fake brief approval. The brief must contain structured `req
 | DOCX structural integrity | `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_docx_integrity.ps1 -DocxPath <absolute-path-to-docx>` |
 | Optional dictionary verification | `powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot . -Phase polish -RunId RUN-LOCAL` |
 | Length fulfillment gate | `powershell -ExecutionPolicy Bypass -File scripts/ci/length_fulfillment_gate_test.ps1` |
+| Revision proposal gate | `powershell -ExecutionPolicy Bypass -File scripts/ci/revision_proposal_gate_test.ps1` |
 
 ## KitHub Studio UI
 - Open the static studio preview directly when you only need layout/editing preview:
@@ -283,7 +320,7 @@ The runner rejects a fake brief approval. The brief must contain structured `req
   - write the initial book prompt in `Kitap isteği` and use `İsteği Kaydet` to create/update `runtime/book-request.md`,
   - enter the absolute project path before running `Dışa Aktar`,
   - use the `Plan` tab to review `design/*.md` before approving the book plan,
-  - use the `Revizyon` tab to review recent `revision/_workspace` reports,
+  - use the `Revizyon` tab to generate proposal cards, approve exact cards, and apply only approved replacements,
   - choose the `fromPhase` / `toPhase` range before running the pipeline,
   - use the `Onaylar` panel to write explicit approval files under `runtime/approvals`,
   - use `Bölümü Kaydet` to write the currently opened `episode/ep*.md`,

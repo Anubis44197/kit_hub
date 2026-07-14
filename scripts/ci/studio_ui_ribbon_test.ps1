@@ -56,6 +56,24 @@ if ($tabPanelMismatch.Count -gt 0) {
   throw "Ribbon tabs without matching panel: $($tabPanelMismatch -join ', ')"
 }
 
+$actionMatches = [regex]::Matches($html, 'data-ribbon-action="([^"]+)"')
+$staticActions = @(
+  $actionMatches |
+    ForEach-Object { $_.Groups[1].Value } |
+    Where-Object { $_ -notmatch '^\$' } |
+    Sort-Object -Unique
+)
+$handlerMatches = [regex]::Matches($html, '"([^"]+)":\s*\(\)\s*=>')
+$handledActions = @(
+  $handlerMatches |
+    ForEach-Object { $_.Groups[1].Value } |
+    Sort-Object -Unique
+)
+$missingHandlers = @($staticActions | Where-Object { $_ -notin $handledActions })
+if ($missingHandlers.Count -gt 0) {
+  throw "Ribbon actions without handler: $($missingHandlers -join ', ')"
+}
+
 Assert-ContainsText -Text $html -Pattern 'role="tablist"' -Message "Ribbon missing tablist role."
 Assert-ContainsText -Text $html -Pattern 'role="tabpanel"' -Message "Ribbon missing tabpanel role."
 Assert-ContainsText -Text $html -Pattern '\.ribbon\s*\{\s*display:\s*none;' -Message "Secondary ribbon row must stay hidden; the top app bar is the only visible top control bar."

@@ -30,12 +30,19 @@ grep -q '"tdk-layout-agent"' runtime/phase-contracts/polish.json
 grep -q '"final-proofreader"' runtime/phase-contracts/polish.json
 
 echo "[pipeline-smoke] validating rewrite flow contract..."
+test -f scripts/revision_proposals.ps1
+test -f scripts/apply_revision.ps1
 grep -q "revision-analyst" skills/rewrite/SKILL.md
 grep -q "character-sculptor" skills/rewrite/SKILL.md
 grep -q "episode-rewriter" skills/rewrite/SKILL.md
 grep -q "tdk-polisher" skills/rewrite/SKILL.md
 grep -q "tdk-layout-agent" skills/rewrite/SKILL.md
 grep -q "quality-verifier" skills/rewrite/SKILL.md
+grep -q "Proposal-first revision" skills/rewrite/SKILL.md
+grep -q "revision-proposals-approval.json" skills/rewrite/SKILL.md
+grep -q "revision-proposals-approval.json" README.md
+grep -q "revision/_workspace/revision-proposals.json" runtime/phase-contracts/rewrite.json
+grep -q "revision-proposals-approval.json" runtime/phase-contracts/rewrite.json
 grep -q '"character-sculptor"' runtime/phase-contracts/rewrite.json
 grep -q '"tdk-layout-agent"' runtime/phase-contracts/rewrite.json
 

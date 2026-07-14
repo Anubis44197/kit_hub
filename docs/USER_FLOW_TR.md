@@ -161,6 +161,51 @@ Roman veya kitap bittikten sonra calisma dosyalari hemen silinmez.
 
 Kullanici final dosyayi okuyabilir, elestiri verebilir, bolum ekletebilir, rewrite isteyebilir veya yeni export alabilir.
 
+Revizyon artik proposal-first calisir. Sistem once taslagi kilitler ve kart uretir; onay almadan `episode/` dosyalarini degistirmez:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/revision_proposals.ps1 -ProjectRoot .
+```
+
+Bu komut su dosyalari uretir:
+
+```text
+revision/_workspace/draft-v1-lock.json
+revision/_workspace/revision-proposals.json
+revision/_workspace/revision-proposals.md
+```
+
+Kullanici sadece istedigi kartlari onaylar:
+
+```text
+runtime/approvals/revision-proposals-approval.json
+```
+
+Ornek:
+
+```json
+{
+  "approved": true,
+  "approved_proposal_ids": ["REV-001"]
+}
+```
+
+IDE/API yazari onaylanan kart icin dar replacement dosyasini `revision/_workspace/proposed/` altina koyar. Sonra sadece onayli kart uygulanir:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/apply_revision.ps1 -ProjectRoot . -ProposalId REV-001
+```
+
+Revizyon uygulama komutu once hedef bolumu yedekler, replacement metninde teknik etiket/encoding/kontrol metni olup olmadigini kontrol eder ve yalnizca onayli proposal id icin episode dosyasini degistirir.
+
+`rewrite` fazi artik bu proposal-first dosyalari olmadan gecemez:
+
+```text
+revision/_workspace/draft-v1-lock.json
+revision/_workspace/revision-proposals.json
+runtime/approvals/revision-proposals-approval.json
+```
+
 ## 9. Kullanici Onayli Temizlik
 
 Yalnizca kullanici acikca "bitti, calisma alanini temizle" derse:

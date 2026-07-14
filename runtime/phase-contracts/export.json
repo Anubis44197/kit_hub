@@ -21,6 +21,7 @@
                                 "skills/polish/references/chief-editor-orchestrator-contract.md",
                                 "skills/polish/references/tdk-source-assurance-chain.md",
                                 "skills/polish/references/open-source-novel-editor-patterns.md",
+                                "skills/polish/references/context-saliency-contract.md",
                                 "skills/export-word/references/word-compatibility-test-plan.md"
                             ],
     "required_state_files":  [
@@ -30,6 +31,7 @@
                                  "runtime/approvals/book-brief-approval.json",
                                  "revision/_state/book-plan.json",
                                  "revision/_state/open-source-story-model.json",
+                                 "revision/_state/story-bible.json",
                                  "revision/_state/chapter-plan.json",
                                  "revision/_state/layout-plan.json",
                                  "revision/_state/longform-plan.json",
@@ -37,6 +39,8 @@
                                  "revision/_state/plot-ledger.json",
                                  "revision/_state/chapter-summaries.json",
                                  "revision/_state/continuity-ledger.json",
+                                 "revision/_state/chapter-continuity-chain.json",
+                                 "revision/_state/context-saliency-map.json",
                                  "revision/_state/world-state.json",
                                  "revision/_state/relationship-graph.json",
                                  "revision/_state/knowledge-graph.json",

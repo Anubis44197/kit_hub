@@ -42,6 +42,7 @@ This phase never writes manuscript chapters. It turns the user's actual request 
 - `novel-config.md`
 - `revision/_state/book-plan.json`
 - `revision/_state/open-source-story-model.json`
+- `revision/_state/story-bible.json`
 - `revision/_state/chapter-plan.json`
 - `revision/_state/layout-plan.json`
 - `revision/_state/longform-plan.json`
@@ -49,6 +50,8 @@ This phase never writes manuscript chapters. It turns the user's actual request 
 - `revision/_state/plot-ledger.json`
 - `revision/_state/chapter-summaries.json`
 - `revision/_state/continuity-ledger.json`
+- `revision/_state/chapter-continuity-chain.json`
+- `revision/_state/context-saliency-map.json`
 - `revision/_state/style-profile.json`
 - `revision/_state/writing-type-profile.json`
 - `revision/_state/genre-structure-template.json`
@@ -65,3 +68,10 @@ This phase never writes manuscript chapters. It turns the user's actual request 
 - Bind `book-plan.json.open_source_story_model` to `revision/_state/open-source-story-model.json`.
 - The generated model must include Manuskript-style character/plot/world/outline fields, novelWriter-style synopsis/tag/cross-reference rules, bibisco-style premise/fabula/narrative-strand/setting rules, and STORM-style pre-writing question/source rules.
 - Later writing phases must treat this file as governing state, not optional commentary.
+
+## Story Bible and Saliency Contract
+- Produce `revision/_state/story-bible.json` in every design-big run.
+- The Story Bible must include premise, genre, style, synopsis, characters, worldbuilding, outline, and visibility rules.
+- Produce initial `revision/_state/chapter-continuity-chain.json` and `revision/_state/context-saliency-map.json`.
+- The saliency map must state that writing agents may not receive the full raw Story Bible without chapter-specific context selection.
+- Later create, polish, and rewrite phases must use the saliency map to keep the LLM inside the approved book context.

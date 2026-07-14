@@ -10,13 +10,15 @@ prompt_version: "1.0.0"
 Apply structural rewrites after design changes.
 
 ## Pipeline
-1. Divergence analysis (`revision-analyst` + `character-sculptor`)
-2. Rewrite execution (`episode-rewriter`)
-3. Turkish language and book-mode polish (`tdk-polisher`, REWRITE mode) [mandatory]
-4. Book layout normalization (`tdk-layout-agent`) [mandatory when `book_mode.enabled=true`]
-5. Verification (`quality-verifier`, REWRITE mode)
-6. Retry loop (bounded)
-7. Mark rewritten episodes for re-polish
+1. Divergence analysis (`revision-analyst`)
+2. Context selection (`context-saliency-gate`)
+3. Character impact review (`character-sculptor`)
+4. Rewrite execution (`episode-rewriter`)
+5. Turkish language and book-mode polish (`tdk-polisher`, REWRITE mode) [mandatory]
+6. Book layout normalization (`tdk-layout-agent`) [mandatory when `book_mode.enabled=true`]
+7. Verification (`quality-verifier`, REWRITE mode)
+8. Retry loop (bounded)
+9. Mark rewritten episodes for re-polish
 
 ## Config Source
 - `novel-config.md`
@@ -62,6 +64,13 @@ Apply structural rewrites after design changes.
   - `skills/polish/references/handoff-contract.md`
 
 ## Final Episode Writeback Rule (Mandatory)
+- Proposal-first revision is mandatory before any user-requested post-draft rewrite.
+- First run `scripts/revision_proposals.ps1` or produce equivalent artifacts:
+  - `revision/_workspace/draft-v1-lock.json`
+  - `revision/_workspace/revision-proposals.json`
+  - `revision/_workspace/revision-proposals.md`
+- Do not overwrite `episode/epNNN.md` until `runtime/approvals/revision-proposals-approval.json` explicitly approves the exact proposal id.
+- Replacement text must be written under `revision/_workspace/proposed/` and applied only through `scripts/apply_revision.ps1` or an equivalent audited apply step.
 - If `book_mode.enabled=true`, canonical final text source is:
   - `{WORK_DIR}/_workspace/09_tdk-layout_bookmode_EP{NNN}.md`
 - If `book_mode.enabled=false`, canonical final text source is:
@@ -73,6 +82,12 @@ Apply structural rewrites after design changes.
 - `revision/_state/open-source-story-model.json` is mandatory before rewrite.
 - Rewrite agents must preserve its outline, character, plot, world, cross-reference, research and export models unless the user explicitly approves a plan change.
 - Any rewrite that changes character knowledge, relationship state, plot promises, settings, source claims or scene order must update the matching state ledger in the same phase.
+
+## Context Saliency Contract
+- `revision/_state/story-bible.json`, `revision/_state/chapter-continuity-chain.json`, and `revision/_state/context-saliency-map.json` are mandatory before rewrite.
+- Rewrites may use only chapter-relevant visible context selected by `context-saliency-gate`.
+- Rewrites may not introduce future-only reveals, unplanned character knowledge, stale sample text, unrelated project material, or raw full Story Bible dumps.
+- `context-saliency-gate` must run before `episode-rewriter` whenever the rewrite changes plot, character behavior, knowledge, setting, or causal continuity.
 
 ## Mandatory Artifact Gates
 - Do not run `quality-verifier` before `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` exist.

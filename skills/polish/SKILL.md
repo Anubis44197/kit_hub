@@ -16,6 +16,7 @@ Run systematic editorial correction over existing chapters.
    - book-structure-optimizer
    - developmental-editor
    - continuity-editor
+   - context-saliency-gate
    - research-citation-auditor when writing type is nonfiction or fact-bearing
    - alive-enhancer
 2. Correction execution (`revision-executor`)
@@ -90,6 +91,12 @@ Run systematic editorial correction over existing chapters.
 - `revision/_state/open-source-story-model.json` is mandatory before polish.
 - Polish agents must preserve its outline, character, plot, world, cross-reference, research and export models.
 - Any polish change that alters character knowledge, relationship state, plot promises, settings, source claims or scene order must update the matching state ledger in the same phase.
+
+## Context Saliency Contract
+- `revision/_state/story-bible.json`, `revision/_state/chapter-continuity-chain.json`, and `revision/_state/context-saliency-map.json` are mandatory before polish.
+- `context-saliency-gate` must confirm that polish changes stay inside the visible chapter context.
+- Polish may not introduce future-only reveals, unplanned characters, stale sample text, unrelated project content, or character knowledge absent from `knowledge-graph.json`.
+- If polish needs new context, update the appropriate state ledger first and explain the reason in the workspace report.
 
 ## Mandatory Artifact Gates
 - Do not run `revision-reviewer` before `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` exist.

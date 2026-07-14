@@ -221,6 +221,26 @@
       "max_turns": 60
     },
     {
+      "name": "context-saliency-gate",
+      "allowed_phases": [
+        "design-small",
+        "create",
+        "polish",
+        "rewrite"
+      ],
+      "required_references": [
+        "skills/polish/references/context-saliency-contract.md",
+        "skills/polish/references/handoff-contract.md"
+      ],
+      "allowed_write_roots": [
+        "revision/_state",
+        "revision/_workspace",
+        "runtime/agent-compliance"
+      ],
+      "timeout_seconds": 900,
+      "max_turns": 40
+    },
+    {
       "name": "character-sculptor",
       "allowed_phases": [
         "design-small",

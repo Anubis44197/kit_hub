@@ -2428,6 +2428,7 @@
       { key: "plan", file: "book-plan-approval.json", label: "Kitap Planı", phase: "design-small" },
       { key: "freeze", file: "design-freeze.json", label: "Tasarım Kilidi", phase: "create" },
       { key: "rewrite", file: "rewrite-approval.json", label: "Revizyon", phase: "rewrite" },
+      { key: "revisionProposals", file: "revision-proposals-approval.json", label: "Revizyon Kartları", phase: "rewrite" },
       { key: "export", file: "export-approval.json", label: "Export", phase: "export" }
     ];
 
@@ -2539,6 +2540,7 @@
     let currentTab = "manuscript";
     let currentDesignDocs = [];
     let currentReports = [];
+    let currentRevision = null;
     let currentAlignment = "justify";
     const previewPageLimit = 12;
     const genreBlockOptions = {
@@ -2830,6 +2832,54 @@
       notesPanel.classList.add("open");
       notesPanel.setAttribute("aria-hidden", "false");
       setStatus("Motor olayı: tekrar ve frekans analizi açıldı");
+    }
+
+    function renderRevisionPanel() {
+      const proposals = currentRevision?.proposals?.proposals || [];
+      const approval = currentRevision?.approval || {};
+      const approvedIds = new Set((approval.approved_proposal_ids || []).map(String));
+      const draftLocked = Boolean(currentRevision?.draftLock?.snapshot_id);
+      const cards = proposals.length ? proposals.map(proposal => {
+        const id = proposal.id || "REV-000";
+        const approved = approvedIds.has(id);
+        const actionable = id !== "REV-000" && proposal.status !== "no_change_required";
+        return `
+          <article class="story-card">
+            <h4>${escapeHtml(id)} · ${escapeHtml(proposal.reader_title || proposal.target_file || "Revizyon")}</h4>
+            <p>${escapeHtml((proposal.issues || []).join(" "))}</p>
+            <small>${escapeHtml(proposal.severity || "info")} · ${escapeHtml(proposal.action || "review")}</small>
+            <small>Hedef: ${escapeHtml(proposal.target_file || "-")}</small>
+            ${proposal.replacement_file ? `<small>Yeni metin: ${escapeHtml(proposal.replacement_file)}</small>` : ""}
+            ${actionable ? `
+              <div class="ribbon-commands" style="margin-top:10px">
+                <button type="button" data-revision-approve="${escapeHtml(id)}">${approved ? "Onaylandı" : "Onayla"}</button>
+                <button type="button" class="primary" data-revision-apply="${escapeHtml(id)}">Uygula</button>
+              </div>
+            ` : ""}
+          </article>
+        `;
+      }).join("") : `
+        <article class="story-card">
+          <h4>Revizyon bekliyor</h4>
+          <p>Önce taslağı tara. Sistem taslağı kilitler, sorunları kartlara ayırır ve onay olmadan metni değiştirmez.</p>
+          <small>Proposal-first revision</small>
+        </article>
+      `;
+
+      notesTitle.textContent = "Revizyon Kartları";
+      notesContent.innerHTML = `
+        <div class="ledger-grid" style="margin-bottom:12px">
+          <div class="ledger-row"><b>Taslak kilidi</b><span>${draftLocked ? escapeHtml(currentRevision.draftLock.snapshot_id) : "Bekliyor"}</span></div>
+          <div class="ledger-row"><b>Onay</b><span>${approval.approved ? "Kullanıcı onayı var" : "Onay bekliyor"}</span></div>
+        </div>
+        <div class="ribbon-commands" style="margin-bottom:12px">
+          <button type="button" class="primary" data-revision-scan>Revizyon Önerilerini Tara</button>
+        </div>
+        <div class="story-card-grid">${cards}</div>
+      `;
+      notesPanel.classList.add("open");
+      notesPanel.setAttribute("aria-hidden", "false");
+      setStatus("Motor olayı: revizyon kartları açıldı");
     }
 
     function splitPreviewPages(paragraphs) {
@@ -3510,14 +3560,7 @@
         return;
       }
       if (tab === "revision") {
-        const text = currentReports.length
-          ? currentReports.map(report => `# ${report.name}\n\n${report.text}`).join("\n\n---\n\n")
-          : "Henüz revizyon notu yok.\n\nYazım ilerlediğinde tempo, tekrar, karakter dengesi, Türkçe ve yayın düzeni kontrolleri burada sade özet olarak gösterilecek.";
-        notesTitle.textContent = "Revizyon Notları";
-        notesContent.textContent = text;
-        notesPanel.classList.add("open");
-        notesPanel.setAttribute("aria-hidden", "false");
-        setStatus("Motor olayı: revizyon notları yan panelde açıldı");
+        renderRevisionPanel();
         return;
       }
       renderPreview();
@@ -3833,6 +3876,7 @@
 
       currentDesignDocs = summary.designDocs || [];
       currentReports = summary.reports || [];
+      currentRevision = summary.revision || null;
       renderSupportTab(currentTab);
       renderQuality(summary.quality);
       renderLifecycle(summary.lifecycle);
@@ -4204,6 +4248,96 @@
       }
       catch (error) {
         setStatus(`Motor olayı: temizlik başarısız (${error.message})`);
+      }
+    }
+
+    async function generateRevisionProposalsViaBridge() {
+      currentProjectPathHint = projectPathInput.value.trim() || currentProjectPathHint;
+      if (!bridgeOnline || !currentProjectPathHint || currentProjectPathHint === ".") {
+        setStatus("Motor olayı: revizyon taraması için Studio Bridge ve gerçek proje yolu gerekli.");
+        return;
+      }
+      try {
+        setStatus("Motor olayı: revizyon önerileri taranıyor...");
+        const response = await fetch(`${bridgeUrl}/api/revision-proposals`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ projectRoot: currentProjectPathHint })
+        });
+        const result = await response.json();
+        if (!result.ok) {
+          setRunLog(result.output || result.error || "Revizyon önerisi üretilemedi.");
+          return;
+        }
+        setRunLog(result.output || "Revizyon önerileri üretildi.");
+        await refreshProject();
+        renderSupportTab("revision");
+      }
+      catch (error) {
+        setStatus(`Motor olayı: revizyon taraması başarısız (${error.message})`);
+      }
+    }
+
+    async function approveRevisionProposalViaBridge(proposalId) {
+      if (!bridgeOnline || !currentProjectPathHint || currentProjectPathHint === ".") {
+        setStatus("Motor olayı: revizyon onayı için Studio Bridge ve proje yolu gerekli.");
+        return;
+      }
+      try {
+        const existing = currentRevision?.approval || {};
+        const ids = new Set((existing.approved_proposal_ids || []).map(String));
+        ids.add(proposalId);
+        const payload = {
+          ...existing,
+          approved: true,
+          approved_by: "KitHub Studio",
+          approved_at: new Date().toISOString(),
+          approved_proposal_ids: [...ids],
+          note: "User approved selected revision proposal cards. Only listed proposal ids may be applied."
+        };
+        const response = await fetch(`${bridgeUrl}/api/write-approval`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            projectRoot: currentProjectPathHint,
+            file: "revision-proposals-approval.json",
+            approval: payload
+          })
+        });
+        const result = await response.json();
+        if (!result.ok) throw new Error(result.error || "revision approval failed");
+        setRunLog(`Revizyon kartı onaylandı\nKart: ${proposalId}\nDosya: ${result.relativePath}`);
+        await refreshProject();
+        renderSupportTab("revision");
+      }
+      catch (error) {
+        setStatus(`Motor olayı: revizyon onayı yazılamadı (${error.message})`);
+      }
+    }
+
+    async function applyRevisionProposalViaBridge(proposalId) {
+      if (!bridgeOnline || !currentProjectPathHint || currentProjectPathHint === ".") {
+        setStatus("Motor olayı: revizyon uygulamak için Studio Bridge ve proje yolu gerekli.");
+        return;
+      }
+      try {
+        setStatus(`Motor olayı: ${proposalId} uygulanıyor...`);
+        const response = await fetch(`${bridgeUrl}/api/apply-revision`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ projectRoot: currentProjectPathHint, proposalId })
+        });
+        const result = await response.json();
+        if (!result.ok) {
+          setRunLog(result.output || result.error || "Revizyon uygulanamadı.");
+          setStatus(`Motor olayı: revizyon durdu (${result.error || "hata"})`);
+          return;
+        }
+        setRunLog(result.output || `Revizyon uygulandı: ${proposalId}`);
+        await refreshProject();
+      }
+      catch (error) {
+        setStatus(`Motor olayı: revizyon uygulanamadı (${error.message})`);
       }
     }
 
@@ -4654,6 +4788,25 @@
       });
     });
     closeNotesBtn.addEventListener("click", () => renderSupportTab("manuscript"));
+    notesContent.addEventListener("click", event => {
+      const scan = event.target.closest("[data-revision-scan]");
+      if (scan) {
+        event.preventDefault();
+        generateRevisionProposalsViaBridge();
+        return;
+      }
+      const approve = event.target.closest("[data-revision-approve]");
+      if (approve) {
+        event.preventDefault();
+        approveRevisionProposalViaBridge(approve.dataset.revisionApprove);
+        return;
+      }
+      const apply = event.target.closest("[data-revision-apply]");
+      if (apply) {
+        event.preventDefault();
+        applyRevisionProposalViaBridge(apply.dataset.revisionApply);
+      }
+    });
     document.getElementById("typeNav").addEventListener("click", event => {
       const button = event.target.closest("[data-type-section]");
       if (!button) return;

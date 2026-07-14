@@ -479,7 +479,7 @@ function Get-ProjectSummary {
   }
 
   $approvals = [ordered]@{}
-  foreach ($name in @("book-brief-approval.json","story-choice.json","length-depth-approval.json","book-plan-approval.json","design-freeze.json","rewrite-approval.json","export-approval.json")) {
+  foreach ($name in @("book-brief-approval.json","story-choice.json","length-depth-approval.json","book-plan-approval.json","design-freeze.json","rewrite-approval.json","revision-proposals-approval.json","export-approval.json")) {
     $approvals[$name] = Read-Utf8JsonIfExists -Path (Join-Path $approvalDir $name)
   }
 
@@ -525,6 +525,10 @@ function Get-ProjectSummary {
     }
   }
 
+  $revisionProposals = Read-Utf8JsonIfExists -Path (Join-Path $workspaceDir "revision-proposals.json")
+  $revisionDraftLock = Read-Utf8JsonIfExists -Path (Join-Path $workspaceDir "draft-v1-lock.json")
+  $revisionApproval = Read-Utf8JsonIfExists -Path (Join-Path $approvalDir "revision-proposals-approval.json")
+
   return [ordered]@{
     ok = $true
     projectRoot = $projectRoot
@@ -540,6 +544,12 @@ function Get-ProjectSummary {
     evidence = [object[]]@($evidence)
     designDocs = [object[]]@($designDocs)
     reports = [object[]]@($reports)
+    revision = [ordered]@{
+      draftLock = $revisionDraftLock
+      proposals = $revisionProposals
+      approval = $revisionApproval
+      pendingCount = if ($revisionProposals -and $revisionProposals.proposals) { @($revisionProposals.proposals | Where-Object { [string]$_.status -eq "pending_user_approval" }).Count } else { 0 }
+    }
     quality = Get-QualityAudit -Chapters $chapters -Exports $exports -Approvals $approvals -Reports $reports -LongformPlan (Read-Utf8JsonIfExists -Path (Join-Path $stateDir "longform-plan.json"))
     chapterHeatmap = [object[]]@(Get-ChapterHeatmap -Chapters $chapters -ChapterPlan (Read-Utf8JsonIfExists -Path (Join-Path $stateDir "chapter-plan.json")) -ChapterSummaries (Read-Utf8JsonIfExists -Path (Join-Path $stateDir "chapter-summaries.json")) -ContinuityLedger (Read-Utf8JsonIfExists -Path (Join-Path $stateDir "continuity-ledger.json")))
     lifecycle = [ordered]@{
@@ -547,6 +557,65 @@ function Get-ProjectSummary {
       finalExport = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot "runtime/final-export-manifest.json")
       cleanupApproval = Read-Utf8JsonIfExists -Path (Join-Path $approvalDir "cleanup-approval.json")
     }
+  }
+}
+
+function Invoke-RevisionProposals {
+  param([object]$Payload)
+
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $scriptPath = Join-Path $RepoRoot "scripts/revision_proposals.ps1"
+  if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+    throw "revision_proposals.ps1 not found under RepoRoot: $RepoRoot"
+  }
+
+  $args = @(
+    "-ExecutionPolicy", "Bypass",
+    "-File", $scriptPath,
+    "-ProjectRoot", $projectRoot
+  )
+  if ($Payload.forceNewSnapshot -eq $true) {
+    $args += "-ForceNewSnapshot"
+  }
+
+  $output = & powershell @args 2>&1
+  $exit = $LASTEXITCODE
+  return [ordered]@{
+    ok = ($exit -eq 0)
+    exitCode = $exit
+    projectRoot = $projectRoot
+    proposals = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot "revision/_workspace/revision-proposals.json")
+    output = (($output | Out-String).Trim())
+  }
+}
+
+function Apply-RevisionProposal {
+  param([object]$Payload)
+
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $proposalId = [string]$Payload.proposalId
+  if ($proposalId -notmatch "^REV-\d{3}$") {
+    throw "Invalid proposalId: $proposalId"
+  }
+  $scriptPath = Join-Path $RepoRoot "scripts/apply_revision.ps1"
+  if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+    throw "apply_revision.ps1 not found under RepoRoot: $RepoRoot"
+  }
+
+  $args = @(
+    "-ExecutionPolicy", "Bypass",
+    "-File", $scriptPath,
+    "-ProjectRoot", $projectRoot,
+    "-ProposalId", $proposalId
+  )
+  $output = & powershell @args 2>&1
+  $exit = $LASTEXITCODE
+  return [ordered]@{
+    ok = ($exit -eq 0)
+    exitCode = $exit
+    projectRoot = $projectRoot
+    proposalId = $proposalId
+    output = (($output | Out-String).Trim())
   }
 }
 
@@ -644,7 +713,7 @@ function Write-Approval {
   param([object]$Payload)
   $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
   $file = [string]$Payload.file
-  if ($file -notin @("book-brief-approval.json","story-choice.json","length-depth-approval.json","book-plan-approval.json","design-freeze.json","rewrite-approval.json","export-approval.json")) {
+  if ($file -notin @("book-brief-approval.json","story-choice.json","length-depth-approval.json","book-plan-approval.json","design-freeze.json","rewrite-approval.json","revision-proposals-approval.json","export-approval.json")) {
     throw "Invalid approval file: $file"
   }
   $approvalDir = Join-Path $projectRoot "runtime/approvals"
@@ -1071,6 +1140,22 @@ try {
         if ($method -eq "POST" -and $path -eq "/api/write-approval") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           Write-JsonHttpResponse -Stream $stream -Value (Write-Approval -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/revision-proposals") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $result = Invoke-RevisionProposals -Payload $payload
+          $status = if ($result.ok) { 200 } else { 500 }
+          Write-JsonHttpResponse -Stream $stream -Value $result -StatusCode $status
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/apply-revision") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $result = Apply-RevisionProposal -Payload $payload
+          $status = if ($result.ok) { 200 } else { 500 }
+          Write-JsonHttpResponse -Stream $stream -Value $result -StatusCode $status
           continue
         }
 

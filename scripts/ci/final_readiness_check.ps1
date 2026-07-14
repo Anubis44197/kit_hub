@@ -108,6 +108,16 @@ Assert-Contains -Path "skills/rewrite/SKILL.md" -Pattern $policyPattern -ErrorMe
 Assert-Contains -Path "skills/export-word/SKILL.md" -Pattern $policyPattern -ErrorMessage "Missing language policy in skills/export-word/SKILL.md"
 
 Write-Host "[final-readiness-ps] validating adapter references..."
+Assert-File "scripts/ci/validate_contracts.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/validate_contracts.ps1"
+if ($LASTEXITCODE -ne 0) {
+  throw "validate_contracts.ps1 failed with exit code: $LASTEXITCODE"
+}
+Assert-File "scripts/ci/smoke_test.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/smoke_test.ps1"
+if ($LASTEXITCODE -ne 0) {
+  throw "smoke_test.ps1 failed with exit code: $LASTEXITCODE"
+}
 Assert-File "scripts/ci/app_root_cleanliness_test.ps1"
 & powershell -ExecutionPolicy Bypass -File "scripts/ci/app_root_cleanliness_test.ps1"
 if ($LASTEXITCODE -ne 0) {
@@ -172,6 +182,11 @@ Assert-File "scripts/ci/studio_ui_bridge_test.ps1"
 if ($LASTEXITCODE -ne 0) {
   throw "studio_ui_bridge_test.ps1 failed with exit code: $LASTEXITCODE"
 }
+Assert-File "scripts/ci/revision_proposal_gate_test.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/revision_proposal_gate_test.ps1"
+if ($LASTEXITCODE -ne 0) {
+  throw "revision_proposal_gate_test.ps1 failed with exit code: $LASTEXITCODE"
+}
 Assert-File "scripts/ci/studio_ui_ribbon_test.ps1"
 & powershell -ExecutionPolicy Bypass -File "scripts/ci/studio_ui_ribbon_test.ps1"
 if ($LASTEXITCODE -ne 0) {
@@ -213,8 +228,16 @@ if ($LASTEXITCODE -ne 0) {
   throw "open_source_story_model_gate_test.ps1 failed with exit code: $LASTEXITCODE"
 }
 Assert-File "scripts/ci/longform_scalability_gate_test.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/longform_scalability_gate_test.ps1"
+if ($LASTEXITCODE -ne 0) {
+  throw "longform_scalability_gate_test.ps1 failed with exit code: $LASTEXITCODE"
+}
 Assert-File "scripts/ci/writing_type_profiles_gate_test.ps1"
 Assert-File "scripts/ci/production_sample_export_test.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/production_sample_export_test.ps1"
+if ($LASTEXITCODE -ne 0) {
+  throw "production_sample_export_test.ps1 failed with exit code: $LASTEXITCODE"
+}
 Assert-File "scripts/ci/agent_compliance_story_model_gate_test.ps1"
 & powershell -ExecutionPolicy Bypass -File "scripts/ci/agent_compliance_story_model_gate_test.ps1"
 if ($LASTEXITCODE -ne 0) {

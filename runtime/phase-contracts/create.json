@@ -4,6 +4,7 @@
     "required_agents":  [
                             "episode-architect",
                             "continuity-bridge",
+                            "context-saliency-gate",
                             "episode-creator",
                             "quality-verifier",
                             "tdk-polisher",
@@ -15,6 +16,7 @@
                                 "skills/create/SKILL.md",
                                 "skills/create/references/creation-principles.md",
                                 "skills/polish/references/open-source-novel-editor-patterns.md",
+                                "skills/polish/references/context-saliency-contract.md",
                                 "skills/polish/references/tdk-official-writing-rules.md",
                                 "skills/polish/references/chief-editor-orchestrator-contract.md",
                                 "skills/polish/references/tdk-source-assurance-chain.md"
@@ -26,6 +28,7 @@
                                  "runtime/approvals/book-brief-approval.json",
                                  "revision/_state/book-plan.json",
                                  "revision/_state/open-source-story-model.json",
+                                 "revision/_state/story-bible.json",
                                  "revision/_state/chapter-plan.json",
                                  "revision/_state/layout-plan.json",
                                  "revision/_state/longform-plan.json",
@@ -33,6 +36,8 @@
                                  "revision/_state/plot-ledger.json",
                                  "revision/_state/chapter-summaries.json",
                                  "revision/_state/continuity-ledger.json",
+                                 "revision/_state/chapter-continuity-chain.json",
+                                 "revision/_state/context-saliency-map.json",
                                  "revision/_state/world-state.json",
                                  "revision/_state/relationship-graph.json",
                                  "revision/_state/knowledge-graph.json",
@@ -68,6 +73,7 @@
     "agent_sequence":  [
                            "episode-architect",
                            "continuity-bridge",
+                           "context-saliency-gate",
                            "episode-creator",
                            "tdk-polisher",
                            "tdk-layout-agent",

@@ -23,15 +23,52 @@ grep -R -n "REVISE" agents skills && {
   exit 1
 } || true
 
+echo "[contract-lint] validating mojibake guard..."
+mojibake_pattern="$(printf '\\303|\\304|\\305|\\357\\277\\275')"
+mojibake_hits="$(grep -R -n -E "$mojibake_pattern" README.md RELEASE_CHECKLIST.md docs index.html runtime scripts skills \
+  | grep -v '^scripts/run_pipeline.ps1:' \
+  | grep -v '^scripts/ci/tdk_local_rule_check.py:' \
+  | grep -v '^skills/polish/references/tdk-official-writing-rules.md:' || true)"
+if [ -n "$mojibake_hits" ]; then
+  echo "$mojibake_hits"
+  echo "Unexpected mojibake markers found"
+  exit 1
+fi
+
 echo "[contract-lint] validating mandatory export gate..."
 grep -q "export-approval-gate" skills/export-word/SKILL.md
 grep -q "export-validator" skills/export-word/SKILL.md
+
+echo "[contract-lint] validating proposal-first revision gate..."
+test -f scripts/revision_proposals.ps1
+test -f scripts/apply_revision.ps1
+test -f scripts/ci/revision_proposal_gate_test.ps1
+grep -q "Proposal-first revision" skills/rewrite/SKILL.md
+grep -q "revision-proposals-approval.json" skills/rewrite/SKILL.md
+grep -q "revision/_workspace/revision-proposals.json" runtime/phase-contracts/rewrite.json
+grep -q "revision-proposals-approval.json" runtime/phase-contracts/rewrite.json
 
 echo "[contract-lint] validating language policy blocks..."
 grep -q "Chapter/story content language must be Turkish." skills/create/SKILL.md
 grep -q "Chapter/story content language must be Turkish." skills/polish/SKILL.md
 grep -q "Chapter/story content language must be Turkish." skills/rewrite/SKILL.md
 grep -q "Chapter/story content language must be Turkish." skills/export-word/SKILL.md
+
+echo "[contract-lint] validating context saliency boundary..."
+test -f agents/context-saliency-gate.md
+test -f skills/polish/references/context-saliency-contract.md
+test -f tests/golden/agents/context-saliency-gate/input.md
+test -f tests/golden/agents/context-saliency-gate/expected.md
+for f in runtime/phase-contracts/design-small.json runtime/phase-contracts/create.json runtime/phase-contracts/polish.json runtime/phase-contracts/rewrite.json; do
+  grep -q "context-saliency-gate" "$f"
+  grep -q "story-bible.json" "$f"
+  grep -q "context-saliency-map.json" "$f"
+done
+grep -q "story-bible.json" scripts/local_phase.ps1
+grep -q "context-saliency-map.json" scripts/local_phase.ps1
+grep -q "context-saliency-gate_" scripts/run_pipeline.ps1
+grep -q "writer_may_use_full_story_bible" scripts/ci/validate_state_reducers.ps1
+grep -q "context-saliency-map.json" scripts/ide_phase_prompt.ps1
 
 echo "[contract-lint] validating model adapter references..."
 test -f skills/polish/references/shared-task-schema.md
@@ -97,6 +134,7 @@ grep -q "## Minimal Markdown Verdict Template (Required)" agents/quality-verifie
 echo "[contract-lint] validating Windows validation scripts..."
 test -f scripts/ci/verify_docx_integrity.ps1
 test -f scripts/ci/external_smoke_test.ps1
+test -f scripts/ci/extended_readiness_check.ps1
 test -f scripts/ci/tdk_dict_check.py
 test -f scripts/ci/tdk_dict_check.ps1
 

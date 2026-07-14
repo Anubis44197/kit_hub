@@ -534,17 +534,19 @@ function Get-PhaseOutputArtifacts {
       $patterns = @("novel-config.md","design/*_bootstrap.md","design/02_character_core.md","design/*_character*.md","design/03_macro_plot_hooks.md","design/*plot*hook*.md","design/04_book_plan.md","design/05_chapter_plan.md","design/06_layout_plan.md","runtime/approvals/book-plan-approval.json","revision/_state/*.json")
     }
     "design-small" {
-      $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md")
+      $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md","revision/_workspace/context-saliency-gate_*.json","revision/_workspace/context-saliency-gate_*.md","revision/_state/*.json")
     }
     "create" {
-      $patterns = @("episode/ep*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/*editorial-cycle*.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
+      $patterns = @("episode/ep*.md","revision/_workspace/context-saliency-gate_*.json","revision/_workspace/context-saliency-gate_*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/*editorial-cycle*.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
     }
     "polish" {
-      $patterns = @("episode/ep*.md","revision/_workspace/*revision-reviewer*EP*.md","revision/_workspace/*editorial-cycle*.json","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/10_tdk-dictionary-check_polish.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
+      $patterns = @("episode/ep*.md","revision/_workspace/context-saliency-gate_*.json","revision/_workspace/context-saliency-gate_*.md","revision/_workspace/*revision-reviewer*EP*.md","revision/_workspace/*editorial-cycle*.json","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/10_tdk-dictionary-check_polish.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
     }
     "rewrite" {
       $patterns = @(
         "episode/ep*.md",
+        "revision/_workspace/context-saliency-gate_*.json",
+        "revision/_workspace/context-saliency-gate_*.md",
         "revision/_workspace/*rewrite*report*.md",
         "revision/_workspace/*editorial-cycle*.json",
         "revision/_workspace/04_quality-verifier_verdict_EP*.md",

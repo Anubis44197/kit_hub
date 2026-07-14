@@ -68,12 +68,15 @@ function Get-CharacterAliases {
 
 $bookPlan = Read-StateJson -Name "book-plan.json"
 $openSourceStoryModel = Read-StateJson -Name "open-source-story-model.json"
+$storyBible = Read-StateJson -Name "story-bible.json"
 $chapterPlan = Read-StateJson -Name "chapter-plan.json"
 $longformPlan = Read-StateJson -Name "longform-plan.json"
 $characterState = Read-StateJson -Name "character-state.json"
 $plotLedger = Read-StateJson -Name "plot-ledger.json"
 $chapterSummaries = Read-StateJson -Name "chapter-summaries.json"
 $continuityLedger = Read-StateJson -Name "continuity-ledger.json"
+$chapterContinuityChain = Read-StateJson -Name "chapter-continuity-chain.json"
+$contextSaliencyMap = Read-StateJson -Name "context-saliency-map.json"
 $writingProfile = Read-StateJson -Name "writing-type-profile.json"
 $structureTemplate = Read-StateJson -Name "genre-structure-template.json"
 $claimLedger = Read-StateJson -Name "claim-ledger.json"
@@ -110,6 +113,18 @@ foreach ($field in @("sources","outline_model","character_model","plot_model","w
   if (-not ($openSourceStoryModel.PSObject.Properties.Name -contains $field)) {
     throw "State reducer conflict: open-source-story-model.json missing '$field'."
   }
+}
+
+foreach ($field in @("premise","genre","style","synopsis","characters","worldbuilding","outline","visibility_rules")) {
+  if (-not ($storyBible.PSObject.Properties.Name -contains $field)) {
+    throw "State reducer conflict: story-bible.json missing '$field'."
+  }
+}
+if (-not ($storyBible.visibility_rules.PSObject.Properties.Name -contains "raw_full_context_policy")) {
+  throw "State reducer conflict: story-bible visibility_rules missing raw_full_context_policy."
+}
+if ([string]$storyBible.visibility_rules.raw_full_context_policy -notmatch "must not") {
+  throw "State reducer conflict: story-bible raw_full_context_policy must block full raw context dumps."
 }
 $sourceProjects = @($openSourceStoryModel.sources | ForEach-Object { Get-ObjectString -Obj $_ -Field "project" })
 foreach ($project in @("Manuskript","novelWriter","bibisco","STORM")) {
@@ -241,6 +256,49 @@ foreach ($chapter in $chapters) {
     if (-not $mentionsKnownCharacter -and -not $genericFocus -and $focus -match "\b[A-ZÇĞİÖŞÜ][a-zçğıöşü]{2,}\b") {
       throw "State reducer conflict: chapter character_focus appears to name a character but does not match planned characters."
     }
+  }
+}
+
+if (-not ($chapterContinuityChain.PSObject.Properties.Name -contains "chapters")) {
+  throw "State reducer conflict: chapter-continuity-chain.json missing chapters."
+}
+$continuityChapters = @($chapterContinuityChain.chapters)
+if ($continuityChapters.Count -ne $chapters.Count) {
+  throw "State reducer conflict: chapter-continuity-chain count does not match chapter-plan."
+}
+foreach ($i in 0..([Math]::Max(0, $chapters.Count - 1))) {
+  $plannedId = [string]$chapterIds[$i]
+  $chain = $continuityChapters[$i]
+  if ((Get-ObjectString -Obj $chain -Field "id") -ne $plannedId) {
+    throw "State reducer conflict: chapter-continuity-chain order does not match chapter-plan at '$plannedId'."
+  }
+  if ($i -gt 0) {
+    $continuesFrom = Get-ObjectString -Obj $chain -Field "continues_from"
+    if ($continuesFrom -ne [string]$chapterIds[$i - 1]) {
+      throw "State reducer conflict: chapter '$plannedId' does not continue from previous planned chapter."
+    }
+  }
+}
+
+if (-not ($contextSaliencyMap.PSObject.Properties.Name -contains "chapters")) {
+  throw "State reducer conflict: context-saliency-map.json missing chapters."
+}
+$saliencyChapters = @($contextSaliencyMap.chapters)
+if ($saliencyChapters.Count -ne $chapters.Count) {
+  throw "State reducer conflict: context-saliency-map count does not match chapter-plan."
+}
+foreach ($entry in $saliencyChapters) {
+  foreach ($field in @("id","visible_characters","visible_worldbuilding","visible_plot_threads","visible_promises","blocked_context","selection_reason")) {
+    if (-not ($entry.PSObject.Properties.Name -contains $field)) {
+      throw "State reducer conflict: context-saliency-map chapter entry missing '$field'."
+    }
+  }
+  $entryId = Get-ObjectString -Obj $entry -Field "id"
+  if ($chapterIds -notcontains $entryId) {
+    throw "State reducer conflict: context-saliency-map references unknown chapter '$entryId'."
+  }
+  if (($entry.PSObject.Properties.Name -contains "writer_may_use_full_story_bible") -and [bool]$entry.writer_may_use_full_story_bible) {
+    throw "State reducer conflict: context-saliency-map allows full raw Story Bible to writer."
   }
 }
 
