@@ -3,12 +3,14 @@
   "title": "Layout Profile",
   "type": "object",
   "additionalProperties": true,
-  "required": ["schema_version", "run_id", "profile_status", "print_target", "trim_size", "font_family", "body_font_size_pt", "line_spacing", "delivery_profiles", "page_setup", "typography", "front_matter", "cover"],
+  "required": ["schema_version", "run_id", "profile_status", "print_target", "book_template", "book_template_label", "trim_size", "font_family", "body_font_size_pt", "line_spacing", "delivery_profiles", "page_setup", "typography", "front_matter", "back_matter", "page_numbering", "cover"],
   "properties": {
     "schema_version": { "type": "string" },
     "run_id": { "type": "string", "minLength": 1 },
     "profile_status": { "type": "string", "enum": ["QUESTIONS_PENDING", "USER_APPROVED", "BLOCKED"] },
     "print_target": { "type": "string" },
+    "book_template": { "type": "string", "minLength": 1 },
+    "book_template_label": { "type": "string", "minLength": 1 },
     "trim_size": { "type": "string" },
     "font_family": { "type": "string" },
     "body_font_size_pt": { "type": "number" },
@@ -29,6 +31,8 @@
       "additionalProperties": true
     },
     "front_matter": { "type": "object" },
+    "back_matter": { "type": "object" },
+    "page_numbering": { "type": "object" },
     "cover": { "type": "object" }
   }
 }

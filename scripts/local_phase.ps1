@@ -1036,6 +1036,8 @@ function Invoke-Intake {
     run_id = $RunId
     profile_status = "QUESTIONS_PENDING"
     print_target = "A5_NOVEL_DOCX"
+    book_template = "classicNovel"
+    book_template_label = "Roman Klasik"
     trim_size = "A5"
     font_family = "Garamond"
     body_font_size_pt = 11.5
@@ -1083,6 +1085,17 @@ function Invoke-Intake {
       copyright_page = "ask_user_or_required_for_print"
       preface = "ask_user"
       table_of_contents = "required_for_longform"
+    }
+    back_matter = [ordered]@{
+      acknowledgements = "optional"
+      author_note = "optional"
+      bibliography = "optional_by_writing_type"
+      glossary = "optional_by_writing_type"
+    }
+    page_numbering = [ordered]@{
+      policy = "front matter roman_or_unnumbered, body arabic"
+      front_matter = "roman_or_unnumbered"
+      body = "arabic_from_first_chapter"
     }
     cover = [ordered]@{
       front_cover_brief = "required"
@@ -1486,6 +1499,8 @@ plan_id: $planId
     schema_version = "1.0.0"
     run_id = $RunId
     plan_id = $planId
+    book_template = "classicNovel"
+    book_template_label = "Roman Klasik"
     delivery_profiles = [ordered]@{
       publisher_submission = [ordered]@{ enabled = $true; file_role = "editorial_review_docx"; print_ready_claim_allowed = $false }
       print_preview = [ordered]@{ enabled = $true; file_role = "reader_layout_proof"; page_numbers = "required"; chapter_start = "new_page"; print_ready_claim_allowed = $false }

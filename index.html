@@ -105,8 +105,7 @@
       background: transparent;
     }
 
-    button.ghost.is-offline,
-    .ribbon button.is-offline {
+    button.ghost.is-offline {
       opacity: 0.46;
       border-style: dashed;
       cursor: not-allowed;
@@ -141,140 +140,6 @@
       backdrop-filter: blur(18px);
       transition: grid-template-columns 220ms ease;
       overflow: visible;
-    }
-
-    .ribbon {
-      display: none;
-    }
-
-    .ribbon-tabs {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 16px;
-      overflow-x: auto;
-      overflow-y: hidden;
-      scrollbar-width: thin;
-    }
-
-    .ribbon-tabs button {
-      min-height: 28px;
-      padding: 0 12px;
-      border-radius: 5px;
-      text-align: center;
-      color: var(--muted);
-      background: transparent;
-      white-space: nowrap;
-    }
-
-    .ribbon-tabs button.active {
-      color: var(--teal);
-      border-color: rgba(52, 198, 193, 0.44);
-      background: rgba(52, 198, 193, 0.08);
-    }
-
-    .ribbon-help {
-      margin-left: auto;
-      color: var(--muted);
-      font-size: 11px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 520px;
-    }
-
-    .ribbon-status {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      margin-left: 10px;
-      flex: 0 0 auto;
-    }
-
-    .ribbon button.active,
-    .ribbon button[aria-pressed="true"] {
-      color: var(--teal);
-      border-color: rgba(52, 198, 193, 0.48);
-      background: rgba(52, 198, 193, 0.1);
-    }
-
-    .ribbon-panels {
-      display: none;
-    }
-
-    .ribbon-panel {
-      display: none;
-      grid-auto-flow: column;
-      grid-auto-columns: max-content;
-      align-items: stretch;
-      gap: 10px;
-      padding: 8px 14px;
-      min-width: max-content;
-    }
-
-    .ribbon-panel.active {
-      display: grid;
-    }
-
-    .ribbon-group {
-      min-width: 132px;
-      padding: 8px 10px;
-      border: 1px solid var(--line-soft);
-      border-radius: 7px;
-      background: rgba(255,255,255,0.025);
-      display: grid;
-      grid-template-rows: 1fr auto;
-      gap: 7px;
-    }
-
-    .ribbon-commands {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .ribbon-group label {
-      color: var(--muted);
-      font-size: 10px;
-      letter-spacing: 1.1px;
-      text-transform: uppercase;
-    }
-
-    .ribbon .icon-button {
-      width: 32px;
-      min-width: 32px;
-      min-height: 32px;
-    }
-
-    .ribbon button {
-      min-height: 32px;
-      white-space: nowrap;
-    }
-
-    .ribbon-badges {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      min-width: 220px;
-      justify-content: flex-end;
-    }
-
-    .ribbon-badge {
-      min-height: 30px;
-      padding: 5px 8px;
-      border: 1px solid var(--line-soft);
-      border-radius: 999px;
-      background: rgba(255,255,255,0.03);
-      color: var(--muted);
-      font-size: 11px;
-      white-space: nowrap;
-    }
-
-    .ribbon-badge strong {
-      color: var(--text);
-      font-weight: 650;
     }
 
     body.nav-collapsed { --left-w: 0px; }
@@ -986,6 +851,44 @@
       white-space: pre-wrap;
     }
 
+    .version-list {
+      display: grid;
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      white-space: normal;
+    }
+
+    .version-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .version-row b {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .version-row small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .version-row button {
+      min-height: 30px;
+      padding: 0 10px;
+    }
+
     .story-card-grid {
       display: grid;
       gap: 10px;
@@ -1029,6 +932,77 @@
       margin-top: 10px;
       color: var(--gold);
       font-size: 11px;
+    }
+
+    .writing-card {
+      position: relative;
+      padding: 14px;
+      cursor: default;
+    }
+
+    .writing-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 3px;
+      border-radius: 8px 0 0 8px;
+      background: linear-gradient(180deg, var(--teal), var(--amber));
+      opacity: 0.78;
+    }
+
+    .writing-card.is-selected {
+      border-color: rgba(104, 196, 134, 0.58);
+      background: rgba(104, 196, 134, 0.055);
+    }
+
+    .writing-card .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 11px;
+    }
+
+    .writing-card .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .writing-card .card-actions button {
+      flex: 1;
+      min-height: 30px;
+    }
+
+    .writing-brief {
+      border: 1px solid rgba(52, 198, 193, 0.22);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(52, 198, 193, 0.04);
+      color: var(--soft);
+      white-space: normal;
+    }
+
+    .writing-brief b {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .writing-brief p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .support-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
     }
 
     .ledger-grid {
@@ -1522,38 +1496,6 @@
       40% { opacity: 1; transform: translateY(-3px); }
     }
 
-    .run-log {
-      margin-top: 12px;
-      border: 1px solid var(--line-soft);
-      border-radius: var(--radius);
-      background: #071012;
-      overflow: hidden;
-    }
-
-    .run-log header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      min-height: 32px;
-      padding: 0 9px;
-      border-bottom: 1px solid var(--line-soft);
-      color: var(--muted);
-      font-size: 11px;
-      letter-spacing: 1.2px;
-      text-transform: uppercase;
-    }
-
-    .run-log pre {
-      margin: 0;
-      max-height: 150px;
-      overflow: auto;
-      padding: 10px;
-      color: #b9c7c2;
-      font: 11px/1.45 Consolas, "Cascadia Mono", monospace;
-      white-space: pre-wrap;
-    }
-
     .audit-panel {
       margin-top: 12px;
       border: 1px solid var(--line-soft);
@@ -1657,7 +1599,7 @@
 
     .type-body {
       display: grid;
-      grid-template-columns: 118px repeat(4, minmax(150px, 1fr));
+      grid-template-columns: minmax(138px, 0.7fr) repeat(4, minmax(185px, 1fr));
       min-width: 0;
       overflow: auto;
     }
@@ -1674,11 +1616,14 @@
 
     .type-nav button {
       text-align: left;
-      padding: 0;
+      padding: 2px 0;
       border: 0;
       background: transparent;
-      min-height: 24px;
+      min-height: 26px;
       color: var(--muted);
+      line-height: 1.25;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
     .type-nav button.active { color: var(--teal); }
@@ -1699,7 +1644,7 @@
 
     .field {
       display: grid;
-      grid-template-columns: 1fr 92px;
+      grid-template-columns: minmax(76px, 0.78fr) minmax(132px, 1.22fr);
       gap: 10px;
       align-items: center;
       min-height: 29px;
@@ -1716,6 +1661,7 @@
       color: var(--text);
       padding: 0 8px;
       font-size: 12px;
+      min-width: 0;
     }
 
     .mini-page {
@@ -1920,144 +1866,6 @@
       </div>
     </header>
 
-    <section class="ribbon" aria-label="KitHub komut şeridi">
-      <nav class="ribbon-tabs" aria-label="Komut sekmeleri" role="tablist">
-        <button type="button" class="active" data-ribbon-tab="start" role="tab" aria-selected="true" aria-controls="ribbon-panel-start">Başlangıç</button>
-        <button type="button" data-ribbon-tab="writing" role="tab" aria-selected="false" aria-controls="ribbon-panel-writing">Yazım</button>
-        <button type="button" data-ribbon-tab="plan" role="tab" aria-selected="false" aria-controls="ribbon-panel-plan">Kitap Planı</button>
-        <button type="button" data-ribbon-tab="agents" role="tab" aria-selected="false" aria-controls="ribbon-panel-agents">Ajanlar</button>
-        <button type="button" data-ribbon-tab="layout" role="tab" aria-selected="false" aria-controls="ribbon-panel-layout">Dizgi</button>
-        <button type="button" data-ribbon-tab="publish" role="tab" aria-selected="false" aria-controls="ribbon-panel-publish">Yayın</button>
-        <span class="ribbon-help" id="ribbonHelp">Proje oluştur, bağla ve motor akışını başlat.</span>
-        <span class="ribbon-status" aria-label="Proje durum rozetleri">
-          <span class="ribbon-badge">Brief <strong id="ribbonBriefState">0/8</strong></span>
-          <span class="ribbon-badge">Ajan <strong id="ribbonAgentState">0/9</strong></span>
-          <span class="ribbon-badge">Kalite <strong id="ribbonQualityState">0</strong></span>
-          <span class="ribbon-badge">Dizgi <strong id="ribbonLayoutState">A5 · Garamond 11.5</strong></span>
-        </span>
-      </nav>
-      <div class="ribbon-panels">
-        <div class="ribbon-panel active" data-ribbon-panel="start" id="ribbon-panel-start" role="tabpanel">
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" data-ribbon-action="new-project">Yeni</button>
-              <button type="button" data-ribbon-action="bind-project">Bağla</button>
-              <button type="button" data-ribbon-action="refresh">Yenile</button>
-            </div>
-            <label>Proje</label>
-          </div>
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" data-ribbon-action="save-request">İsteği Kaydet</button>
-              <button type="button" data-ribbon-action="run-pipeline">Pipeline</button>
-            </div>
-            <label>Akış</label>
-          </div>
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" class="active" data-ribbon-action="mode-ide" data-ribbon-mode="IDE" aria-pressed="true">IDE</button>
-              <button type="button" data-ribbon-action="mode-api" data-ribbon-mode="API" aria-pressed="false">API</button>
-            </div>
-            <label>Mod</label>
-          </div>
-        </div>
-
-        <div class="ribbon-panel" data-ribbon-panel="writing" id="ribbon-panel-writing" role="tabpanel" hidden>
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" data-ribbon-action="save-episode">Bölümü Kaydet</button>
-              <button type="button" data-ribbon-action="render-preview">Ön İzle</button>
-              <button type="button" data-ribbon-action="big-preview">Büyük Ön İzleme</button>
-            </div>
-            <label>Bölüm</label>
-          </div>
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" class="icon-button" data-ribbon-format="bold">B</button>
-              <button type="button" class="icon-button" data-ribbon-format="italic">I</button>
-              <button type="button" class="icon-button" data-ribbon-format="underline">U</button>
-              <button type="button" class="icon-button" data-ribbon-align="left">≡</button>
-              <button type="button" class="icon-button" data-ribbon-align="justify">▤</button>
-            </div>
-            <label>Metin</label>
-          </div>
-        </div>
-
-        <div class="ribbon-panel" data-ribbon-panel="plan" id="ribbon-panel-plan" role="tabpanel" hidden>
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" data-ribbon-action="show-brief">Sihirbaz</button>
-              <button type="button" data-ribbon-action="build-request">İstek Oluştur</button>
-              <button type="button" data-ribbon-action="save-wizard">Kaydet</button>
-            </div>
-            <label>Brief</label>
-          </div>
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" data-ribbon-action="tab-plan">Plan</button>
-              <button type="button" data-ribbon-action="tab-revision">Revizyon</button>
-            </div>
-            <label>Belgeler</label>
-          </div>
-        </div>
-
-        <div class="ribbon-panel" data-ribbon-panel="agents" id="ribbon-panel-agents" role="tabpanel" hidden>
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" data-ribbon-action="toggle-agents" aria-pressed="false">Paneli Aç</button>
-              <button type="button" data-ribbon-action="show-health">Sağlık</button>
-              <button type="button" data-ribbon-action="copy-log">Günlüğü Kopyala</button>
-            </div>
-            <label>Denetim</label>
-          </div>
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" data-ribbon-action="tab-manuscript">Metin</button>
-              <button type="button" data-ribbon-action="tab-preview">Sayfa</button>
-            </div>
-            <label>Odak</label>
-          </div>
-        </div>
-
-        <div class="ribbon-panel" data-ribbon-panel="layout" id="ribbon-panel-layout" role="tabpanel" hidden>
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" data-ribbon-action="toggle-type" aria-pressed="false">Paneli Aç</button>
-              <button type="button" data-ribbon-action="layout-page">Sayfa</button>
-              <button type="button" data-ribbon-action="layout-font">Tipografi</button>
-              <button type="button" data-ribbon-action="layout-paragraph">Paragraf</button>
-            </div>
-            <label>Dizgi</label>
-          </div>
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" data-ribbon-action="apply-layout">Uygula</button>
-              <button type="button" data-ribbon-action="layout-header">Kenarlar</button>
-              <button type="button" data-ribbon-action="layout-numbering">Numara</button>
-            </div>
-            <label>Sayfa Yapısı</label>
-          </div>
-        </div>
-
-        <div class="ribbon-panel" data-ribbon-panel="publish" id="ribbon-panel-publish" role="tabpanel" hidden>
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" data-ribbon-action="export-command">Dışa Aktar</button>
-              <button type="button" data-ribbon-action="final-desktop">Finali Masaüstüne</button>
-            </div>
-            <label>Çıktı</label>
-          </div>
-          <div class="ribbon-group">
-            <div class="ribbon-commands">
-              <button type="button" data-ribbon-action="cleanup">Bitti Onayıyla Temizle</button>
-              <button type="button" data-ribbon-action="copy-log">Günlük</button>
-            </div>
-            <label>Kapanış</label>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <aside class="sidebar">
       <div class="side-head">
         <span class="label">Kitap Haritası</span>
@@ -2242,11 +2050,13 @@
         <details class="control-menu" id="bookControlMenu">
           <summary>Kontrol</summary>
           <div class="control-menu-list">
+            <button type="button" data-support-tab="writingCards">Yazım Kartları</button>
             <button type="button" data-support-tab="cards">Bölüm Panosu</button>
             <button type="button" data-support-tab="context">Bağlam Defteri</button>
             <button type="button" data-support-tab="analysis">Tekrar Analizi</button>
             <button type="button" data-support-tab="plan">Plan</button>
             <button type="button" data-support-tab="revision">Revizyon</button>
+            <button type="button" data-support-tab="versions">Sürüm Geçmişi</button>
           </div>
         </details>
       </div>
@@ -2314,6 +2124,18 @@
         </nav>
         <div class="type-group" data-type-panel="page">
           <h4>Sayfa</h4>
+          <label class="field">Kitap Şablonu
+            <select id="layoutProfile">
+              <option value="classicNovel">Roman Klasik</option>
+              <option value="modernNovel">Modern Roman</option>
+              <option value="publisherA5">Yayınevi A5</option>
+              <option value="essay">Deneme</option>
+              <option value="biography">Biyografi</option>
+              <option value="poetry">Şiir Kitabı</option>
+              <option value="screenplay">Senaryo</option>
+              <option value="children">Çocuk Kitabı</option>
+            </select>
+          </label>
           <label class="field">Sayfa Boyutu
             <select id="pageSize"><option>A5 (148 x 210 mm)</option><option>A4 (210 x 297 mm)</option></select>
           </label>
@@ -2394,13 +2216,6 @@
             <button type="button" class="ghost danger" id="cleanupProjectBtn">Bitti Onayıyla Temizle</button>
           </div>
         </div>
-        <div class="run-log">
-          <header>
-            <span>Çalıştırma Günlüğü</span>
-            <button type="button" class="ghost" id="copyRunLogBtn">Kopyala</button>
-          </header>
-          <pre id="runLogOutput">Studio Bridge bekleniyor.</pre>
-        </div>
       </div>
     </aside>
   </main>
@@ -2480,8 +2295,6 @@
     const bookStats = document.getElementById("bookStats");
     const bookTitle = document.querySelector(".book-title");
     const liveStatus = document.querySelector(".statusbar .live");
-    const scoreValue = document.getElementById("scoreValue");
-    const qualityLabel = document.getElementById("qualityLabel");
     const settingsBridgeStatus = document.getElementById("settingsBridgeStatus");
     const healthMeta = document.getElementById("healthMeta");
     const healthList = document.getElementById("healthList");
@@ -2497,8 +2310,7 @@
     const newProjectBtn = document.getElementById("newProjectBtn");
     const saveRequestBtn = document.getElementById("saveRequestBtn");
     const refreshProjectBtn = document.getElementById("refreshProjectBtn");
-    const runLogOutput = document.getElementById("runLogOutput");
-    const copyRunLogBtn = document.getElementById("copyRunLogBtn");
+    let runLogText = "Studio Bridge bekleniyor.";
     const wizardType = document.getElementById("wizardType");
     const wizardPages = document.getElementById("wizardPages");
     const wizardCharacters = document.getElementById("wizardCharacters");
@@ -2512,11 +2324,6 @@
     const wizardMissing = document.getElementById("wizardMissing");
     const buildRequestBtn = document.getElementById("buildRequestBtn");
     const saveWizardBtn = document.getElementById("saveWizardBtn");
-    const ribbonBriefState = document.getElementById("ribbonBriefState");
-    const ribbonAgentState = document.getElementById("ribbonAgentState");
-    const ribbonQualityState = document.getElementById("ribbonQualityState");
-    const ribbonLayoutState = document.getElementById("ribbonLayoutState");
-    const ribbonHelp = document.getElementById("ribbonHelp");
     const processTitle = document.getElementById("processTitle");
     const processNote = document.getElementById("processNote");
 
@@ -2541,6 +2348,7 @@
     let currentDesignDocs = [];
     let currentReports = [];
     let currentRevision = null;
+    let currentVersions = [];
     let currentAlignment = "justify";
     const previewPageLimit = 12;
     const genreBlockOptions = {
@@ -2555,6 +2363,186 @@
       "Anı": ["Gövde Metni", "Tarih Notu", "Alıntı"],
       "Çocuk kitabı": ["Gövde Metni", "Bölüm Başlığı", "Diyalog"]
     };
+    const layoutProfiles = {
+      classicNovel: {
+        label: "Roman Klasik",
+        pageSize: "A5 (148 x 210 mm)",
+        printMode: "Karşılıklı sayfa",
+        frontMatter: "Künye + İçindekiler",
+        font: "Garamond",
+        size: 11.5,
+        line: 1.15,
+        top: 18,
+        inside: 20,
+        outside: 16,
+        indent: 0.55,
+        after: 0,
+        chapterStart: "new_page",
+        titlePage: "required",
+        toc: "required",
+        preface: "optional",
+        coverBrief: "required",
+        backCoverCopy: "required",
+        pageNumbering: "front matter roman/unnumbered, body arabic",
+        submission: "publisher_submission_docx"
+      },
+      modernNovel: {
+        label: "Modern Roman",
+        pageSize: "A5 (148 x 210 mm)",
+        printMode: "Karşılıklı sayfa",
+        frontMatter: "Künye + İçindekiler",
+        font: "Georgia",
+        size: 11,
+        line: 1.22,
+        top: 19,
+        inside: 21,
+        outside: 17,
+        indent: 0.45,
+        after: 1,
+        chapterStart: "new_page",
+        titlePage: "required",
+        toc: "required",
+        preface: "optional",
+        coverBrief: "required",
+        backCoverCopy: "required",
+        pageNumbering: "front matter roman/unnumbered, body arabic",
+        submission: "publisher_submission_docx"
+      },
+      publisherA5: {
+        label: "Yayınevi A5",
+        pageSize: "A5 (148 x 210 mm)",
+        printMode: "Karşılıklı sayfa",
+        frontMatter: "Künye + İçindekiler",
+        font: "Garamond",
+        size: 11.5,
+        line: 1.18,
+        top: 18,
+        inside: 22,
+        outside: 16,
+        indent: 0.55,
+        after: 0,
+        chapterStart: "new_page",
+        titlePage: "required",
+        toc: "required",
+        preface: "optional",
+        coverBrief: "required",
+        backCoverCopy: "required",
+        pageNumbering: "front matter roman/unnumbered, body arabic",
+        submission: "publisher_submission_docx"
+      },
+      essay: {
+        label: "Deneme",
+        pageSize: "A5 (148 x 210 mm)",
+        printMode: "Tek taraf",
+        frontMatter: "Künye + İçindekiler",
+        font: "Palatino Linotype",
+        size: 11.5,
+        line: 1.25,
+        top: 20,
+        inside: 19,
+        outside: 18,
+        indent: 0.35,
+        after: 3,
+        chapterStart: "new_page",
+        titlePage: "required",
+        toc: "required",
+        preface: "recommended",
+        coverBrief: "required",
+        backCoverCopy: "required",
+        pageNumbering: "front matter roman/unnumbered, body arabic",
+        submission: "publisher_submission_docx"
+      },
+      biography: {
+        label: "Biyografi",
+        pageSize: "A5 (148 x 210 mm)",
+        printMode: "Karşılıklı sayfa",
+        frontMatter: "Künye + İçindekiler",
+        font: "Georgia",
+        size: 11,
+        line: 1.24,
+        top: 19,
+        inside: 21,
+        outside: 17,
+        indent: 0.4,
+        after: 2,
+        chapterStart: "new_page",
+        titlePage: "required",
+        toc: "required",
+        preface: "recommended",
+        coverBrief: "required",
+        backCoverCopy: "required",
+        pageNumbering: "front matter roman/unnumbered, body arabic",
+        submission: "publisher_submission_docx"
+      },
+      poetry: {
+        label: "Şiir Kitabı",
+        pageSize: "A5 (148 x 210 mm)",
+        printMode: "Tek taraf",
+        frontMatter: "Künye + İçindekiler",
+        font: "Garamond",
+        size: 12,
+        line: 1.35,
+        top: 24,
+        inside: 18,
+        outside: 18,
+        indent: 0,
+        after: 6,
+        chapterStart: "new_page",
+        titlePage: "required",
+        toc: "required",
+        preface: "optional",
+        coverBrief: "required",
+        backCoverCopy: "required",
+        pageNumbering: "front matter unnumbered, body arabic",
+        submission: "poetry_collection_docx"
+      },
+      screenplay: {
+        label: "Senaryo",
+        pageSize: "A4 (210 x 297 mm)",
+        printMode: "Tek taraf",
+        frontMatter: "Yalnız metin",
+        font: "Courier New",
+        size: 12,
+        line: 1.1,
+        top: 20,
+        inside: 25,
+        outside: 20,
+        indent: 0,
+        after: 0,
+        chapterStart: "scene_sequence",
+        titlePage: "required",
+        toc: "optional",
+        preface: "none",
+        coverBrief: "optional",
+        backCoverCopy: "optional",
+        pageNumbering: "body arabic",
+        submission: "screenplay_docx"
+      },
+      children: {
+        label: "Çocuk Kitabı",
+        pageSize: "A5 (148 x 210 mm)",
+        printMode: "Tek taraf",
+        frontMatter: "Künye + İçindekiler",
+        font: "Georgia",
+        size: 13,
+        line: 1.35,
+        top: 20,
+        inside: 18,
+        outside: 18,
+        indent: 0.25,
+        after: 4,
+        chapterStart: "new_page",
+        titlePage: "required",
+        toc: "optional",
+        preface: "optional",
+        coverBrief: "required",
+        backCoverCopy: "required",
+        pageNumbering: "body arabic",
+        submission: "children_book_docx"
+      }
+    };
+    let selectedWritingCardId = null;
+    const writingCardBoundaryContract = "plan-context-boundary";
 
     function renderChapters() {
       if (!chapters.length) {
@@ -2632,14 +2620,10 @@
       document.getElementById("agentSummary").textContent = `${processSteps.length} adımdan ${done}'i tamamlandı. ${review} onay bekliyor.`;
       if (processTitle) processTitle.textContent = activeStep.title;
       if (processNote) processNote.textContent = review ? "Devam etmek için kullanıcı onayı bekleniyor." : activeStep.text;
-      ribbonAgentState.textContent = `${done}/${agents.length}`;
     }
 
     function renderQuality(quality) {
       const score = Number(quality?.score || 0);
-      if (scoreValue) scoreValue.textContent = String(score);
-      ribbonQualityState.textContent = String(score);
-      if (qualityLabel) qualityLabel.textContent = score >= 86 ? "Yayına yakın" : score >= 60 ? "Revizyon ister" : "Proje bekliyor";
       healthMeta.textContent = quality ? `${quality.passed || 0}/${quality.total || 0}` : "Bekler";
       const checks = quality?.checks || [
         { label: "Plan/onay zinciri", ok: false, detail: "proje bekleniyor" },
@@ -2727,6 +2711,117 @@
       notesPanel.classList.add("open");
       notesPanel.setAttribute("aria-hidden", "false");
       setStatus("Motor olayı: kart panosu açıldı");
+    }
+
+    function buildWritingCards() {
+      const values = collectWizardValues();
+      const chapter = chapters[currentChapterIndex] || {};
+      const selected = manuscriptText.value.slice(manuscriptText.selectionStart || 0, manuscriptText.selectionEnd || 0).trim();
+      const currentText = manuscriptText.value || "";
+      const lastParagraph = cleanParagraphs(currentText).slice(-1)[0] || "";
+      const chapterLabel = chapter.title || "Açık bölüm";
+      const target = selected ? "seçili paragraf" : chapterLabel;
+      const premise = values.premise || chapter.summary || "ana hikaye çizgisi";
+      const setting = values.setting || "sahnenin mekânı";
+
+      return [
+        {
+          id: "continue",
+          title: "Devam Ettir",
+          body: `${target} kaldığı yerden ilerlesin; yeni bilgi ekle, aynı duyguyu tekrar anlatma.`,
+          meta: "Olay ilerlemesi",
+          prompt: `Bu bölümde ${premise} vaadine bağlı kalarak sahneyi devam ettir. Son paragraftaki sonucu tekrarlama; karakterin yeni bir karar, engel veya bilgiyle karşılaşmasını sağla.`
+        },
+        {
+          id: "expand",
+          title: "Sahneyi Genişlet",
+          body: `${setting} hissini artır; eşya, ses, ışık ve beden hareketleriyle sahneyi aç.`,
+          meta: "Atmosfer",
+          prompt: `Sahneyi genişlet: mekân ayrıntılarını, küçük eylemleri ve karakterin iç gerilimini artır. Betimleme olayın önüne geçmesin; her ayrıntı karakterin hedefiyle ilişkili olsun.`
+        },
+        {
+          id: "character",
+          title: "Karakteri Derinleştir",
+          body: "Karakterin arzusunu, korkusunu veya sakladığı bilgiyi açık açıklama yerine davranışla göster.",
+          meta: "Tutarlılık",
+          prompt: `Karakter derinliği ekle: karakter ne istediğini ve neyden kaçındığını davranışla göstersin. Önceki bağlamla çelişme, yeni motivasyon uydurma.`
+        },
+        {
+          id: "tension",
+          title: "Gerilimi Artır",
+          body: "Sahneye baskı koy; yanlış anlaşılma, süre baskısı veya güven kırılması ekle.",
+          meta: "Tempo",
+          prompt: `Gerilimi artır: sahneye somut bir baskı unsuru ekle. Çatışmayı yükselt ama final bilgisini erken açıklama; bölüm planındaki sıraya bağlı kal.`
+        },
+        {
+          id: "polish",
+          title: "Edebi Sıkılaştır",
+          body: "Tekrarları azalt, cümle ritmini düzelt, Türkçe karakter ve noktalama temizliğini koru.",
+          meta: "Dil",
+          prompt: `Metni edebi olarak sıkılaştır: tekrarları azalt, cümle ritmini iyileştir, Türkçe yazım ve noktalama kurallarını koru. Anlamı ve olay sırasını değiştirme.`
+        }
+      ].map(card => ({
+        ...card,
+        selected: card.id === selectedWritingCardId,
+        source: selected ? selected.slice(0, 240) : lastParagraph.slice(0, 240)
+      }));
+    }
+
+    function renderWritingCards() {
+      const cards = buildWritingCards();
+      const chosen = cards.find(card => card.selected);
+      notesTitle.textContent = "Yazım Kartları";
+      notesContent.innerHTML = `
+        <div class="writing-brief">
+          <b>Önce kart seç, sonra isteğe ekle.</b>
+          <p>Bu kartlar metni kendiliğinden değiştirmez. Seçilen kart, IDE/API yazım isteğine bağlanır; bölüm planı ve bağlam defteri dışına çıkmaması için kısa komut üretir.</p>
+        </div>
+        <div class="story-card-grid" style="margin-top:12px">${cards.map(card => `
+          <article class="story-card writing-card ${card.selected ? "is-selected" : ""}" data-writing-card="${escapeHtml(card.id)}">
+            <h4>${escapeHtml(card.title)}</h4>
+            <p>${escapeHtml(card.body)}</p>
+            ${card.source ? `<small>Kaynak: ${escapeHtml(card.source)}</small>` : ""}
+            <div class="card-meta">
+              <small>${escapeHtml(card.meta)}</small>
+              <small>${card.selected ? "Seçildi" : "Hazır"}</small>
+            </div>
+            <div class="card-actions">
+              <button type="button" data-writing-card-select="${escapeHtml(card.id)}">${card.selected ? "Seçili" : "Seç"}</button>
+              <button type="button" class="primary" data-writing-card-request="${escapeHtml(card.id)}">İsteğe Ekle</button>
+            </div>
+          </article>
+        `).join("")}</div>
+        ${chosen ? `<div class="writing-brief" style="margin-top:12px"><b>Seçilen komut</b><p>${escapeHtml(chosen.prompt)}</p></div>` : ""}
+      `;
+      notesPanel.classList.add("open");
+      notesPanel.setAttribute("aria-hidden", "false");
+      setStatus("Motor olayı: yazım kartları açıldı");
+    }
+
+    async function applyWritingCardRequest(cardId) {
+      const card = buildWritingCards().find(item => item.id === cardId);
+      if (!card) return;
+      selectedWritingCardId = card.id;
+      const request = [
+        "YAZIM KARTI",
+        `Kart: ${card.title}`,
+        `Amaç: ${card.meta}`,
+        "",
+        card.prompt,
+        "",
+        "Zorunlu sınırlar:",
+        "- Onaylı kitap planı ve bağlam defteri dışına çıkma.",
+        "- Aynı sahneyi tekrar anlatma; olayda ilerleme sağla.",
+        "- Teknik etiket, dosya adı veya sistem notu yazma.",
+        "- Türkçe karakter, noktalama ve kitap dili temizliğini koru."
+      ].join("\n");
+      bookRequestInput.value = bookRequestInput.value.trim()
+        ? `${bookRequestInput.value.trim()}\n\n---\n\n${request}`
+        : request;
+      chapterAction.textContent = `${card.title} isteğe eklendi`;
+      setRunLog(request);
+      renderWritingCards();
+      setStatus("Motor olayı: seçilen yazım kartı isteğe eklendi; kullanıcı onayıyla yazım başlatılabilir.");
     }
 
     function attachCardBoardDrag() {
@@ -2822,11 +2917,11 @@
       notesTitle.textContent = "Tekrar Analizi";
       notesContent.innerHTML = `
         <div class="analysis-list">
-          <div class="analysis-row"><b>Paragraf sayısı</b><span>${paragraphs.length}</span></div>
-          <div class="analysis-row"><b>Uzun paragraf riski</b><span>${longParagraphs}</span></div>
+          <div class="analysis-row"><b>Paragraf sayısı:</b><span>${paragraphs.length}</span></div>
+          <div class="analysis-row"><b>Uzun paragraf riski:</b><span>${longParagraphs}</span></div>
           ${repeated.length ? repeated.map(([word, count]) => `
-            <div class="analysis-row"><b>${escapeHtml(word)}</b><span>${count} kez</span></div>
-          `).join("") : `<div class="analysis-row"><b>Tekrar riski</b><span>Düşük</span></div>`}
+            <div class="analysis-row"><b>${escapeHtml(word)}:</b><span>${count} kez</span></div>
+          `).join("") : `<div class="analysis-row"><b>Tekrar riski:</b><span>Düşük</span></div>`}
         </div>
       `;
       notesPanel.classList.add("open");
@@ -2851,7 +2946,7 @@
             <small>Hedef: ${escapeHtml(proposal.target_file || "-")}</small>
             ${proposal.replacement_file ? `<small>Yeni metin: ${escapeHtml(proposal.replacement_file)}</small>` : ""}
             ${actionable ? `
-              <div class="ribbon-commands" style="margin-top:10px">
+              <div class="support-actions" style="margin-top:10px">
                 <button type="button" data-revision-approve="${escapeHtml(id)}">${approved ? "Onaylandı" : "Onayla"}</button>
                 <button type="button" class="primary" data-revision-apply="${escapeHtml(id)}">Uygula</button>
               </div>
@@ -2872,7 +2967,7 @@
           <div class="ledger-row"><b>Taslak kilidi</b><span>${draftLocked ? escapeHtml(currentRevision.draftLock.snapshot_id) : "Bekliyor"}</span></div>
           <div class="ledger-row"><b>Onay</b><span>${approval.approved ? "Kullanıcı onayı var" : "Onay bekliyor"}</span></div>
         </div>
-        <div class="ribbon-commands" style="margin-bottom:12px">
+        <div class="support-actions" style="margin-bottom:12px">
           <button type="button" class="primary" data-revision-scan>Revizyon Önerilerini Tara</button>
         </div>
         <div class="story-card-grid">${cards}</div>
@@ -2880,6 +2975,53 @@
       notesPanel.classList.add("open");
       notesPanel.setAttribute("aria-hidden", "false");
       setStatus("Motor olayı: revizyon kartları açıldı");
+    }
+
+    function formatVersionDate(value) {
+      if (!value) return "tarih yok";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleString("tr-TR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function renderVersionHistory() {
+      notesTitle.textContent = "Sürüm Geçmişi";
+      if (!bridgeProjectActive) {
+        notesContent.innerHTML = `
+          <p>Gerçek sürüm geçmişi için Studio Bridge ile bir proje bağlayın.</p>
+          <p>Her kayıt, proje içinde <b>revision/_versions</b> altında tutulur.</p>
+        `;
+      }
+      else if (!currentVersions.length) {
+        notesContent.innerHTML = `
+          <p>Henüz sürüm kaydı yok.</p>
+          <p>Kitap isteği, bölüm, dizgi, revizyon veya final export kaydedildiğinde burada görünecek.</p>
+        `;
+      }
+      else {
+        notesContent.innerHTML = `
+          <ol class="version-list">
+            ${currentVersions.map((version, index) => `
+              <li class="version-row">
+                <span>
+                  <b>${index === 0 ? "Şu anki kayıt" : escapeHtml(version.title || "Sürüm")}</b>
+                  <small>${escapeHtml(version.reason || version.title || "Kayıt")} · ${formatVersionDate(version.created_at)} · ${Number(version.words || 0)} kelime</small>
+                </span>
+                <button type="button" data-version-restore="${escapeHtml(version.id)}"${index === 0 ? " disabled" : ""}>Geri dön</button>
+              </li>
+            `).join("")}
+          </ol>
+        `;
+      }
+      notesPanel.classList.add("open");
+      notesPanel.setAttribute("aria-hidden", "false");
+      setStatus("Motor olayı: sürüm geçmişi açıldı");
     }
 
     function splitPreviewPages(paragraphs) {
@@ -3016,14 +3158,14 @@
         italic: value.slice(Math.max(0, start - 1), start) === "_" && value.slice(end, end + 1) === "_",
         underline: value.slice(Math.max(0, start - 3), start) === "<u>" && value.slice(end, end + 4) === "</u>"
       };
-      document.querySelectorAll("[data-format], [data-ribbon-format]").forEach(button => {
-        const command = button.dataset.format || button.dataset.ribbonFormat;
+      document.querySelectorAll("[data-format]").forEach(button => {
+        const command = button.dataset.format;
         const active = Boolean(states[command]);
         button.classList.toggle("active", active);
         button.setAttribute("aria-pressed", active ? "true" : "false");
       });
-      document.querySelectorAll("[data-align], [data-ribbon-align]").forEach(button => {
-        const alignment = button.dataset.align || button.dataset.ribbonAlign;
+      document.querySelectorAll("[data-align]").forEach(button => {
+        const alignment = button.dataset.align;
         const active = alignment === currentAlignment;
         button.classList.toggle("active", active);
         button.setAttribute("aria-pressed", active ? "true" : "false");
@@ -3293,26 +3435,11 @@
       const saveAvailable = bridgeOnline || hasLocalProject;
       const hasAnyProject = hasLocalProject || hasBridgeProject;
 
-      const setRibbonAvailability = (action, available, title) => {
-        document.querySelectorAll(`[data-ribbon-action="${action}"]`).forEach(button => {
-          button.classList.toggle("is-offline", !available);
-          button.setAttribute("aria-disabled", available ? "false" : "true");
-          button.title = available ? "" : title;
-        });
-      };
-
       newProjectBtn.classList.toggle("is-offline", !bridgeOnline);
       finalExportBtn.classList.toggle("is-offline", !hasBridgeProject);
       cleanupProjectBtn.classList.toggle("is-offline", !hasBridgeProject);
       saveRequestBtn.classList.toggle("is-offline", !saveAvailable);
       exportBtn.classList.toggle("is-offline", !hasBridgeProject);
-
-      setRibbonAvailability("new-project", bridgeOnline, "Studio Bridge kapalı: yeni proje motor komutu gerektirir.");
-      setRibbonAvailability("save-request", saveAvailable, "Önce Studio Bridge aç veya proje klasörü bağla.");
-      setRibbonAvailability("save-episode", hasAnyProject, "Önce proje bağla veya Studio Bridge ile gerçek proje yolu seç.");
-      setRibbonAvailability("refresh", hasAnyProject || bridgeOnline, "Önce proje yolu yaz, proje bağla veya Studio Bridge aç.");
-      setRibbonAvailability("final-desktop", hasBridgeProject, "Final aktarım için Studio Bridge ve gerçek proje yolu gerekli.");
-      setRibbonAvailability("cleanup", hasBridgeProject, "Temizlik için Studio Bridge ve gerçek proje yolu gerekli.");
 
       newProjectBtn.title = bridgeOnline ? "Studio Bridge ile yeni proje olusturur." : "Studio Bridge kapali: yeni proje motor komutu gerektirir.";
       saveRequestBtn.title = saveAvailable ? "runtime/book-request.md dosyasini kaydeder." : "Once Studio Bridge ac veya proje klasoru bagla.";
@@ -3322,7 +3449,7 @@
     }
 
     function setRunLog(message) {
-      runLogOutput.textContent = message || "Çıktı yok.";
+      runLogText = message || "Çıktı yok.";
     }
 
     function collectWizardValues() {
@@ -3352,7 +3479,6 @@
       ];
       const missing = checks.filter(([, value]) => !String(value || "").trim()).map(([label]) => label);
       wizardCompleteness.textContent = `${checks.length - missing.length}/${checks.length}`;
-      ribbonBriefState.textContent = `${checks.length - missing.length}/${checks.length}`;
       wizardMissing.textContent = missing.length ? `Eksik: ${missing.join(", ")}` : "Hazır: kitap isteği plana dönüştürülebilir.";
       return { complete: missing.length === 0, missing };
     }
@@ -3398,11 +3524,11 @@
 
     async function copyRunLog() {
       try {
-        await navigator.clipboard.writeText(runLogOutput.textContent);
-        setStatus("Motor olayı: çalıştırma günlüğü kopyalandı");
+        await navigator.clipboard.writeText(runLogText);
+        setStatus("Motor olayı: son motor notu kopyalandı");
       }
       catch {
-        setStatus("Motor olayı: günlük kopyalanamadı");
+        setStatus("Motor olayı: motor notu kopyalanamadı");
       }
     }
 
@@ -3536,6 +3662,10 @@
         return;
       }
       manuscriptText.readOnly = false;
+      if (tab === "writingCards") {
+        renderWritingCards();
+        return;
+      }
       if (tab === "cards") {
         renderCardBoard();
         return;
@@ -3561,6 +3691,10 @@
       }
       if (tab === "revision") {
         renderRevisionPanel();
+        return;
+      }
+      if (tab === "versions") {
+        renderVersionHistory();
         return;
       }
       renderPreview();
@@ -3728,6 +3862,7 @@
       bookStats.textContent = `${targetChapters} · ${targetPages}`;
 
       setSelectIfPresent("pageSize", layoutPlan?.page_size);
+      setSelectIfPresent("layoutProfile", layoutPlan?.layout_profile);
       setSelectIfPresent("printMode", layoutPlan?.print_mode);
       setSelectIfPresent("frontMatter", layoutPlan?.front_matter);
       if (layoutPlan?.font_family) {
@@ -3877,6 +4012,7 @@
       currentDesignDocs = summary.designDocs || [];
       currentReports = summary.reports || [];
       currentRevision = summary.revision || null;
+      currentVersions = summary.versions || [];
       renderSupportTab(currentTab);
       renderQuality(summary.quality);
       renderLifecycle(summary.lifecycle);
@@ -3888,6 +4024,7 @@
       renderApprovals();
 
       setSelectIfPresent("pageSize", layoutPlan.page_size);
+      setSelectIfPresent("layoutProfile", layoutPlan.layout_profile);
       setSelectIfPresent("printMode", layoutPlan.print_mode);
       setSelectIfPresent("frontMatter", layoutPlan.front_matter);
       if (layoutPlan.font_family) {
@@ -4018,6 +4155,7 @@
         setRunLog(`Kitap isteği kaydedildi\nDosya: runtime/book-request.md\nKelime: ${result.words}\nKarakter: ${result.characters}\nZorunlu alanlar: ${missing.length ? "eksik - " + missing.join(", ") : "tam"}`);
         setStatus(missing.length ? "Motor olayı: kitap isteği kaydedildi ama sihirbaz alanları eksik." : `Motor olayı: kitap isteği kaydedildi (${result.words} kelime)`);
         syncBridgeButtons();
+        await refreshProject();
       }
       catch (error) {
         setStatus(`Motor olayı: kitap isteği kaydedilemedi (${error.message})`);
@@ -4038,6 +4176,7 @@
       try {
         projectHandle = await window.showDirectoryPicker({ mode: "readwrite" });
         bridgeProjectActive = false;
+        currentVersions = [];
         currentProjectPathHint = projectHandle.name;
         if (!projectPathInput.value.trim()) {
           projectPathInput.value = projectHandle.name;
@@ -4104,6 +4243,7 @@
           renderChapters();
           renderPreview();
           setStatus(`Motor olayı: ${chapter.filename} bridge ile kaydedildi`);
+          await refreshProject();
           return;
         }
         catch (error) {
@@ -4341,6 +4481,44 @@
       }
     }
 
+    async function restoreVersionViaBridge(versionId) {
+      if (!bridgeOnline || !currentProjectPathHint || currentProjectPathHint === ".") {
+        setStatus("Motor olayı: sürüme dönmek için Studio Bridge ve gerçek proje yolu gerekli.");
+        return;
+      }
+      const version = currentVersions.find(item => item.id === versionId);
+      const label = version?.title || versionId;
+      const accepted = window.confirm(`Bu işlem mevcut çalışma halini önce yedekler, sonra "${label}" sürümüne döner. Devam edilsin mi?`);
+      if (!accepted) {
+        setStatus("Motor olayı: sürüme dönüş iptal edildi.");
+        return;
+      }
+      try {
+        setStatus(`Motor olayı: ${label} sürümüne dönülüyor...`);
+        const response = await fetch(`${bridgeUrl}/api/restore-version`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            projectRoot: currentProjectPathHint,
+            versionId,
+            confirmation: "geri dön"
+          })
+        });
+        const result = await response.json();
+        if (!result.ok) {
+          setRunLog(result.error || "Sürüme dönüş başarısız.");
+          setStatus(`Motor olayı: sürüme dönüş durdu (${result.error || "hata"})`);
+          return;
+        }
+        setRunLog(`${label} sürümüne dönüldü\nGeri yüklenen dosya: ${result.restoredFiles || 0}`);
+        await refreshProject();
+        renderSupportTab("versions");
+      }
+      catch (error) {
+        setStatus(`Motor olayı: sürüme dönüş başarısız (${error.message})`);
+      }
+    }
+
     function applyTypography() {
       const font = document.getElementById("typeFont").value;
       const size = Number(document.getElementById("typeSize").value || 11.5);
@@ -4359,18 +4537,53 @@
       bookPage.style.paddingLeft = `${Math.max(42, inside * 2.55)}px`;
       bookPage.style.paddingRight = `${Math.max(38, outside * 2.55)}px`;
       previewMeta.textContent = `${isA4 ? "A4 · 210 x 297 mm" : "A5 · 148 x 210 mm"} · ${font} ${size} pt`;
-      if (ribbonLayoutState) {
-        ribbonLayoutState.textContent = `${isA4 ? "A4" : "A5"} · ${font} ${size}`;
-        ribbonLayoutState.title = `${isA4 ? "A4 · 210 x 297 mm" : "A5 · 148 x 210 mm"} · ${font} ${size} pt · satır ${line}`;
-      }
       renderPreview();
     }
 
+    function setControlValue(id, value) {
+      const control = document.getElementById(id);
+      if (!control || value === undefined || value === null) return;
+      control.value = String(value);
+    }
+
+    function applyLayoutProfile(profileId) {
+      const profile = layoutProfiles[profileId];
+      if (!profile) return;
+      setControlValue("pageSize", profile.pageSize);
+      setControlValue("printMode", profile.printMode);
+      setControlValue("frontMatter", profile.frontMatter);
+      setControlValue("typeFont", profile.font);
+      setControlValue("fontSelect", profile.font);
+      setControlValue("typeSize", profile.size);
+      setControlValue("fontSizeSelect", profile.size);
+      setControlValue("lineHeight", profile.line);
+      setControlValue("marginTop", profile.top);
+      setControlValue("marginInside", profile.inside);
+      setControlValue("marginOutside", profile.outside);
+      setControlValue("indent", profile.indent);
+      setControlValue("after", profile.after);
+      applyTypography();
+      setStatus(`Motor olayı: ${profile.label} kitap şablonu uygulandı`);
+    }
+
     function collectLayoutPlanFromUi() {
+      const profileId = document.getElementById("layoutProfile").value;
+      const profile = layoutProfiles[profileId] || layoutProfiles.classicNovel;
       return {
+        layout_profile: profileId,
+        book_template: profileId,
+        book_template_label: profile.label,
         page_size: document.getElementById("pageSize").value,
         print_mode: document.getElementById("printMode").value,
         front_matter: document.getElementById("frontMatter").value,
+        chapter_start_policy: profile.chapterStart,
+        title_page_policy: profile.titlePage,
+        toc_policy: profile.toc,
+        preface_policy: profile.preface,
+        cover_brief_policy: profile.coverBrief,
+        back_cover_copy_policy: profile.backCoverCopy,
+        page_numbering_policy: profile.pageNumbering,
+        publisher_submission_label: profile.submission,
         font_family: document.getElementById("typeFont").value,
         font_size_pt: Number(document.getElementById("typeSize").value || 11.5),
         line_spacing: Number(document.getElementById("lineHeight").value || 1.15),
@@ -4472,26 +4685,14 @@
       drawerToggle.textContent = typeCollapsed ? "Paneli Aç" : "Paneli Kapat";
       collapseAgents.textContent = agentsCollapsed ? "Aç" : "Daralt";
       sideCollapseBtn.textContent = navCollapsed ? "☰" : "☰";
-      document.querySelectorAll('[data-ribbon-action="toggle-type"]').forEach(button => {
-        button.textContent = typeCollapsed ? "Paneli Aç" : "Paneli Kapat";
-        button.setAttribute("aria-pressed", typeCollapsed ? "false" : "true");
-      });
-      document.querySelectorAll('[data-ribbon-action="toggle-agents"]').forEach(button => {
-        button.textContent = agentsCollapsed ? "Paneli Aç" : "Paneli Kapat";
-        button.setAttribute("aria-pressed", agentsCollapsed ? "false" : "true");
-      });
     }
 
-    function selectWorkspaceTab(tabName, syncRibbon = true) {
+    function selectWorkspaceTab(tabName) {
       const target = document.querySelector(`[data-tab="${tabName}"]`);
       if (!target) return;
       document.querySelectorAll(".tabs button").forEach(item => item.classList.remove("active"));
       target.classList.add("active");
       renderSupportTab(tabName);
-      if (syncRibbon) {
-        const relatedRibbon = tabName === "plan" || tabName === "revision" ? "plan" : "writing";
-        showRibbonTab(relatedRibbon);
-      }
     }
 
     function ensurePanelOpen(className, control) {
@@ -4505,77 +4706,9 @@
       if (!target) return;
       document.querySelectorAll(".mode button").forEach(item => item.classList.remove("active"));
       target.classList.add("active");
-      document.querySelectorAll("[data-ribbon-mode]").forEach(button => {
-        const active = button.dataset.ribbonMode === mode;
-        button.classList.toggle("active", active);
-        button.setAttribute("aria-pressed", active ? "true" : "false");
-      });
       syncModePanels(mode);
       if (persist) writeStudioSettings({ mode });
       setStatus(`Motor olayı: ${mode} modu seçildi`);
-    }
-
-    function showRibbonTab(name) {
-      const help = {
-        start: "Proje oluştur, bağla ve motor akışını başlat.",
-        writing: "Bölüm metnini düzenle, biçimlendir ve ön izle.",
-        plan: "Brief, kitap planı ve revizyon belgelerini yönet.",
-        agents: "Ajan akışını, kalite kapılarını ve günlüğü izle.",
-        layout: "Sayfa boyutu, font, paragraf ve mizanpajı ayarla.",
-        publish: "Final DOCX, masaüstü aktarım ve onaylı temizlik işlemleri."
-      };
-      document.querySelectorAll("[data-ribbon-tab]").forEach(button => {
-        const active = button.dataset.ribbonTab === name;
-        button.classList.toggle("active", active);
-        button.setAttribute("aria-selected", active ? "true" : "false");
-      });
-      document.querySelectorAll("[data-ribbon-panel]").forEach(panel => {
-        const active = panel.dataset.ribbonPanel === name;
-        panel.classList.toggle("active", active);
-        panel.hidden = !active;
-      });
-      if (ribbonHelp) ribbonHelp.textContent = help[name] || help.start;
-    }
-
-    function runRibbonAction(action, sourceButton) {
-      if (sourceButton?.classList.contains("is-offline")) {
-        setStatus(sourceButton.title || "Motor olayı: bu komut için önce proje bağlantısı gerekiyor.");
-        return;
-      }
-      const actions = {
-        "new-project": () => createProjectViaBridge(),
-        "bind-project": () => bindProject(),
-        "refresh": () => refreshProject(),
-        "save-request": () => saveBookRequestViaBridge(),
-        "run-pipeline": () => copyPipelineCommand(),
-        "mode-ide": () => activateMode("IDE"),
-        "mode-api": () => activateMode("API"),
-        "save-episode": () => saveCurrentEpisode(),
-        "render-preview": () => renderPreview(),
-        "big-preview": () => togglePreviewFocus.click(),
-        "show-brief": () => { ensurePanelOpen("nav-collapsed", toggleNav); document.querySelector(".wizard-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" }); setStatus("Motor olayı: başlangıç sihirbazı açıldı"); },
-        "build-request": () => buildWizardRequestText(),
-        "save-wizard": () => saveWizardRequest(),
-        "tab-plan": () => selectWorkspaceTab("plan", false),
-        "tab-revision": () => selectWorkspaceTab("revision", false),
-        "toggle-agents": () => toggleAgents.click(),
-        "show-health": () => { ensurePanelOpen("agents-collapsed", toggleAgents); healthList?.scrollIntoView({ behavior: "smooth", block: "nearest" }); setStatus("Motor olayı: kitap sağlığı paneli açıldı"); },
-        "copy-log": () => copyRunLog(),
-        "tab-manuscript": () => selectWorkspaceTab("manuscript", false),
-        "tab-preview": () => selectWorkspaceTab("preview", false),
-        "toggle-type": () => toggleType.click(),
-        "layout-page": () => { ensurePanelOpen("type-collapsed", toggleType); focusTypeSection("page"); },
-        "layout-font": () => { ensurePanelOpen("type-collapsed", toggleType); focusTypeSection("font"); },
-        "layout-paragraph": () => { ensurePanelOpen("type-collapsed", toggleType); focusTypeSection("paragraph"); },
-        "layout-header": () => { ensurePanelOpen("type-collapsed", toggleType); focusTypeSection("header"); },
-        "layout-numbering": () => { ensurePanelOpen("type-collapsed", toggleType); focusTypeSection("numbering"); },
-        "apply-layout": () => applyAndSaveTypography(),
-        "export-command": () => copyPipelineCommand(),
-        "final-desktop": () => exportFinalViaBridge(),
-        "cleanup": () => cleanupProjectViaBridge()
-      };
-      const handler = actions[action];
-      if (handler) handler();
     }
 
     document.querySelectorAll(".mode button").forEach(button => {
@@ -4619,10 +4752,6 @@
       setStatus("Motor olayı: IDE ajan komutu panoya kopyalandı");
     });
 
-    document.querySelectorAll("[data-ribbon-tab]").forEach(button => {
-      button.addEventListener("click", () => showRibbonTab(button.dataset.ribbonTab));
-    });
-
     document.addEventListener("keydown", event => {
       if (event.key === "Escape" && document.body.classList.contains("focus-writing")) {
         event.preventDefault();
@@ -4631,25 +4760,6 @@
         setStatus("Motor olayı: odak yazım modu kapandı");
         return;
       }
-      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-      const order = ["start", "writing", "plan", "agents", "layout", "publish"];
-      const index = Number(event.key) - 1;
-      if (index < 0 || index >= order.length) return;
-      event.preventDefault();
-      showRibbonTab(order[index]);
-      document.querySelector(`[data-ribbon-tab="${order[index]}"]`)?.focus();
-    });
-
-    document.querySelectorAll("[data-ribbon-action]").forEach(button => {
-      button.addEventListener("click", () => runRibbonAction(button.dataset.ribbonAction, button));
-    });
-
-    document.querySelectorAll("[data-ribbon-format]").forEach(button => {
-      button.addEventListener("click", () => applyFormatCommand(button.dataset.ribbonFormat));
-    });
-
-    document.querySelectorAll("[data-ribbon-align]").forEach(button => {
-      button.addEventListener("click", () => applyAlignment(button.dataset.ribbonAlign));
     });
 
     document.querySelectorAll(".tabs button").forEach(button => {
@@ -4805,6 +4915,29 @@
       if (apply) {
         event.preventDefault();
         applyRevisionProposalViaBridge(apply.dataset.revisionApply);
+        return;
+      }
+      const restore = event.target.closest("[data-version-restore]");
+      if (restore) {
+        event.preventDefault();
+        restoreVersionViaBridge(restore.dataset.versionRestore);
+        return;
+      }
+      const requestWritingCard = event.target.closest("[data-writing-card-request]");
+      if (requestWritingCard) {
+        event.preventDefault();
+        applyWritingCardRequest(requestWritingCard.dataset.writingCardRequest);
+        return;
+      }
+      const chooseWritingCard = event.target.closest("[data-writing-card-select], [data-writing-card]");
+      if (chooseWritingCard) {
+        const cardId = chooseWritingCard.dataset.writingCardSelect || chooseWritingCard.dataset.writingCard;
+        if (cardId) {
+          event.preventDefault();
+          selectedWritingCardId = cardId;
+          renderWritingCards();
+          setStatus("Motor olayı: yazım kartı seçildi");
+        }
       }
     });
     document.getElementById("typeNav").addEventListener("click", event => {
@@ -4841,6 +4974,9 @@
       document.getElementById("typeSize").value = event.target.value;
       applyTypography();
     });
+    document.getElementById("layoutProfile").addEventListener("change", event => {
+      applyLayoutProfile(event.target.value);
+    });
     ["pageSize", "printMode", "frontMatter", "typeFont", "typeSize", "lineHeight", "marginTop", "marginInside", "marginOutside", "indent", "after"].forEach(id => {
       const control = document.getElementById(id);
       if (!control) return;
@@ -4860,7 +4996,6 @@
     saveRequestBtn.addEventListener("click", saveBookRequestViaBridge);
     refreshProjectBtn.addEventListener("click", refreshProject);
     saveEpisodeBtn.addEventListener("click", saveCurrentEpisode);
-    copyRunLogBtn.addEventListener("click", copyRunLog);
     finalExportBtn.addEventListener("click", exportFinalViaBridge);
     cleanupProjectBtn.addEventListener("click", cleanupProjectViaBridge);
     buildRequestBtn.addEventListener("click", buildWizardRequestText);
@@ -4889,7 +5024,6 @@
     manuscriptText.value = emptyManuscriptText;
     applyAlignment("justify");
     applyStudioSettings();
-    showRibbonTab("start");
     syncPanelButtons();
     syncFormatButtons();
     syncBridgeButtons();

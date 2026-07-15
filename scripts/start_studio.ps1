@@ -6,9 +6,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
+$bridgeScript = Join-Path $RepoRoot "scripts/studio_bridge.ps1"
+if (-not (Test-Path -LiteralPath $bridgeScript -PathType Leaf)) {
+  throw "Studio bridge script not found: $bridgeScript"
+}
+
 $url = "http://127.0.0.1:$Port/"
 if (-not $NoBrowser) {
   Start-Process $url | Out-Null
 }
 
-& powershell -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "scripts/studio_bridge.ps1") -RepoRoot $RepoRoot -Port $Port
+Set-Location -LiteralPath $RepoRoot
+& $bridgeScript -RepoRoot $RepoRoot -Port $Port

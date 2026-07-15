@@ -999,8 +999,25 @@ function Validate-BookBriefApproval {
   if (-not ($dna.PSObject.Properties.Name -contains "plan_before_writing_policy")) {
     throw "Book brief approval blocked: $dnaRel missing plan_before_writing_policy."
   }
-  if (-not ($layout.PSObject.Properties.Name -contains "front_matter") -or -not ($layout.PSObject.Properties.Name -contains "cover") -or -not ($layout.PSObject.Properties.Name -contains "page_setup")) {
-    throw "Book brief approval blocked: $layoutRel must declare front_matter, cover, and page_setup."
+  foreach ($field in @("book_template","book_template_label","front_matter","back_matter","page_numbering","cover","page_setup","typography","delivery_profiles")) {
+    if (-not ($layout.PSObject.Properties.Name -contains $field)) {
+      throw "Book brief approval blocked: $layoutRel must declare full book template field '$field'."
+    }
+  }
+  foreach ($profileField in @("publisher_submission","print_preview")) {
+    if (-not ($layout.delivery_profiles.PSObject.Properties.Name -contains $profileField)) {
+      throw "Book brief approval blocked: $layoutRel delivery_profiles missing '$profileField'."
+    }
+  }
+  foreach ($setupField in @("trim_size","width_mm","height_mm","margin_top_mm","margin_bottom_mm","margin_inside_mm","margin_outside_mm")) {
+    if (-not ($layout.page_setup.PSObject.Properties.Name -contains $setupField)) {
+      throw "Book brief approval blocked: $layoutRel page_setup missing '$setupField'."
+    }
+  }
+  foreach ($typeField in @("body_style","chapter_title_style","paragraph_first_line_indent_cm","paragraph_spacing_after_pt","justification")) {
+    if (-not ($layout.typography.PSObject.Properties.Name -contains $typeField)) {
+      throw "Book brief approval blocked: $layoutRel typography missing '$typeField'."
+    }
   }
 }
 
@@ -2032,7 +2049,7 @@ function Validate-LongformState {
   }
 
   $layoutPlan = Read-Utf8 -Path (Join-Path $stateDir "layout-plan.json") | ConvertFrom-Json
-  foreach ($field in @("schema_version","run_id","delivery_profiles","trim_size","width_mm","height_mm","margin_top_mm","margin_bottom_mm","margin_inside_mm","margin_outside_mm","font_family","font_size_pt","line_spacing","paragraph_first_line_indent_cm","words_per_page_estimate","target_pages","target_words","target_chapters","scale_tier","max_chapters_per_batch","audit_interval_chapters","front_matter_pages_estimate","back_matter_pages_estimate","chapter_start_policy")) {
+  foreach ($field in @("schema_version","run_id","book_template","book_template_label","delivery_profiles","trim_size","width_mm","height_mm","margin_top_mm","margin_bottom_mm","margin_inside_mm","margin_outside_mm","font_family","font_size_pt","line_spacing","paragraph_first_line_indent_cm","words_per_page_estimate","target_pages","target_words","target_chapters","scale_tier","max_chapters_per_batch","audit_interval_chapters","front_matter_pages_estimate","back_matter_pages_estimate","chapter_start_policy")) {
     if (-not ($layoutPlan.PSObject.Properties.Name -contains $field)) {
       throw "layout-plan.json missing '$field'."
     }

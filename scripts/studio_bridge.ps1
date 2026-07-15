@@ -47,6 +47,151 @@ function Write-Utf8Json {
   [System.IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 20), [System.Text.UTF8Encoding]::new($true))
 }
 
+function Get-RelativeProjectPath {
+  param([string]$ProjectRoot, [string]$Path)
+  return ($Path.Substring($ProjectRoot.Length).TrimStart("\") -replace "\\", "/")
+}
+
+function Resolve-ProjectChildPath {
+  param([string]$ProjectRoot, [string]$RelativePath)
+  if (-not $RelativePath.Trim()) { throw "RelativePath is required." }
+  if ([System.IO.Path]::IsPathRooted($RelativePath)) { throw "Relative paths only: $RelativePath" }
+  $candidate = [System.IO.Path]::GetFullPath((Join-Path $ProjectRoot ($RelativePath -replace "/", "\")))
+  $root = [System.IO.Path]::GetFullPath($ProjectRoot).TrimEnd("\") + "\"
+  if (-not $candidate.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Path escapes project root: $RelativePath"
+  }
+  return $candidate
+}
+
+function Get-ProjectVersionHistory {
+  param([string]$ProjectRoot)
+
+  $versionRoot = Join-Path $ProjectRoot "revision/_versions"
+  $items = @()
+  if (Test-Path -LiteralPath $versionRoot -PathType Container) {
+    foreach ($dir in @(Get-ChildItem -LiteralPath $versionRoot -Directory | Sort-Object Name -Descending)) {
+      $manifest = Read-Utf8JsonIfExists -Path (Join-Path $dir.FullName "manifest.json")
+      if ($manifest) {
+        $words = 0
+        if ($manifest.PSObject.Properties.Name -contains "words") {
+          $words = [int]$manifest.words
+        }
+        $items += [ordered]@{
+          id = [string]$manifest.id
+          title = [string]$manifest.title
+          reason = [string]$manifest.reason
+          created_at = [string]$manifest.created_at
+          words = $words
+          file_count = @($manifest.files).Count
+          files = [object[]]@($manifest.files)
+        }
+      }
+    }
+  }
+  return [object[]]@($items)
+}
+
+function New-ProjectVersionSnapshot {
+  param(
+    [string]$ProjectRoot,
+    [string]$Reason,
+    [string]$Title = ""
+  )
+
+  $timestamp = Get-Date
+  $id = $timestamp.ToString("yyyyMMdd-HHmmss")
+  $versionRoot = Join-Path $ProjectRoot "revision/_versions/$id"
+  while (Test-Path -LiteralPath $versionRoot) {
+    Start-Sleep -Milliseconds 250
+    $timestamp = Get-Date
+    $id = $timestamp.ToString("yyyyMMdd-HHmmss")
+    $versionRoot = Join-Path $ProjectRoot "revision/_versions/$id"
+  }
+  $filesRoot = Join-Path $versionRoot "files"
+  New-Item -ItemType Directory -Path $filesRoot -Force | Out-Null
+
+  $candidateFiles = @()
+  foreach ($relativeDir in @("runtime", "design", "episode", "revision/_state")) {
+    $dir = Join-Path $ProjectRoot $relativeDir
+    if (Test-Path -LiteralPath $dir -PathType Container) {
+      $candidateFiles += @(Get-ChildItem -LiteralPath $dir -File -Recurse | Where-Object {
+        $_.FullName -notmatch "\\revision\\_versions\\" -and $_.Extension -match "^\.(md|json|txt)$"
+      })
+    }
+  }
+
+  $copied = @()
+  $wordTotal = 0
+  foreach ($file in @($candidateFiles | Sort-Object FullName -Unique)) {
+    $relative = Get-RelativeProjectPath -ProjectRoot $ProjectRoot -Path $file.FullName
+    $target = Join-Path $filesRoot ($relative -replace "/", "\")
+    $targetDir = Split-Path -Parent $target
+    if (-not (Test-Path -LiteralPath $targetDir -PathType Container)) {
+      New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+    }
+    Copy-Item -LiteralPath $file.FullName -Destination $target -Force
+    $words = if ($file.Extension -eq ".md" -or $file.Extension -eq ".txt") { Get-WordCount -Text (Read-Utf8TextIfExists -Path $file.FullName) } else { 0 }
+    $wordTotal += $words
+    $copied += [ordered]@{
+      relativePath = $relative
+      bytes = $file.Length
+      words = $words
+    }
+  }
+
+  $manifest = [ordered]@{
+    schema_version = "1.0.0"
+    id = $id
+    title = if ($Title.Trim()) { $Title } else { $Reason }
+    reason = $Reason
+    created_at = $timestamp.ToString("o")
+    words = $wordTotal
+    files = [object[]]@($copied)
+  }
+  Write-Utf8Json -Path (Join-Path $versionRoot "manifest.json") -Value $manifest
+  return $manifest
+}
+
+function Restore-ProjectVersion {
+  param([object]$Payload)
+
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $versionId = [string]$Payload.versionId
+  $confirmation = [string]$Payload.confirmation
+  if ($versionId -notmatch "^\d{8}-\d{6}$") { throw "Invalid versionId: $versionId" }
+  if ($confirmation.Trim().ToLowerInvariant() -notin @("geri dön", "surume don", "sürüme dön")) {
+    throw "Restore requires explicit confirmation text: geri dön"
+  }
+
+  $versionRoot = Join-Path $projectRoot "revision/_versions/$versionId"
+  $manifest = Read-Utf8JsonIfExists -Path (Join-Path $versionRoot "manifest.json")
+  if (-not $manifest) { throw "Version manifest not found: $versionId" }
+
+  New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Geri dönüş öncesi otomatik kayıt" -Title "Geri dönüş öncesi"
+
+  foreach ($file in @($manifest.files)) {
+    $relative = [string]$file.relativePath
+    if (-not $relative.Trim()) { continue }
+    $source = Join-Path (Join-Path $versionRoot "files") ($relative -replace "/", "\")
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
+    $target = Resolve-ProjectChildPath -ProjectRoot $projectRoot -RelativePath $relative
+    $targetDir = Split-Path -Parent $target
+    if (-not (Test-Path -LiteralPath $targetDir -PathType Container)) {
+      New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+    }
+    Copy-Item -LiteralPath $source -Destination $target -Force
+  }
+
+  return [ordered]@{
+    ok = $true
+    projectRoot = $projectRoot
+    restoredVersion = $versionId
+    restoredFiles = @($manifest.files).Count
+    versions = Get-ProjectVersionHistory -ProjectRoot $projectRoot
+  }
+}
+
 function Get-ProviderSettingsPath {
   $appData = [Environment]::GetFolderPath("ApplicationData")
   if (-not $appData.Trim()) {
@@ -544,6 +689,7 @@ function Get-ProjectSummary {
     evidence = [object[]]@($evidence)
     designDocs = [object[]]@($designDocs)
     reports = [object[]]@($reports)
+    versions = Get-ProjectVersionHistory -ProjectRoot $projectRoot
     revision = [ordered]@{
       draftLock = $revisionDraftLock
       proposals = $revisionProposals
@@ -610,11 +756,16 @@ function Apply-RevisionProposal {
   )
   $output = & powershell @args 2>&1
   $exit = $LASTEXITCODE
+  $snapshot = $null
+  if ($exit -eq 0) {
+    $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Revizyon uygulandı" -Title "Revizyon sonrası"
+  }
   return [ordered]@{
     ok = ($exit -eq 0)
     exitCode = $exit
     projectRoot = $projectRoot
     proposalId = $proposalId
+    version = $snapshot
     output = (($output | Out-String).Trim())
   }
 }
@@ -632,7 +783,8 @@ function Save-BookRequest {
   }
   $checklist = Get-BookRequestChecklist -Text $text
   [System.IO.File]::WriteAllText((Join-Path $runtimeDir "book-request.md"), $text, [System.Text.UTF8Encoding]::new($true))
-  return [ordered]@{ ok = $true; relativePath = "runtime/book-request.md"; characters = $text.Length; words = Get-WordCount -Text $text; checklist = $checklist }
+  $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Kitap isteği kaydedildi" -Title "Kitap isteği"
+  return [ordered]@{ ok = $true; relativePath = "runtime/book-request.md"; characters = $text.Length; words = Get-WordCount -Text $text; checklist = $checklist; version = $snapshot }
 }
 
 function Save-Episode {
@@ -648,7 +800,8 @@ function Save-Episode {
   }
   $path = Join-Path $episodeDir $filename
   [System.IO.File]::WriteAllText($path, [string]$Payload.text, [System.Text.UTF8Encoding]::new($true))
-  return [ordered]@{ ok = $true; relativePath = "episode/$filename"; words = Get-WordCount -Text ([string]$Payload.text) }
+  $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Bölüm kaydedildi" -Title $filename
+  return [ordered]@{ ok = $true; relativePath = "episode/$filename"; words = Get-WordCount -Text ([string]$Payload.text); version = $snapshot }
 }
 
 function Save-LayoutPlan {
@@ -669,7 +822,21 @@ function Save-LayoutPlan {
   }
 
   $font = [string]$Payload.font_family
-  if ($font -notin @("Garamond", "Times New Roman", "Georgia", "Palatino Linotype")) {
+  $layoutProfile = [string]$Payload.layout_profile
+  $bookTemplate = if ($Payload.book_template) { [string]$Payload.book_template } else { $layoutProfile }
+  $bookTemplateLabel = if ($Payload.book_template_label) { [string]$Payload.book_template_label } else { $bookTemplate }
+  $pageSize = [string]$Payload.page_size
+  $printMode = [string]$Payload.print_mode
+  $frontMatterSelection = [string]$Payload.front_matter
+  $chapterStartPolicy = if ($Payload.chapter_start_policy) { [string]$Payload.chapter_start_policy } else { "new_page" }
+  $titlePagePolicy = if ($Payload.title_page_policy) { [string]$Payload.title_page_policy } else { "required" }
+  $tocPolicy = if ($Payload.toc_policy) { [string]$Payload.toc_policy } else { "required" }
+  $prefacePolicy = if ($Payload.preface_policy) { [string]$Payload.preface_policy } else { "optional" }
+  $coverBriefPolicy = if ($Payload.cover_brief_policy) { [string]$Payload.cover_brief_policy } else { "required" }
+  $backCoverCopyPolicy = if ($Payload.back_cover_copy_policy) { [string]$Payload.back_cover_copy_policy } else { "required" }
+  $pageNumberingPolicy = if ($Payload.page_numbering_policy) { [string]$Payload.page_numbering_policy } else { "front matter roman/unnumbered, body arabic" }
+  $publisherSubmissionLabel = if ($Payload.publisher_submission_label) { [string]$Payload.publisher_submission_label } else { "publisher_submission_docx" }
+  if ($font -notin @("Garamond", "Times New Roman", "Georgia", "Palatino Linotype", "Courier New")) {
     throw "Unsupported font_family: $font"
   }
   $fontSize = [double]$Payload.font_size_pt
@@ -688,25 +855,114 @@ function Save-LayoutPlan {
   if ($indent -lt 0 -or $indent -gt 1.5) { throw "paragraph_first_line_indent_cm must be between 0 and 1.5." }
   if ($after -lt 0 -or $after -gt 12) { throw "paragraph_spacing_after_pt must be between 0 and 12." }
 
+  $isA4 = $pageSize -match "A4"
+  $widthMm = if ($isA4) { 210 } else { 148 }
+  $heightMm = if ($isA4) { 297 } else { 210 }
+  $trimSize = if ($isA4) { "A4" } else { "A5" }
+  $printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_sided" }
+
   if (-not $layout.Contains("schema_version")) { $layout["schema_version"] = "1.0.0" }
   if (-not $layout.Contains("run_id")) { $layout["run_id"] = "studio-layout" }
-  if (-not $layout.Contains("width_mm")) { $layout["width_mm"] = 148 }
-  if (-not $layout.Contains("height_mm")) { $layout["height_mm"] = 210 }
   if (-not $layout.Contains("margin_bottom_mm")) { $layout["margin_bottom_mm"] = $top }
   if (-not $layout.Contains("justification")) { $layout["justification"] = "both" }
 
+  $layout["book_template"] = $bookTemplate
+  $layout["book_template_label"] = $bookTemplateLabel
+  $layout["page_size"] = $pageSize
+  $layout["print_mode"] = $printMode
+  $layout["print_mode_key"] = $printModeKey
+  $layout["front_matter_selection"] = $frontMatterSelection
+  $layout["trim_size"] = $trimSize
+  $layout["width_mm"] = $widthMm
+  $layout["height_mm"] = $heightMm
   $layout["font_family"] = $font
+  $layout["layout_profile"] = $layoutProfile
   $layout["font_size_pt"] = $fontSize
   $layout["line_spacing"] = $lineSpacing
   $layout["margin_top_mm"] = $top
+  $layout["margin_bottom_mm"] = $top
   $layout["margin_inside_mm"] = $inside
   $layout["margin_outside_mm"] = $outside
   $layout["paragraph_first_line_indent_cm"] = $indent
   $layout["paragraph_spacing_after_pt"] = $after
+  $layout["chapter_start_policy"] = $chapterStartPolicy
+  $layout["chapter_title_policy"] = "reader-facing titles only; no EP labels, no scene labels, no technical markers"
+  $layout["publisher_submission_label"] = $publisherSubmissionLabel
+  $layout["front_matter_pages_estimate"] = if ($frontMatterSelection -match "Yaln") { 1 } else { 6 }
+  $layout["back_matter_pages_estimate"] = 0
+  $layout["delivery_profiles"] = [ordered]@{
+    publisher_submission = [ordered]@{ enabled = $true; label = $publisherSubmissionLabel; require_docx = $true }
+    print_preview = [ordered]@{ enabled = $true; file_role = "reader_layout_proof"; chapter_start = $chapterStartPolicy }
+  }
+  $layout["front_matter"] = [ordered]@{
+    title_page = $titlePagePolicy
+    copyright_page = "external_metadata_pending"
+    toc = $tocPolicy
+    preface = $prefacePolicy
+  }
+  $layout["back_matter"] = [ordered]@{
+    acknowledgements = "optional"
+    author_note = "optional"
+  }
+  $layout["page_numbering"] = [ordered]@{
+    policy = $pageNumberingPolicy
+    front_matter = if ($pageNumberingPolicy -match "front") { "roman_or_unnumbered" } else { "none" }
+    body = "arabic_from_first_chapter"
+  }
+  $layout["cover"] = [ordered]@{
+    front_cover_brief = $coverBriefPolicy
+    back_cover_copy = $backCoverCopyPolicy
+    final_artwork = "external_publisher_or_designer_review"
+  }
   $layout["studio_updated_at"] = (Get-Date).ToString("o")
 
   [System.IO.File]::WriteAllText($path, ($layout | ConvertTo-Json -Depth 20), [System.Text.UTF8Encoding]::new($true))
-  return [ordered]@{ ok = $true; relativePath = "revision/_state/layout-plan.json"; layoutPlan = $layout }
+
+  $runtimeDir = Join-Path $projectRoot "runtime"
+  if (-not (Test-Path -LiteralPath $runtimeDir -PathType Container)) {
+    New-Item -ItemType Directory -Path $runtimeDir | Out-Null
+  }
+  $runtimeProfile = [ordered]@{
+    schema_version = "1.0.0"
+    run_id = "studio-layout"
+    profile_status = "USER_APPROVED"
+    print_target = $publisherSubmissionLabel
+    book_template = $bookTemplate
+    book_template_label = $bookTemplateLabel
+    trim_size = $trimSize
+    font_family = $font
+    body_font_size_pt = $fontSize
+    line_spacing = $lineSpacing
+    delivery_profiles = $layout["delivery_profiles"]
+    page_setup = [ordered]@{
+      trim_size = $trimSize
+      width_mm = $widthMm
+      height_mm = $heightMm
+      margin_top_mm = $top
+      margin_bottom_mm = $top
+      margin_inside_mm = $inside
+      margin_outside_mm = $outside
+      print_mode = $printModeKey
+    }
+    typography = [ordered]@{
+      body_style = "KitHubBody"
+      chapter_title_style = "KitHubChapterTitle"
+      front_matter_style = "KitHubFrontMatter"
+      toc_style = "KitHubToc"
+      paragraph_first_line_indent_cm = $indent
+      paragraph_spacing_after_pt = $after
+      justification = "both"
+      chapter_start_policy = $chapterStartPolicy
+      chapter_title_policy = $layout["chapter_title_policy"]
+    }
+    front_matter = $layout["front_matter"]
+    back_matter = $layout["back_matter"]
+    page_numbering = $layout["page_numbering"]
+    cover = $layout["cover"]
+  }
+  Write-Utf8Json -Path (Join-Path $runtimeDir "layout-profile.json") -Value $runtimeProfile
+  $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Dizgi ayarı kaydedildi" -Title "Dizgi"
+  return [ordered]@{ ok = $true; relativePath = "revision/_state/layout-plan.json"; runtimeProfile = "runtime/layout-profile.json"; layoutPlan = $layout; version = $snapshot }
 }
 
 function Write-Approval {
@@ -850,6 +1106,10 @@ function Invoke-Pipeline {
 
   $output = & powershell @args 2>&1
   $exit = $LASTEXITCODE
+  $snapshot = $null
+  if ($exit -eq 0) {
+    $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Pipeline tamamlandı: $toPhase" -Title "Motor: $toPhase"
+  }
   return [ordered]@{
     ok = ($exit -eq 0)
     exitCode = $exit
@@ -857,6 +1117,7 @@ function Invoke-Pipeline {
     fromPhase = $fromPhase
     toPhase = $toPhase
     mode = $mode
+    version = $snapshot
     output = (($output | Out-String).Trim())
   }
 }
@@ -881,11 +1142,16 @@ function Invoke-FinalExport {
 
   $output = & powershell @args 2>&1
   $exit = $LASTEXITCODE
+  $snapshot = $null
+  if ($exit -eq 0) {
+    $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Final dışa aktarım tamamlandı" -Title "Final export"
+  }
   return [ordered]@{
     ok = ($exit -eq 0)
     exitCode = $exit
     projectRoot = $projectRoot
     destinationDirectory = $destinationDirectory
+    version = $snapshot
     manifest = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot "runtime/final-export-manifest.json")
     cleanupApproval = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot "runtime/approvals/cleanup-approval.json")
     output = (($output | Out-String).Trim())
@@ -1156,6 +1422,23 @@ try {
           $result = Apply-RevisionProposal -Payload $payload
           $status = if ($result.ok) { 200 } else { 500 }
           Write-JsonHttpResponse -Stream $stream -Value $result -StatusCode $status
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/version-history") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{
+            ok = $true
+            projectRoot = $projectRoot
+            versions = Get-ProjectVersionHistory -ProjectRoot $projectRoot
+          })
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/restore-version") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Restore-ProjectVersion -Payload $payload)
           continue
         }
 

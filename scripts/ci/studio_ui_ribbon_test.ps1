@@ -37,54 +37,12 @@ function Assert-NotContainsText {
 
 $html = Read-Utf8 -RelativePath "index.html"
 
-$tabMatches = [regex]::Matches($html, 'data-ribbon-tab="([^"]+)"')
-$tabs = @(
-  $tabMatches |
-    ForEach-Object { $_.Groups[1].Value } |
-    Where-Object { $_ -notmatch '^\$' } |
-    Sort-Object -Unique
-)
-$panelMatches = [regex]::Matches($html, 'data-ribbon-panel="([^"]+)"')
-$panels = @(
-  $panelMatches |
-    ForEach-Object { $_.Groups[1].Value } |
-    Where-Object { $_ -notmatch '^\$' } |
-    Sort-Object -Unique
-)
-$tabPanelMismatch = @($tabs | Where-Object { $_ -notin $panels })
-if ($tabPanelMismatch.Count -gt 0) {
-  throw "Ribbon tabs without matching panel: $($tabPanelMismatch -join ', ')"
-}
-
-$actionMatches = [regex]::Matches($html, 'data-ribbon-action="([^"]+)"')
-$staticActions = @(
-  $actionMatches |
-    ForEach-Object { $_.Groups[1].Value } |
-    Where-Object { $_ -notmatch '^\$' } |
-    Sort-Object -Unique
-)
-$handlerMatches = [regex]::Matches($html, '"([^"]+)":\s*\(\)\s*=>')
-$handledActions = @(
-  $handlerMatches |
-    ForEach-Object { $_.Groups[1].Value } |
-    Sort-Object -Unique
-)
-$missingHandlers = @($staticActions | Where-Object { $_ -notin $handledActions })
-if ($missingHandlers.Count -gt 0) {
-  throw "Ribbon actions without handler: $($missingHandlers -join ', ')"
-}
-
-Assert-ContainsText -Text $html -Pattern 'role="tablist"' -Message "Ribbon missing tablist role."
-Assert-ContainsText -Text $html -Pattern 'role="tabpanel"' -Message "Ribbon missing tabpanel role."
-Assert-ContainsText -Text $html -Pattern '\.ribbon\s*\{\s*display:\s*none;' -Message "Secondary ribbon row must stay hidden; the top app bar is the only visible top control bar."
-Assert-ContainsText -Text $html -Pattern 'id="ribbonHelp"' -Message "Ribbon missing contextual help line."
-Assert-ContainsText -Text $html -Pattern 'class="ribbon-status"' -Message "Ribbon missing compact status strip."
-Assert-ContainsText -Text $html -Pattern '\.ribbon-panels\s*\{\s*display:\s*none;' -Message "Ribbon command panels must stay visually hidden to avoid duplicate controls."
-Assert-ContainsText -Text $html -Pattern 'id="ribbonLayoutState"' -Message "Ribbon missing active layout state badge."
-Assert-ContainsText -Text $html -Pattern 'ribbonLayoutState\.textContent' -Message "Ribbon layout badge must update from typography controls."
-Assert-ContainsText -Text $html -Pattern 'const order = \["start", "writing", "plan", "agents", "layout", "publish"\]' -Message "Ribbon missing Alt+1..6 tab order."
-Assert-ContainsText -Text $html -Pattern 'syncFormatButtons' -Message "Ribbon missing editor format synchronization."
-Assert-ContainsText -Text $html -Pattern 'selectWorkspaceTab\(button\.dataset\.tab, true\)' -Message "Workspace tabs must sync the ribbon tab."
+Assert-NotContainsText -Text $html -Pattern '<section class="ribbon"' -Message "Hidden secondary ribbon must not exist in the authoring UI."
+Assert-NotContainsText -Text $html -Pattern 'data-ribbon-tab=' -Message "Hidden ribbon tabs must not remain as dead controls."
+Assert-NotContainsText -Text $html -Pattern 'data-ribbon-panel=' -Message "Hidden ribbon panels must not remain as dead controls."
+Assert-NotContainsText -Text $html -Pattern 'data-ribbon-action=' -Message "Hidden ribbon actions must not remain as dead controls."
+Assert-NotContainsText -Text $html -Pattern '\.ribbon\s*\{' -Message "Hidden ribbon CSS must not remain."
+Assert-ContainsText -Text $html -Pattern 'syncFormatButtons' -Message "Editor format synchronization is required."
 Assert-ContainsText -Text $html -Pattern '\.tabs\s*\{\s*display:\s*none;' -Message "Workspace tab row must stay hidden to avoid wasting vertical editor space."
 Assert-ContainsText -Text $html -Pattern '\.phase-controls\s*\{[\s\S]*?display:\s*none;' -Message "Technical phase selectors must stay hidden in the normal editor flow."
 Assert-ContainsText -Text $html -Pattern 'body\.nav-collapsed\s*\{\s*--left-w:\s*0px;' -Message "Collapsed left panel must not leave a vertical strip."
@@ -117,7 +75,6 @@ Assert-NotContainsText -Text $html -Pattern 'id="settingsProjectFolder"' -Messag
 Assert-NotContainsText -Text $html -Pattern 'id="settingsTheme"' -Message "Settings must not show inactive theme controls."
 Assert-NotContainsText -Text $html -Pattern 'id="settingsLanguage"' -Message "Settings must not duplicate fixed Turkish language controls."
 Assert-NotContainsText -Text $html -Pattern 'id="settingsLayoutProfile"' -Message "Settings must not duplicate typography/layout panel controls."
-Assert-NotContainsText -Text $html -Pattern 'function applyLayoutProfile' -Message "Settings must not secretly override typography/layout controls."
 Assert-NotContainsText -Text $html -Pattern 'class="project-chip" id="projectName"' -Message "Top bar must not show a fake project-title button."
 Assert-NotContainsText -Text $html -Pattern '<span>Projeler</span>' -Message "Top bar must not show the old breadcrumb chain."
 Assert-NotContainsText -Text $html -Pattern 'id="draftName"' -Message "Top bar must not show the old draft breadcrumb segment."
@@ -134,6 +91,8 @@ Assert-ContainsText -Text $html -Pattern 'data-edit="undo"' -Message "Toolbar mu
 Assert-ContainsText -Text $html -Pattern 'data-edit="redo"' -Message "Toolbar must include redo."
 Assert-ContainsText -Text $html -Pattern 'data-support-tab="plan"' -Message "Toolbar must expose compact Plan access."
 Assert-ContainsText -Text $html -Pattern 'data-support-tab="revision"' -Message "Toolbar must expose compact Revision access."
+Assert-ContainsText -Text $html -Pattern 'data-support-tab="versions"' -Message "Toolbar must expose compact Version History access."
+Assert-ContainsText -Text $html -Pattern 'data-support-tab="writingCards"' -Message "Toolbar must expose writing cards for controlled scene continuation."
 Assert-ContainsText -Text $html -Pattern 'data-support-tab="cards"' -Message "Toolbar must expose a story card board."
 Assert-ContainsText -Text $html -Pattern 'data-support-tab="context"' -Message "Toolbar must expose a continuity/context ledger."
 Assert-ContainsText -Text $html -Pattern 'data-support-tab="analysis"' -Message "Toolbar must expose repetition/frequency analysis."
@@ -148,6 +107,15 @@ Assert-ContainsText -Text $html -Pattern 'notesPanel\.classList\.add\("open"\)' 
 Assert-NotContainsText -Text $html -Pattern 'manuscriptText\.readOnly = tab !== "manuscript"' -Message "Plan/Revision must not lock or replace the manuscript editor."
 Assert-ContainsText -Text $html -Pattern 'function renderCardBoard\(\)' -Message "Card board renderer is required for writer planning UX."
 Assert-ContainsText -Text $html -Pattern 'draggable="true"' -Message "Story cards must support lightweight drag ordering."
+Assert-ContainsText -Text $html -Pattern 'function renderWritingCards\(\)' -Message "Writing cards renderer is required for user-approved writing choices."
+Assert-ContainsText -Text $html -Pattern 'function applyWritingCardRequest' -Message "Writing cards must produce a controlled request instead of directly rewriting manuscript text."
+Assert-ContainsText -Text $html -Pattern 'data-writing-card-request' -Message "Writing cards must expose an active request action."
+Assert-ContainsText -Text $html -Pattern 'bookRequestInput\.value' -Message "Writing card choices must feed the visible book request."
+Assert-ContainsText -Text $html -Pattern 'plan-context-boundary' -Message "Writing card request must bind the IDE/API writer to plan and context."
+Assert-ContainsText -Text $html -Pattern 'function renderVersionHistory\(\)' -Message "Version history renderer is required for safe revision recovery."
+Assert-ContainsText -Text $html -Pattern 'data-version-restore' -Message "Version history must expose a guarded restore action."
+Assert-NotContainsText -Text $html -Pattern 'class="run-log"' -Message "Technical run log must not be rendered in the normal authoring surface."
+Assert-NotContainsText -Text $html -Pattern 'id="runLogOutput"' -Message "Technical run log output must stay internal, not rendered."
 Assert-ContainsText -Text $html -Pattern 'function renderContextLedger\(\)' -Message "Context ledger renderer is required for continuity UX."
 Assert-ContainsText -Text $html -Pattern 'function renderTextAnalysis\(\)' -Message "Text analysis renderer is required for repetition checks."
 Assert-ContainsText -Text $html -Pattern 'genreBlockOptions' -Message "Genre-specific editor modes must be declared."
@@ -155,6 +123,16 @@ Assert-ContainsText -Text $html -Pattern 'function applyGenreMode' -Message "Gen
 Assert-ContainsText -Text $html -Pattern 'body\.focus-writing' -Message "Focus writing mode must have a dedicated layout state."
 Assert-ContainsText -Text $html -Pattern 'previewPageLimit' -Message "Multi-page preview must cap visible pages for performance."
 Assert-ContainsText -Text $html -Pattern 'splitPreviewPages' -Message "Preview must split manuscript text into page-like chunks."
+Assert-ContainsText -Text $html -Pattern 'Kitap\s+\p{L}ablonu' -Message "Typography panel must present presets as full book templates, not only layout profiles."
+Assert-ContainsText -Text $html -Pattern 'id="layoutProfile"' -Message "Typography panel must expose a compact layout profile selector."
+Assert-ContainsText -Text $html -Pattern 'layoutProfiles' -Message "Typography panel must define reusable layout profile presets."
+Assert-ContainsText -Text $html -Pattern 'function applyLayoutProfile' -Message "Layout profile selector must apply preset values to existing typography controls."
+Assert-ContainsText -Text $html -Pattern 'Roman Klasik' -Message "Layout profiles must include a classic novel preset."
+Assert-ContainsText -Text $html -Pattern 'publisherA5' -Message "Layout profiles must include a publisher-style A5 preset."
+Assert-ContainsText -Text $html -Pattern 'book_template' -Message "Book template selection must be sent to the bridge."
+Assert-ContainsText -Text $html -Pattern 'chapter_start_policy' -Message "Book templates must define chapter start behavior."
+Assert-ContainsText -Text $html -Pattern 'cover_brief_policy' -Message "Book templates must define cover/package requirements."
+Assert-ContainsText -Text $html -Pattern 'page_numbering_policy' -Message "Book templates must define page numbering rules."
 Assert-ContainsText -Text $html -Pattern 'id="processTitle"' -Message "Right side panel must expose a friendly process title."
 Assert-ContainsText -Text $html -Pattern 'id="processNote"' -Message "Right side panel must expose a friendly process note."
 Assert-ContainsText -Text $html -Pattern 'process-card' -Message "Right side panel missing modern process status card."
