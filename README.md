@@ -36,6 +36,98 @@ In API mode, `scripts/studio_bridge.ps1` loads the saved provider settings and r
 
 In IDE mode, the IDE agent writes the requested files while KitHub validates the artifacts, approvals, agent evidence, continuity, Turkish quality, layout, and DOCX export.
 
+## KitHub Studio: New User Flow
+KitHub Studio is the recommended interface for normal use. The backend still runs through PowerShell scripts, but the user should work from the Studio screen instead of editing runtime files by hand.
+
+### 1. Install and open
+```powershell
+git clone https://github.com/Anubis44197/kit_hub.git
+cd kit_hub
+powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+powershell -ExecutionPolicy Bypass -File scripts/start_studio.ps1
+```
+
+If the browser does not open automatically, open the local Studio URL printed by the script. `studio_bridge.ps1` must stay open while Studio is used for project creation, API mode, DOCX import, saving chapters, layout saving, and export.
+
+### 2. Create or bind a book project
+Use one of these buttons in Studio:
+
+- `Yeni Proje`: creates a clean KitHub project folder.
+- `Projeyi Bağla`: connects an existing KitHub project.
+
+Book projects should live outside the application engine when possible, for example under:
+
+```text
+Documents/KitHubProjects/<BookName>
+```
+
+The application repository is the engine. The book project folder is the manuscript workspace.
+
+### 3. Enter the user's book request
+The user writes the subject, genre, target page count, characters, setting, style, ending expectations, and boundaries in the Studio brief area. Then:
+
+1. Fill the starting wizard fields.
+2. Press `İsteği Oluştur`.
+3. Press `Kaydet`.
+4. Press `Romanı Planla`.
+5. Review and approve the plan.
+6. Press `Planı Onayla ve Yazdır`.
+
+The system must plan before writing. It should not start from an old sample, leftover test project, or hard-coded default topic.
+
+### 4. Choose IDE Mode or API Mode
+Studio supports two production modes.
+
+| Mode | Use When | How It Works |
+|---|---|---|
+| `IDE Modu` | The user has an IDE assistant such as Codex/Claude/Cursor but no direct API key in KitHub | Studio saves the brief and phase state. The IDE agent writes the required artifacts. KitHub validates agent evidence, continuity, Turkish quality, layout, approvals, and export. |
+| `API Modu` | The user wants KitHub to call a model provider directly | Open settings, choose provider/model, enter API key, save/test, then run the pipeline from Studio. Missing provider settings fail closed. |
+
+API keys are stored through Studio provider settings. They must not be committed into the repository.
+
+### 5. Edit, review, and revise
+Studio includes:
+
+- page-like manuscript preview
+- DOCX import for existing Word manuscripts
+- live edit panel
+- page notes
+- version history and restore
+- type-specific quality checks
+- long-text chapter splitting for large manuscripts
+- advanced layout controls
+
+Live edit suggestions are not applied automatically. The user must approve or save changes.
+
+### 6. Layout and print preparation
+The layout panel writes the selected book package to:
+
+- `revision/_state/layout-plan.json`
+- `runtime/layout-profile.json`
+
+Supported layout controls include page size, print mode, front matter, font, point size, line spacing, margins, paragraph indentation, chapter start policy, heading hierarchy, running headers, page number position, table-of-contents depth, and widow/orphan control.
+
+### 7. Export
+When the manuscript and approvals are ready, use Studio export controls. Export must pass:
+
+- export approval
+- reader-facing cleanliness checks
+- DOCX integrity validation
+- DOCX layout/profile validation
+- DOCX content match validation
+
+The final output can be copied to the Desktop or another selected output folder.
+
+### 8. Normal local files
+Studio may create runtime log files while it is open:
+
+```text
+studio-stdout.log
+studio-stderr.log
+```
+
+These logs are local troubleshooting files and should not be pushed as manuscript or product files.
+
 ## Repository Positioning (Upstream vs This Repository)
 This project is based on the upstream architecture (`MJbae/awesome-novel-studio`) and extended for stricter Turkish publication workflow.
 
@@ -255,9 +347,10 @@ The runner rejects a fake brief approval. The brief must contain structured `req
 | Optional dictionary verification | `powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot . -Phase polish -RunId RUN-LOCAL` |
 
 ## Local Preview Policy
-- Automatic localhost preview is disabled.
-- `scripts/start_app.ps1` only runs runtime bootstrap + readiness checks.
-- Production flow is pipeline-first (`/run` or `scripts/run_pipeline.ps1`).
+- Studio is the local preview and control surface.
+- Use `scripts/start_studio.ps1` for the interactive UI.
+- Use `scripts/start_app.ps1` for compatibility/bootstrap flows.
+- Production can be driven from Studio or directly through `scripts/run_pipeline.ps1`.
 
 ## Runner Automation
 - Initialize runtime config:
