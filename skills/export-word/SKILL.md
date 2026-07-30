@@ -56,15 +56,17 @@ Export book text to `.docx` only after explicit user approval and pre-export val
   - `skills/polish/references/isbn-kunye-bandrol-checklist.md`
 
 ## Pipeline
-1. Approval check (`export-approval-gate`) [mandatory]
-2. Export readiness validation (`export-validator`) [mandatory]
-3. Source validation (`tdk-polisher` and `tdk-layout-agent` artifacts) [mandatory]
-4. Front matter build/validation (`front-matter-editor`) [mandatory for complete book package]
-5. Cover package brief (`cover-designer`) [mandatory for complete book package]
-6. Publication metadata compliance (`publication-compliance-checker`) [mandatory before print-ready claim]
-7. DOCX build (`book-exporter`)
-8. DOCX layout/profile verification (`verify_docx_layout_profile.ps1`) [mandatory for publisher-grade output]
-9. Export summary report
+1. Final phase supervision (`chief-editor-orchestrator`) [mandatory]
+2. Approval check (`export-approval-gate`) [mandatory]
+3. Export readiness validation (`export-validator`) [mandatory]
+4. Source validation (`tdk-polisher` and `tdk-layout-agent` artifacts) [mandatory]
+5. Front matter build/validation (`front-matter-editor`) [mandatory for complete book package]
+6. Cover package brief (`cover-designer`) [mandatory for complete book package]
+7. Research/citation boundary audit (`research-citation-auditor`) [mandatory for fact-bearing claims]
+8. Publication metadata compliance (`publication-compliance-checker`) [mandatory before print-ready claim]
+9. DOCX build (`book-exporter`)
+10. DOCX layout/profile verification (`verify_docx_layout_profile.ps1`) [mandatory for publisher-grade output]
+11. Export summary report
 
 ## Source Priority
 - If `book_mode.enabled=true`, source text must come from:
@@ -87,6 +89,10 @@ Export book text to `.docx` only after explicit user approval and pre-export val
 
 ## Outputs
 - `{WORK_DIR}/export/{project_name}_EP{RANGE}.docx`
+- `{WORK_DIR}/_workspace/00_chief-editor-orchestrator_export.md`
+- `{WORK_DIR}/_workspace/00_chief-editor-orchestrator_export.json`
+- `{WORK_DIR}/_workspace/07_research-citation-auditor_export.md`
+- `{WORK_DIR}/_workspace/07_research-citation-auditor_export.json`
 - `{WORK_DIR}/_workspace/11_front-matter_*.md`
 - `{WORK_DIR}/_workspace/11_front-matter_toc.json`
 - `{WORK_DIR}/_workspace/12_cover-design_brief.md`

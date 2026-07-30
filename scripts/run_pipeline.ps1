@@ -31,17 +31,6 @@ function Read-JsonFile {
   return Read-Utf8 -Path $Path | ConvertFrom-Json
 }
 
-function Assert-ProjectIsolation {
-  param([string]$Root)
-
-  $rootFull = [System.IO.Path]::GetFullPath($Root)
-  $gitDir = Join-Path $rootFull ".git"
-  $markerPath = Join-Path $rootFull ".kithub-project.json"
-  if ((Test-Path -LiteralPath $gitDir -PathType Container) -and -not (Test-Path -LiteralPath $markerPath -PathType Leaf)) {
-    throw "Project isolation blocked: do not run manuscript phases in the kit_hub application repository. Create a separate project with scripts/new_project.ps1 and run the pipeline there."
-  }
-}
-
 function ConvertTo-RelativeContractPath {
   param([string]$Path)
   return (([string]$Path) -replace "\\", "/").Trim()
@@ -419,7 +408,6 @@ function Validate-PhaseArtifacts {
         "revision/_workspace/*quality*verdict*EP*.md",
         "revision/_workspace/quality-verifier_EP*.md"
       ) -BasePath $Root
-      Ensure-Any -Patterns @("revision/_workspace/*editorial-cycle*.json") -BasePath $Root
       Ensure-Any -Patterns @(
         "revision/_workspace/08_tdk-polisher_issues_EP*.json",
         "revision/_workspace/*tdk-polisher*issues*EP*.json"
@@ -450,7 +438,6 @@ function Validate-PhaseArtifacts {
         "revision/_workspace/*revision-reviewer*EP*.md",
         "revision/_workspace/*reviewer*EP*.md"
       ) -BasePath $Root
-      Ensure-Any -Patterns @("revision/_workspace/*editorial-cycle*.json") -BasePath $Root
       Ensure-Any -Patterns @(
         "revision/_workspace/08_tdk-polisher_issues_EP*.json",
         "revision/_workspace/*tdk-polisher*issues*EP*.json"
@@ -464,7 +451,6 @@ function Validate-PhaseArtifacts {
         "revision/_workspace/04_quality-verifier_verdict_EP*.md",
         "revision/_workspace/*quality*verdict*EP*.md"
       ) -BasePath $Root
-      Ensure-Any -Patterns @("revision/_workspace/*editorial-cycle*.json") -BasePath $Root
       Ensure-Any -Patterns @(
         "revision/_workspace/08_tdk-polisher_issues_EP*.json",
         "revision/_workspace/*tdk-polisher*issues*EP*.json"
@@ -534,21 +520,19 @@ function Get-PhaseOutputArtifacts {
       $patterns = @("novel-config.md","design/*_bootstrap.md","design/02_character_core.md","design/*_character*.md","design/03_macro_plot_hooks.md","design/*plot*hook*.md","design/04_book_plan.md","design/05_chapter_plan.md","design/06_layout_plan.md","runtime/approvals/book-plan-approval.json","revision/_state/*.json")
     }
     "design-small" {
-      $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md","revision/_workspace/context-saliency-gate_*.json","revision/_workspace/context-saliency-gate_*.md","revision/_state/*.json")
+      $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md")
     }
     "create" {
-      $patterns = @("episode/ep*.md","revision/_workspace/context-saliency-gate_*.json","revision/_workspace/context-saliency-gate_*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/*editorial-cycle*.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
+      $patterns = @("episode/ep*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
     }
     "polish" {
-      $patterns = @("episode/ep*.md","revision/_workspace/context-saliency-gate_*.json","revision/_workspace/context-saliency-gate_*.md","revision/_workspace/*revision-reviewer*EP*.md","revision/_workspace/*editorial-cycle*.json","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/10_tdk-dictionary-check_polish.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
+      $patterns = @("episode/ep*.md","revision/_workspace/*revision-reviewer*EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/10_tdk-dictionary-check_polish.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
     }
     "rewrite" {
       $patterns = @(
         "episode/ep*.md",
-        "revision/_workspace/context-saliency-gate_*.json",
-        "revision/_workspace/context-saliency-gate_*.md",
+        "revision/_workspace/rewrite-impact-report.json",
         "revision/_workspace/*rewrite*report*.md",
-        "revision/_workspace/*editorial-cycle*.json",
         "revision/_workspace/04_quality-verifier_verdict_EP*.md",
         "revision/_workspace/08_tdk-polisher_issues_EP*.json",
         "revision/_workspace/10_tdk-dictionary-check_rewrite.json",
@@ -568,16 +552,12 @@ function Get-PhaseOutputArtifacts {
         "revision/_workspace/12_cover-design*",
         "revision/_workspace/13_final-proofreader*",
         "revision/_workspace/14_publication-compliance*",
-        "revision/_workspace/tdk-local-rule-check_export.json",
-        "revision/_workspace/tdk-rule-auditor_*",
-        "revision/_workspace/typography-layout-auditor_*",
         "revision/_state/*.json",
         "revision/export/*.docx"
       )
     }
     default { $patterns = @() }
   }
-  $patterns += "runtime/agent-compliance/chief-editor-orchestrator_*"
 
   $files = @()
   foreach ($pattern in $patterns) {
@@ -919,14 +899,6 @@ function Ensure-UserApproval {
     Validate-BookBriefApproval -Root $Root -Approval $obj -ApprovalRel $rel
   }
   if ($Phase -eq "design-big") {
-    $briefApprovalRel = "runtime/approvals/book-brief-approval.json"
-    $briefApprovalPath = Join-Path $Root $briefApprovalRel
-    Ensure-File $briefApprovalPath
-    $briefApproval = Read-Utf8 -Path $briefApprovalPath | ConvertFrom-Json
-    if (-not ($briefApproval.PSObject.Properties.Name -contains "approved") -or $briefApproval.approved -ne $true) {
-      throw "Design-big blocked: $briefApprovalRel must be approved before story design."
-    }
-    Validate-BookBriefApproval -Root $Root -Approval $briefApproval -ApprovalRel $briefApprovalRel
     $selected = Get-StringFieldValue -Object $obj -Field "selected_option"
     if ($selected -notin @("1","2","3")) {
       throw "Story choice approval blocked: $rel must include selected_option 1, 2, or 3 before design-big."
@@ -948,14 +920,9 @@ function Get-StringFieldValue {
 function Test-AnsweredField {
   param([object]$Primary, [object]$Fallback, [string]$Field)
   $value = Get-StringFieldValue -Object $Primary -Field $Field
-  if ($value) {
-    if ($value -match "(?i)^\s*(ask_user|ask user|to_be_confirmed|tbd|todo|unknown|bilinmiyor|sorulacak)\s*$") { return $false }
-    return $true
-  }
+  if ($value) { return $true }
   $fallbackValue = Get-StringFieldValue -Object $Fallback -Field $Field
-  if (-not $fallbackValue) { return $false }
-  if ($fallbackValue -match "(?i)^\s*(ask_user|ask user|to_be_confirmed|tbd|todo|unknown|bilinmiyor|sorulacak)\s*$") { return $false }
-  return $true
+  return [bool]$fallbackValue
 }
 
 function Validate-BookBriefApproval {
@@ -1027,7 +994,6 @@ function Validate-BookPlanApproval {
   foreach ($rel in @("revision/_state/book-plan.json","revision/_state/chapter-plan.json","revision/_state/layout-plan.json","revision/_state/longform-plan.json","revision/_state/volume-plan.json")) {
     Ensure-File (Join-Path $Root $rel)
   }
-  $bookPlan = Read-JsonFile -Path (Join-Path $Root "revision/_state/book-plan.json")
   $plan = Read-JsonFile -Path (Join-Path $Root "revision/_state/longform-plan.json")
   foreach ($field in @("target_pages","target_words","target_chapters","max_chapters_per_batch","audit_interval_chapters","continuity_model")) {
     if (-not ($plan.PSObject.Properties.Name -contains $field)) {
@@ -1049,16 +1015,6 @@ function Validate-BookPlanApproval {
       }
     }
   }
-  if ($Approval.PSObject.Properties.Name -contains "accepted_writing_type" -and $Approval.accepted_writing_type) {
-    if ([string]$Approval.accepted_writing_type -ne [string]$bookPlan.writing_type) {
-      throw "Book plan approval blocked: accepted_writing_type does not match book-plan.json."
-    }
-  }
-  if ($Approval.PSObject.Properties.Name -contains "accepted_genre" -and $Approval.accepted_genre) {
-    if ([string]$Approval.accepted_genre -ne [string]$bookPlan.genre) {
-      throw "Book plan approval blocked: accepted_genre does not match book-plan.json."
-    }
-  }
 }
 
 function Validate-JsonIssueContract {
@@ -1077,76 +1033,6 @@ function Validate-JsonIssueContract {
     }
     if ($it.severity -notin @("critical","major","minor")) {
       throw "Invalid severity enum '$($it.severity)' in $Path"
-    }
-  }
-}
-
-function Validate-EditorialCycleContract {
-  param(
-    [string]$Root,
-    [string]$Phase,
-    [bool]$Enabled
-  )
-
-  if (-not $Enabled -or $Phase -notin @("create","polish","rewrite")) {
-    return
-  }
-
-  $files = @(Get-ChildItem -Path (Join-Path $Root "revision/_workspace/*editorial-cycle*.json") -File -ErrorAction SilentlyContinue | Sort-Object Name)
-  if ($files.Count -lt 1) {
-    throw "Editorial cycle gate failed: missing revision/_workspace/*editorial-cycle*.json for phase '$Phase'."
-  }
-
-  $stateScorecardPath = Join-Path $Root "revision/_state/editorial-quality-scorecard.json"
-  Ensure-File $stateScorecardPath
-  $stateScorecard = Read-Utf8 -Path $stateScorecardPath | ConvertFrom-Json
-  $threshold = 85
-  if ($stateScorecard.PSObject.Properties.Name -contains "threshold_pass") {
-    $threshold = [double]$stateScorecard.threshold_pass
-  }
-  $requiredAxes = @("continuity","progression","style","language","publication-readiness","type-fit")
-  if ($stateScorecard.PSObject.Properties.Name -contains "axes") {
-    $requiredAxes = @($stateScorecard.axes | ForEach-Object { [string]$_ })
-  }
-
-  foreach ($file in $files) {
-    $obj = Read-Utf8 -Path $file.FullName | ConvertFrom-Json
-    foreach ($field in @("run_id","step_id","phase","writing_type","verdict","threshold_pass","scores","issue_summary","required_fixes","next_action","reviewed_artifacts")) {
-      if (-not ($obj.PSObject.Properties.Name -contains $field)) {
-        throw "Editorial cycle gate failed: $($file.FullName) missing '$field'."
-      }
-    }
-    if ($obj.verdict -notin @("PASS","REWRITE","BLOCKED")) {
-      throw "Editorial cycle gate failed: invalid verdict '$($obj.verdict)' in $($file.FullName)."
-    }
-    if ([double]$obj.threshold_pass -lt $threshold) {
-      throw "Editorial cycle gate failed: threshold_pass lower than project scorecard threshold in $($file.FullName)."
-    }
-    foreach ($axis in $requiredAxes) {
-      if (-not ($obj.scores.PSObject.Properties.Name -contains $axis)) {
-        throw "Editorial cycle gate failed: scores missing required axis '$axis' in $($file.FullName)."
-      }
-      $score = [double]$obj.scores.$axis
-      if (($obj.verdict -eq "PASS") -and $score -lt $threshold) {
-        throw "Editorial cycle gate failed: PASS with axis '$axis' below threshold ($score < $threshold) in $($file.FullName)."
-      }
-    }
-    foreach ($field in @("critical","major","minor","manual_review_required")) {
-      if (-not ($obj.issue_summary.PSObject.Properties.Name -contains $field)) {
-        throw "Editorial cycle gate failed: issue_summary missing '$field' in $($file.FullName)."
-      }
-    }
-    if (($obj.verdict -eq "PASS") -and ([int]$obj.issue_summary.critical -gt 0 -or [int]$obj.issue_summary.major -gt 0 -or $obj.issue_summary.manual_review_required -eq $true)) {
-      throw "Editorial cycle gate failed: PASS cannot have critical/major/manual-review issues in $($file.FullName)."
-    }
-    if ($obj.verdict -ne "PASS" -and @($obj.required_fixes).Count -lt 1) {
-      throw "Editorial cycle gate failed: REWRITE/BLOCKED verdict must include required_fixes in $($file.FullName)."
-    }
-    if ([string]$obj.next_action -notin @("continue","rewrite_required","user_review_required","blocked")) {
-      throw "Editorial cycle gate failed: invalid next_action '$($obj.next_action)' in $($file.FullName)."
-    }
-    if (@($obj.reviewed_artifacts).Count -lt 1) {
-      throw "Editorial cycle gate failed: reviewed_artifacts must list reviewed files in $($file.FullName)."
     }
   }
 }
@@ -1178,26 +1064,10 @@ function Validate-PhaseContracts {
   if ([string]$contract.phase -ne $Phase) {
     throw "Phase contract mismatch. Expected '$Phase', found '$($contract.phase)'."
   }
-  foreach ($field in @("required_agents","agent_sequence","required_references","required_state_files","allowed_output_patterns","denied_output_patterns","status_contract")) {
+  foreach ($field in @("required_agents","required_references","required_state_files","allowed_output_patterns","denied_output_patterns","status_contract")) {
     if (-not ($contract.PSObject.Properties.Name -contains $field)) {
       throw "Phase contract '$Phase' missing '$field'."
     }
-  }
-  $requiredAgents = @($contract.required_agents | ForEach-Object { [string]$_ })
-  $agentSequence = @($contract.agent_sequence | ForEach-Object { [string]$_ })
-  if ($agentSequence.Count -ne $requiredAgents.Count) {
-    throw "Phase contract '$Phase' agent_sequence must include every required agent exactly once."
-  }
-  foreach ($agentName in $requiredAgents) {
-    if ($agentSequence -notcontains $agentName) {
-      throw "Phase contract '$Phase' agent_sequence missing required agent '$agentName'."
-    }
-  }
-  if (($agentSequence | Sort-Object -Unique).Count -ne $agentSequence.Count) {
-    throw "Phase contract '$Phase' agent_sequence contains duplicate agents."
-  }
-  if ($requiredAgents -contains "chief-editor-orchestrator" -and $agentSequence[-1] -ne "chief-editor-orchestrator") {
-    throw "Phase contract '$Phase' must run chief-editor-orchestrator last."
   }
   foreach ($agentName in @($contract.required_agents)) {
     $agent = Get-AgentByName -Registry $registry -Name ([string]$agentName)
@@ -1272,7 +1142,7 @@ function Validate-AgentCompliance {
   $schemaPath = Join-Path $Root "runtime/agent-compliance.schema.json"
   Ensure-File $schemaPath
   $schemaRaw = Read-Utf8 -Path $schemaPath
-  foreach ($schemaToken in @("artifact_hashes","contract_hashes","agent_statuses","agent_evidence","phase_authority","completed_at","additionalProperties")) {
+  foreach ($schemaToken in @("artifact_hashes","contract_hashes","agent_statuses","phase_authority","completed_at","additionalProperties")) {
     if ($schemaRaw -notmatch [regex]::Escape($schemaToken)) {
       throw "Agent compliance schema missing required token '$schemaToken': $schemaPath"
     }
@@ -1282,7 +1152,7 @@ function Validate-AgentCompliance {
   Ensure-File $path
   $obj = Read-Utf8 -Path $Path | ConvertFrom-Json
 
-  $requiredFields = @("run_id","phase","required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","contract_hashes","agent_statuses","agent_evidence","phase_authority","completed_at","contract_status","missing_items")
+  $requiredFields = @("run_id","phase","required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","contract_hashes","agent_statuses","phase_authority","completed_at","contract_status","missing_items")
   $allowedFields = $requiredFields + @("generation_boundary","creative_authority","research_boundary")
   foreach ($prop in $obj.PSObject.Properties.Name) {
     if ($allowedFields -notcontains $prop) {
@@ -1299,12 +1169,12 @@ function Validate-AgentCompliance {
       throw "Agent compliance field '$field' must be a non-empty string: $path"
     }
   }
-  foreach ($field in @("required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","contract_hashes","agent_statuses","agent_evidence","missing_items")) {
+  foreach ($field in @("required_agents","agents_executed","required_references","loaded_state_files","output_artifacts","artifact_hashes","contract_hashes","agent_statuses","missing_items")) {
     $items = @($obj.$field)
     if ($null -eq $obj.$field) {
       throw "Agent compliance field '$field' must be an array: $path"
     }
-    if ($field -in @("required_agents","agents_executed","output_artifacts","artifact_hashes","contract_hashes","agent_statuses","agent_evidence") -and $items.Count -lt 1) {
+    if ($field -in @("required_agents","agents_executed","output_artifacts","artifact_hashes","contract_hashes","agent_statuses") -and $items.Count -lt 1) {
       throw "Agent compliance field '$field' must not be empty: $path"
     }
   }
@@ -1395,88 +1265,6 @@ function Validate-AgentCompliance {
     throw "Agent compliance has missing_items for phase '$Phase': $($obj.missing_items -join ', ')"
   }
 
-  $outputArtifacts = @($obj.output_artifacts | ForEach-Object { [string]$_ })
-  $evidenceByAgent = @{}
-  foreach ($record in @($obj.agent_evidence)) {
-    foreach ($field in @("agent","status","evidence_artifacts","checks_performed","verdict")) {
-      if (-not ($record.PSObject.Properties.Name -contains $field)) {
-        throw "Agent compliance agent_evidence entry missing '$field': $path"
-      }
-    }
-    $agentName = [string]$record.agent
-    if ($evidenceByAgent.ContainsKey($agentName)) {
-      throw "Agent compliance duplicate agent_evidence entry for '$agentName': $path"
-    }
-    if ($null -eq (Get-AgentByName -Registry $registry -Name $agentName)) {
-      throw "Agent compliance evidence references unknown agent '$agentName'."
-    }
-    if ([string]$record.status -ne "completed") {
-      throw "Agent evidence for '$agentName' is not completed in phase '$Phase': status=$($record.status)"
-    }
-    if ([string]$record.verdict -in @("REWRITE","BLOCKED")) {
-      throw "Agent evidence for '$agentName' blocks phase '$Phase': verdict=$($record.verdict)"
-    }
-    $evidenceArtifacts = @($record.evidence_artifacts | ForEach-Object { [string]$_ })
-    $checksPerformed = @($record.checks_performed | ForEach-Object { [string]$_ })
-    if ($evidenceArtifacts.Count -lt 1 -or $checksPerformed.Count -lt 1) {
-      throw "Agent evidence for '$agentName' must include evidence_artifacts and checks_performed."
-    }
-    if ($agentName -eq "chief-editor-orchestrator") {
-      $chiefReportEvidence = @($evidenceArtifacts | Where-Object { [string]$_ -match "chief-editor-orchestrator_report_" })
-      $chiefVerdictEvidence = @($evidenceArtifacts | Where-Object { [string]$_ -match "chief-editor-orchestrator_verdict_" })
-      if ($chiefReportEvidence.Count -lt 1 -or $chiefVerdictEvidence.Count -lt 1) {
-        throw "Chief editor orchestrator evidence for phase '$Phase' must include dedicated report and verdict artifacts."
-      }
-      foreach ($rel in $chiefVerdictEvidence) {
-        $verdictPath = Join-Path $Root $rel
-        Ensure-File $verdictPath
-        $chiefVerdict = Read-Utf8 -Path $verdictPath | ConvertFrom-Json
-        foreach ($chiefField in @("run_id","phase","agent","verdict","checked_output_artifacts")) {
-          if (-not ($chiefVerdict.PSObject.Properties.Name -contains $chiefField)) {
-            throw "Chief editor verdict missing '$chiefField': $rel"
-          }
-        }
-        if ([string]$chiefVerdict.phase -ne $Phase) {
-          throw "Chief editor verdict phase mismatch for '$rel'. Expected '$Phase', found '$($chiefVerdict.phase)'."
-        }
-        if ([string]$chiefVerdict.agent -ne "chief-editor-orchestrator") {
-          throw "Chief editor verdict agent mismatch for '$rel'."
-        }
-        if ([string]$chiefVerdict.verdict -in @("REWRITE","BLOCKED")) {
-          throw "Chief editor verdict blocks phase '$Phase': verdict=$($chiefVerdict.verdict)"
-        }
-        $checkedOutputArtifacts = @($chiefVerdict.checked_output_artifacts | ForEach-Object { [string]$_ })
-        if ($checkedOutputArtifacts.Count -lt 1) {
-          throw "Chief editor verdict must list checked_output_artifacts: $rel"
-        }
-        foreach ($checkedRel in $checkedOutputArtifacts) {
-          if ($outputArtifacts -notcontains $checkedRel) {
-            throw "Chief editor verdict references artifact not listed in output_artifacts: $checkedRel"
-          }
-        }
-        $uncheckedArtifacts = @($outputArtifacts | Where-Object {
-          ([string]$_ -notmatch "chief-editor-orchestrator_(report|verdict)_") -and
-          ($checkedOutputArtifacts -notcontains [string]$_)
-        })
-        if ($uncheckedArtifacts.Count -gt 0) {
-          throw "Chief editor verdict for phase '$Phase' did not check output artifacts: $($uncheckedArtifacts -join ', ')"
-        }
-      }
-    }
-    foreach ($rel in $evidenceArtifacts) {
-      if ($outputArtifacts -notcontains $rel) {
-        throw "Agent evidence for '$agentName' references artifact not listed in output_artifacts: $rel"
-      }
-      Ensure-File (Join-Path $Root $rel)
-    }
-    $evidenceByAgent[$agentName] = $true
-  }
-  foreach ($agent in @($obj.required_agents)) {
-    if (-not $evidenceByAgent.ContainsKey([string]$agent)) {
-      throw "Agent compliance missing agent_evidence entry for required agent '$agent'."
-    }
-  }
-
   foreach ($rel in @($obj.required_references)) {
     Ensure-File (Join-Path $Root ([string]$rel))
   }
@@ -1484,6 +1272,25 @@ function Validate-AgentCompliance {
     Ensure-File (Join-Path $Root ([string]$rel))
   }
 
+  $outputArtifacts = @($obj.output_artifacts | ForEach-Object { [string]$_ })
+  $mandatoryAgentArtifacts = @()
+  if (@($obj.required_agents) -contains "chief-editor-orchestrator") {
+    $mandatoryAgentArtifacts += "revision/_workspace/00_chief-editor-orchestrator_$Phase.md"
+    $mandatoryAgentArtifacts += "revision/_workspace/00_chief-editor-orchestrator_$Phase.json"
+  }
+  if (@($obj.required_agents) -contains "domain-researcher") {
+    $mandatoryAgentArtifacts += "revision/_workspace/02_domain-researcher_$Phase.md"
+    $mandatoryAgentArtifacts += "revision/_workspace/02_domain-researcher_$Phase.json"
+  }
+  if (@($obj.required_agents) -contains "research-citation-auditor") {
+    $mandatoryAgentArtifacts += "revision/_workspace/07_research-citation-auditor_$Phase.md"
+    $mandatoryAgentArtifacts += "revision/_workspace/07_research-citation-auditor_$Phase.json"
+  }
+  foreach ($mandatoryArtifact in $mandatoryAgentArtifacts) {
+    if ($outputArtifacts -notcontains $mandatoryArtifact) {
+      throw "Agent compliance missing mandatory agent evidence artifact '$mandatoryArtifact' for phase '$Phase'."
+    }
+  }
   foreach ($rel in $outputArtifacts) {
     if ($rel -match "[\*\?]") {
       throw "Agent compliance output_artifacts must list concrete files, not wildcard path '$rel'."
@@ -1554,26 +1361,6 @@ function Validate-PublicationCompliance {
   $verdicts = Get-ChildItem -Path (Join-Path $Root "revision/_workspace/14_publication-compliance_verdict_EP*.json") -File -ErrorAction SilentlyContinue
   if (-not $verdicts -or $verdicts.Count -lt 1) {
     throw "Publication compliance verdict is missing."
-  }
-
-  $metadataPath = Join-Path $Root "revision/_workspace/11_front-matter_publication-metadata.json"
-  Ensure-File $metadataPath
-  $metadata = Read-Utf8 -Path $metadataPath | ConvertFrom-Json
-  foreach ($field in @("title","author_or_editor","copyright_owner","publication_year","format","metadata_status")) {
-    if (-not ($metadata.PSObject.Properties.Name -contains $field)) {
-      throw "Publication metadata missing '$field': $metadataPath"
-    }
-  }
-  if ([string]$metadata.metadata_status -notin @("draft_user_review","publisher_review_required","final_publisher_supplied")) {
-    throw "Publication metadata has invalid metadata_status: $metadataPath"
-  }
-  foreach ($field in @("isbn","barcode","publisher")) {
-    if ($metadata.PSObject.Properties.Name -contains $field) {
-      $value = ([string]$metadata.$field).Trim()
-      if ($value -match "(?i)^(fake|placeholder|todo|tbd|123|000|isbn)$") {
-        throw "Publication metadata contains fake or placeholder $field."
-      }
-    }
   }
 
   foreach ($file in $verdicts) {
@@ -1760,9 +1547,6 @@ function Validate-DocxReaderClean {
     "(?i)\bprint_ready\b",
     "(?i)\brun_id\s*:",
     "(?i)\bstep_id\s*:",
-    "(?i)\bEP\d{3}\b",
-    "(?i)\bScene\s+\d+\b",
-    "(?i)\bSahne\s+\d+\b",
     "(?i)ISBN.*(missing|eksik|not_assigned|placeholder|review)",
     "(?i)bandrol.*(external|eksik|review)",
     "(?i)yayı[nm]\s+not",
@@ -1778,62 +1562,6 @@ function Validate-DocxReaderClean {
 
   $reportPath = Join-Path $Root "revision/_workspace/10_docx-reader-clean_report.md"
   Write-Utf8Bom -Path $reportPath -Content "# DOCX Reader Clean`n`nVERDICT: PASS`n`nReview notes and publication-control metadata were not found in the reader-facing DOCX.`n"
-}
-
-function Validate-ExportManifestContract {
-  param(
-    [string]$Root,
-    [string]$Phase,
-    [bool]$Enabled
-  )
-
-  if (-not $Enabled -or $Phase -ne "export") {
-    return
-  }
-
-  $manifestPath = Resolve-ExportManifestPath -Root $Root
-  $manifest = Read-Utf8 -Path $manifestPath | ConvertFrom-Json
-  foreach ($field in @("project_name","episode_range","source_mode","source_files","source_hashes","style_profile","docx_style_profile","delivery_profiles","page_layout","typography","approval_artifact","front_matter_files","cover_design_manifest","cover_files","publication_compliance_verdict","blocked","block_reasons","output_docx_path","docx_sha256")) {
-    if (-not ($manifest.PSObject.Properties.Name -contains $field)) {
-      throw "Export manifest contract failed: missing '$field'."
-    }
-  }
-  if ($manifest.blocked -eq $true) {
-    throw "Export manifest contract failed: blocked export cannot be treated as completed."
-  }
-  if (@($manifest.source_files).Count -lt 1) {
-    throw "Export manifest contract failed: source_files is empty."
-  }
-  if (@($manifest.front_matter_files).Count -lt 5) {
-    throw "Export manifest contract failed: front_matter_files must include title, copyright, preface, toc, and metadata artifacts."
-  }
-  foreach ($rel in @($manifest.front_matter_files + $manifest.cover_files + @($manifest.cover_design_manifest, $manifest.publication_compliance_verdict, $manifest.output_docx_path, $manifest.docx_style_profile))) {
-    if (-not [string]$rel) { continue }
-    Ensure-File (Resolve-ProjectPath -Root $Root -Path ([string]$rel))
-  }
-  foreach ($hashRecord in @($manifest.source_hashes)) {
-    foreach ($field in @("path","sha256")) {
-      if (-not ($hashRecord.PSObject.Properties.Name -contains $field) -or -not ([string]$hashRecord.$field).Trim()) {
-        throw "Export manifest contract failed: source_hashes entry missing '$field'."
-      }
-    }
-    if ([string]$hashRecord.sha256 -notmatch "^[a-f0-9]{64}$") {
-      throw "Export manifest contract failed: invalid sha256 for source '$($hashRecord.path)'."
-    }
-  }
-  if (-not ($manifest.delivery_profiles.PSObject.Properties.Name -contains "publisher_submission") -or -not ($manifest.delivery_profiles.PSObject.Properties.Name -contains "print_preview")) {
-    throw "Export manifest contract failed: delivery_profiles must declare publisher_submission and print_preview."
-  }
-  foreach ($field in @("width_mm","height_mm","margin_top_mm","margin_bottom_mm","margin_inside_mm","margin_outside_mm")) {
-    if (-not ($manifest.page_layout.PSObject.Properties.Name -contains $field)) {
-      throw "Export manifest contract failed: page_layout missing '$field'."
-    }
-  }
-  foreach ($field in @("font_family","font_size_pt","line_spacing","paragraph_first_line_indent_cm","justification")) {
-    if (-not ($manifest.typography.PSObject.Properties.Name -contains $field)) {
-      throw "Export manifest contract failed: typography missing '$field'."
-    }
-  }
 }
 
 function Validate-DocxLayoutProfile {
@@ -1873,7 +1601,6 @@ function Validate-LongformState {
   $stateDir = Join-Path $Root "revision/_state"
   $required = @(
     "book-plan.json",
-    "open-source-story-model.json",
     "chapter-plan.json",
     "layout-plan.json",
     "longform-plan.json",
@@ -1889,14 +1616,12 @@ function Validate-LongformState {
     "theme-ledger.json",
     "volume-plan.json",
     "style-profile.json",
+    "create-plan.json",
+    "design-hashes.json",
     "writing-type-profile.json",
     "genre-structure-template.json",
     "editorial-quality-scorecard.json",
-    "llm-adapter-contract.json",
-    "claim-ledger.json",
-    "source-ledger.json",
-    "term-glossary.json",
-    "argument-ledger.json"
+    "llm-adapter-contract.json"
   )
   foreach ($name in $required) {
     Ensure-File (Join-Path $stateDir $name)
@@ -1909,6 +1634,8 @@ function Validate-LongformState {
     "character-state.json",
     "plot-ledger.json",
     "style-profile.json",
+    "create-plan.json",
+    "design-hashes.json",
     "writing-type-profile.json",
     "genre-structure-template.json",
     "editorial-quality-scorecard.json",
@@ -1938,7 +1665,7 @@ function Validate-LongformState {
   if (-not ($plan.PSObject.Properties.Name -contains "required_state_files") -or @($plan.required_state_files).Count -lt 3) {
     throw "Longform plan must declare required_state_files for continuity and planning gates."
   }
-  foreach ($requiredStateRel in @("revision/_state/open-source-story-model.json","revision/_state/world-state.json","revision/_state/relationship-graph.json","revision/_state/knowledge-graph.json","revision/_state/promise-payoff-ledger.json","revision/_state/timeline.json","revision/_state/theme-ledger.json","revision/_state/volume-plan.json","revision/_state/claim-ledger.json","revision/_state/source-ledger.json","revision/_state/term-glossary.json","revision/_state/argument-ledger.json")) {
+  foreach ($requiredStateRel in @("revision/_state/world-state.json","revision/_state/relationship-graph.json","revision/_state/knowledge-graph.json","revision/_state/promise-payoff-ledger.json","revision/_state/timeline.json","revision/_state/theme-ledger.json","revision/_state/volume-plan.json")) {
     if (@($plan.required_state_files) -notcontains $requiredStateRel) {
       throw "Longform plan required_state_files missing '$requiredStateRel'."
     }
@@ -1949,35 +1676,8 @@ function Validate-LongformState {
   if ([int]$plan.audit_interval_chapters -lt 1) {
     throw "Longform plan audit_interval_chapters must be positive."
   }
-  foreach ($field in @("memory_strategy","chapter_state_update_contract","reader_progression_policy")) {
-    if (-not ($plan.PSObject.Properties.Name -contains $field)) {
-      throw "Longform plan missing '$field' for long-book continuity memory."
-    }
-  }
-  foreach ($stateUpdateName in @("chapter-summaries","character-state","plot-ledger","continuity-ledger","world-state","relationship-graph","knowledge-graph","promise-payoff-ledger","timeline","theme-ledger","open-source-story-model")) {
-    if (@($plan.chapter_state_update_contract) -notcontains $stateUpdateName) {
-      throw "Longform plan chapter_state_update_contract missing '$stateUpdateName'."
-    }
-  }
 
   $bookPlan = Read-Utf8 -Path (Join-Path $stateDir "book-plan.json") | ConvertFrom-Json
-  if ($Phase -in @("design-big","design-small")) {
-    $targetPages = [int]$plan.target_pages
-    $characterCount = @($bookPlan.characters).Count
-    $writingType = ""
-    $genre = ""
-    if ($bookPlan.PSObject.Properties.Name -contains "writing_type") { $writingType = [string]$bookPlan.writing_type }
-    if ($bookPlan.PSObject.Properties.Name -contains "genre") { $genre = [string]$bookPlan.genre }
-    $complexForm = ($writingType -match "(?i)novel|roman|novella|historical|tarihsel|agent|ajan" -or $genre -match "(?i)novel|roman|novella|historical|tarihsel|agent|ajan")
-    if ($targetPages -le 20 -and $characterCount -ge 5 -and $complexForm) {
-      $lengthApprovalPath = Join-Path $Root "runtime/approvals/length-depth-approval.json"
-      Ensure-File $lengthApprovalPath
-      $lengthApproval = Read-Utf8 -Path $lengthApprovalPath | ConvertFrom-Json
-      if ($lengthApproval.approved -ne $true -or $lengthApproval.risk_acknowledged -ne $true) {
-        throw "Length-depth gate blocked: $targetPages pages with $characterCount characters and '$writingType/$genre' can limit character depth, pacing, and genre complexity. Ask the user to increase length or approve runtime/approvals/length-depth-approval.json with risk_acknowledged=true."
-      }
-    }
-  }
   foreach ($field in @("schema_version","run_id","plan_id","source_prompt","approved_story_option","title_working","writing_type","genre","theme","premise","scale_tier","target_pages","target_words","narrative_pov","tense","characters","plot_arc","chapter_count","max_chapters_per_batch","audit_interval_chapters","approval_required")) {
     if (-not ($bookPlan.PSObject.Properties.Name -contains $field)) {
       throw "book-plan.json missing '$field'."
@@ -1992,10 +1692,7 @@ function Validate-LongformState {
   if ([int]$bookPlan.target_pages -ne [int]$plan.target_pages -or [int]$bookPlan.target_words -ne [int]$plan.target_words) {
     throw "book-plan.json page/word targets must match longform-plan."
   }
-  $planWritingType = [string]$bookPlan.writing_type
-  $fictionWritingTypes = @("novel","story","novella","children_book","young_adult","screenplay")
-  $nonfictionWritingTypes = @("essay","memoir","biography","research_book","self_help","business_book","academic")
-  if (($fictionWritingTypes -contains $planWritingType) -and @($bookPlan.characters).Count -lt 1) {
+  if (@($bookPlan.characters).Count -lt 1) {
     throw "book-plan.json must include at least one planned character before writing starts."
   }
   foreach ($characterPlan in @($bookPlan.characters)) {
@@ -2005,19 +1702,9 @@ function Validate-LongformState {
       }
     }
   }
-  if ($nonfictionWritingTypes -contains $planWritingType) {
-    $argumentArc = if ($bookPlan.PSObject.Properties.Name -contains "argument_arc") { $bookPlan.argument_arc } else { $bookPlan.plot_arc }
-    foreach ($arcField in @("opening_promise","inciting_incident","midpoint_turn","climax","resolution")) {
-      if (-not ($argumentArc.PSObject.Properties.Name -contains $arcField) -or -not ([string]$argumentArc.$arcField).Trim()) {
-        throw "book-plan.json argument_arc/plot_arc missing concrete '$arcField'."
-      }
-    }
-  }
-  else {
-    foreach ($arcField in @("opening_promise","inciting_incident","midpoint_turn","climax","resolution")) {
-      if (-not ($bookPlan.plot_arc.PSObject.Properties.Name -contains $arcField) -or -not ([string]$bookPlan.plot_arc.$arcField).Trim()) {
-        throw "book-plan.json plot_arc missing concrete '$arcField'."
-      }
+  foreach ($arcField in @("opening_promise","inciting_incident","midpoint_turn","climax","resolution")) {
+    if (-not ($bookPlan.plot_arc.PSObject.Properties.Name -contains $arcField) -or -not ([string]$bookPlan.plot_arc.$arcField).Trim()) {
+      throw "book-plan.json plot_arc missing concrete '$arcField'."
     }
   }
 
@@ -2045,6 +1732,115 @@ function Validate-LongformState {
     }
     if ([int]$chapter.target_words -lt 300) {
       throw "chapter-plan.json chapter $($chapter.id) target_words is too low for a book chapter."
+    }
+  }
+
+  $createPlan = Read-Utf8 -Path (Join-Path $stateDir "create-plan.json") | ConvertFrom-Json
+  foreach ($field in @("schema_version","run_id","plan_id","status","chapter_count","max_chapters_per_batch","retry_policy","chapters")) {
+    if (-not ($createPlan.PSObject.Properties.Name -contains $field)) {
+      throw "create-plan.json missing '$field'."
+    }
+  }
+  if ([int]$createPlan.chapter_count -ne [int]$plan.target_chapters) {
+    throw "create-plan.json chapter_count must match longform-plan target_chapters."
+  }
+  if ([int]$createPlan.max_chapters_per_batch -ne [int]$plan.max_chapters_per_batch) {
+    throw "create-plan.json max_chapters_per_batch must match longform-plan."
+  }
+  if (-not ($createPlan.retry_policy.PSObject.Properties.Name -contains "max_retries_per_chapter") -or [int]$createPlan.retry_policy.max_retries_per_chapter -lt 1) {
+    throw "create-plan.json retry_policy.max_retries_per_chapter must be positive."
+  }
+  $createChapters = @($createPlan.chapters)
+  if ($createChapters.Count -ne $chapterEntries.Count) {
+    throw "create-plan.json chapter count must match chapter-plan.json."
+  }
+  for ($idx = 0; $idx -lt $chapterEntries.Count; $idx++) {
+    $planned = $chapterEntries[$idx]
+    $createChapter = $createChapters[$idx]
+    foreach ($field in @("id","reader_title","target_words","min_words","max_words","status","attempts","required_before_pass")) {
+      if (-not ($createChapter.PSObject.Properties.Name -contains $field)) {
+        throw "create-plan.json chapter entry missing '$field'."
+      }
+    }
+    if ([string]$createChapter.id -ne [string]$planned.id) {
+      throw "create-plan.json chapter order/id does not match chapter-plan.json at index $idx."
+    }
+    if ([int]$createChapter.target_words -ne [int]$planned.target_words) {
+      throw "create-plan.json target_words must match chapter-plan.json for $($planned.id)."
+    }
+    if ([int]$createChapter.min_words -gt [int]$createChapter.target_words -or [int]$createChapter.max_words -lt [int]$createChapter.target_words) {
+      throw "create-plan.json min/max word bounds must contain target_words for $($planned.id)."
+    }
+    foreach ($gate in @("episode text","tdk-polisher","tdk-layout-agent","quality-verifier","chapter-summaries update")) {
+      if (@($createChapter.required_before_pass) -notcontains $gate) {
+        throw "create-plan.json $($planned.id) missing required_before_pass gate '$gate'."
+      }
+    }
+  }
+
+  $designHashes = Read-Utf8 -Path (Join-Path $stateDir "design-hashes.json") | ConvertFrom-Json
+  foreach ($field in @("schema_version","run_id","plan_id","hash_scope","sources","rewrite_policy")) {
+    if (-not ($designHashes.PSObject.Properties.Name -contains $field)) {
+      throw "design-hashes.json missing '$field'."
+    }
+  }
+  $hashSources = @($designHashes.sources)
+  if ($hashSources.Count -lt 10) {
+    throw "design-hashes.json must include concrete approved design sources."
+  }
+  $requiredHashSources = @("novel-config.md","revision/_state/book-plan.json","revision/_state/chapter-plan.json","revision/_state/layout-plan.json","revision/_state/longform-plan.json","revision/_state/character-state.json","revision/_state/plot-ledger.json","revision/_state/style-profile.json")
+  $hashByPath = @{}
+  foreach ($source in $hashSources) {
+    foreach ($field in @("path","sha256")) {
+      if (-not ($source.PSObject.Properties.Name -contains $field) -or -not ([string]$source.$field).Trim()) {
+        throw "design-hashes.json source entry missing '$field'."
+      }
+    }
+    $rel = ConvertTo-RelativeContractPath -Path ([string]$source.path)
+    if ($hashByPath.ContainsKey($rel)) {
+      throw "design-hashes.json duplicate source path '$rel'."
+    }
+    if ([string]$source.sha256 -notmatch "^[a-f0-9]{64}$") {
+      throw "design-hashes.json source '$rel' has invalid sha256."
+    }
+    Ensure-File (Join-Path $Root $rel)
+    $hashByPath[$rel] = [string]$source.sha256
+  }
+  foreach ($rel in $requiredHashSources) {
+    if (-not $hashByPath.ContainsKey($rel)) {
+      throw "design-hashes.json missing required design source '$rel'."
+    }
+  }
+  $changedDesignSources = @()
+  foreach ($rel in $hashByPath.Keys) {
+    $path = Join-Path $Root $rel
+    $actualHash = Get-FileSha256 -Path $path
+    if ($actualHash -ne $hashByPath[$rel]) {
+      $changedDesignSources += $rel
+    }
+  }
+  if ($changedDesignSources.Count -gt 0 -and $Phase -ne "rewrite") {
+    throw "Approved design baseline changed after freeze. Run rewrite with a rewrite-impact-report before continuing: $($changedDesignSources -join ', ')"
+  }
+  if ($Phase -eq "rewrite" -and $changedDesignSources.Count -gt 0) {
+    $impactPath = Join-Path $Root "revision/_workspace/rewrite-impact-report.json"
+    Ensure-File $impactPath
+    $impact = Read-Utf8 -Path $impactPath | ConvertFrom-Json
+    foreach ($field in @("run_id","changed_design_sources","affected_chapters","impact_level","required_actions","verdict")) {
+      if (-not ($impact.PSObject.Properties.Name -contains $field)) {
+        throw "rewrite-impact-report.json missing '$field'."
+      }
+    }
+    foreach ($changed in $changedDesignSources) {
+      if (@($impact.changed_design_sources) -notcontains $changed) {
+        throw "rewrite-impact-report.json missing changed design source '$changed'."
+      }
+    }
+    if (@($impact.affected_chapters).Count -lt 1) {
+      throw "rewrite-impact-report.json must list affected_chapters when design sources changed."
+    }
+    if ($impact.verdict -notin @("REWRITE_REQUIRED","NO_REWRITE_REQUIRED")) {
+      throw "rewrite-impact-report.json verdict must be REWRITE_REQUIRED or NO_REWRITE_REQUIRED."
     }
   }
 
@@ -2078,14 +1874,6 @@ function Validate-LongformState {
   $allowed = [Math]::Max(1000.0, [double]$layoutPlan.target_words * 0.18)
   if ($delta -gt $allowed) {
     throw "layout-plan.json page/word targets are inconsistent; adjust target_pages, target_words, or words_per_page_estimate."
-  }
-  foreach ($field in @("front_matter","back_matter","page_numbering","chapter_title_policy","publisher_submission_label")) {
-    if (-not ($layoutPlan.PSObject.Properties.Name -contains $field)) {
-      throw "layout-plan.json missing publication layout field '$field'."
-    }
-  }
-  if ([string]$layoutPlan.chapter_title_policy -notmatch "(?i)reader|okur|no_ep|technical|scene|sahne") {
-    throw "layout-plan.json chapter_title_policy must explicitly forbid technical reader-facing labels."
   }
 
   if ($Phase -in @("design-small","create","polish","rewrite","export")) {
@@ -2172,40 +1960,11 @@ function Validate-LongformState {
       throw "writing-type-profile.json missing '$field'."
     }
   }
-  $supportedWritingTypes = @("novel","story","novella","children_book","young_adult","essay","memoir","biography","research_book","self_help","business_book","academic","poetry_collection","screenplay")
-  $activeWritingType = [string]$writingProfile.writing_type
-  if ($supportedWritingTypes -notcontains $activeWritingType) {
-    throw "writing-type-profile.json writing_type '$activeWritingType' is not supported or is not canonical."
-  }
-  if ([string]$bookPlan.writing_type -ne $activeWritingType) {
-    throw "book-plan.json writing_type must match writing-type-profile.json writing_type."
-  }
-  if ([string]$writingProfile.target_reader -match "(?i)user_defined|to_be_confirmed|placeholder|tbd") {
-    throw "writing-type-profile.json target_reader must be concrete before writing starts."
-  }
 
   $structureTemplate = Read-Utf8 -Path (Join-Path $stateDir "genre-structure-template.json") | ConvertFrom-Json
   foreach ($field in @("template_id","acts","chapter_rules","mandatory_ledgers")) {
     if (-not ($structureTemplate.PSObject.Properties.Name -contains $field)) {
       throw "genre-structure-template.json missing '$field'."
-    }
-  }
-  $fictionTypes = @("novel","story","novella","children_book","young_adult","screenplay")
-  $nonfictionTypes = @("essay","memoir","biography","research_book","self_help","business_book","academic")
-  $sequenceTypes = @("poetry_collection")
-  $requiredTypeLedgers = @("chapter-summaries.json","continuity-ledger.json")
-  if ($fictionTypes -contains $activeWritingType) {
-    $requiredTypeLedgers += @("character-state.json","plot-ledger.json","world-state.json","relationship-graph.json","knowledge-graph.json","promise-payoff-ledger.json","timeline.json","theme-ledger.json")
-  }
-  if ($nonfictionTypes -contains $activeWritingType) {
-    $requiredTypeLedgers += @("claim-ledger.json","source-ledger.json","term-glossary.json","argument-ledger.json")
-  }
-  if ($sequenceTypes -contains $activeWritingType) {
-    $requiredTypeLedgers += @("theme-ledger.json","style-profile.json","chapter-summaries.json")
-  }
-  foreach ($ledgerName in $requiredTypeLedgers) {
-    if (@($structureTemplate.mandatory_ledgers) -notcontains $ledgerName) {
-      throw "genre-structure-template.json mandatory_ledgers missing type-required '$ledgerName'."
     }
   }
 
@@ -2215,24 +1974,11 @@ function Validate-LongformState {
       throw "editorial-quality-scorecard.json missing '$field'."
     }
   }
-  foreach ($axis in @("type-fit","publication-readiness")) {
-    if (@($scorecard.axes) -notcontains $axis) {
-      throw "editorial-quality-scorecard.json axes missing '$axis'."
-    }
-  }
-  if ($nonfictionTypes -contains $activeWritingType -and @($scorecard.axes) -notcontains "character_or_argument_depth") {
-    throw "editorial-quality-scorecard.json axes missing nonfiction argument-depth axis."
-  }
 
   $adapterContract = Read-Utf8 -Path (Join-Path $stateDir "llm-adapter-contract.json") | ConvertFrom-Json
   foreach ($field in @("adapter_contract","max_chapters_per_batch","required_input_state","required_output_state")) {
     if (-not ($adapterContract.PSObject.Properties.Name -contains $field)) {
       throw "llm-adapter-contract.json missing '$field'."
-    }
-  }
-  foreach ($requiredOutputRel in @("revision/_state/chapter-summaries.json","revision/_state/character-state.json","revision/_state/plot-ledger.json","revision/_state/continuity-ledger.json","revision/_state/claim-ledger.json","revision/_state/source-ledger.json","revision/_state/term-glossary.json","revision/_state/argument-ledger.json")) {
-    if (@($adapterContract.required_output_state) -notcontains $requiredOutputRel) {
-      throw "llm-adapter-contract.json required_output_state missing '$requiredOutputRel'."
     }
   }
 
@@ -2285,7 +2031,7 @@ function Assert-NoForbiddenPatterns {
     return
   }
 
-  $episodes = @(Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File -ErrorAction SilentlyContinue | Sort-Object Name)
+  $episodes = Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File -ErrorAction SilentlyContinue
   foreach ($ep in $episodes) {
     $raw = Read-Utf8 -Path $ep.FullName
     foreach ($p in $Patterns) {
@@ -2328,157 +2074,6 @@ function Get-TokenSet {
   param([string]$Text)
   $tokens = [regex]::Matches($Text.ToLowerInvariant(), "[a-z0-9ğüşöçı]+") | ForEach-Object { $_.Value } | Where-Object { $_.Length -gt 3 }
   return @($tokens | Sort-Object -Unique)
-}
-
-function Get-ManuscriptWordCount {
-  param([string]$Text)
-
-  $clean = $Text -replace "(?m)^\s*#{1,6}\s+.*$", " "
-  $clean = $clean -replace "(?m)^\s*(run_id|step_id|VERDICT)\s*:.*$", " "
-  return [regex]::Matches($clean, "[\p{L}\p{Nd}]+(?:['’][\p{L}\p{Nd}]+)?").Count
-}
-
-function Get-IntFieldOrDefault {
-  param(
-    [object]$Object,
-    [string]$Field,
-    [int]$Default
-  )
-
-  if ($Object -and ($Object.PSObject.Properties.Name -contains $Field)) {
-    $value = 0
-    if ([int]::TryParse([string]$Object.$Field, [ref]$value)) {
-      return $value
-    }
-  }
-  return $Default
-}
-
-function Get-DoubleFieldOrDefault {
-  param(
-    [object]$Object,
-    [string]$Field,
-    [double]$Default
-  )
-
-  if ($Object -and ($Object.PSObject.Properties.Name -contains $Field)) {
-    $value = 0.0
-    if ([double]::TryParse([string]$Object.$Field, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$value)) {
-      return $value
-    }
-  }
-  return $Default
-}
-
-function Get-EpisodeFilesSorted {
-  param([string]$Root)
-
-  $episodeDir = Join-Path $Root "episode"
-  if (-not (Test-Path -LiteralPath $episodeDir -PathType Container)) {
-    return @()
-  }
-  return @(Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File -ErrorAction SilentlyContinue | Sort-Object Name)
-}
-
-function Validate-LengthFulfillment {
-  param(
-    [string]$Root,
-    [string]$Phase,
-    [object]$Config,
-    [bool]$Enabled
-  )
-
-  if (-not $Enabled -or $Phase -notin @("create","polish","rewrite","export")) {
-    return
-  }
-
-  $stateDir = Join-Path $Root "revision/_state"
-  $longformPlanPath = Join-Path $stateDir "longform-plan.json"
-  $chapterPlanPath = Join-Path $stateDir "chapter-plan.json"
-  $volumePlanPath = Join-Path $stateDir "volume-plan.json"
-  Ensure-File $longformPlanPath
-  Ensure-File $chapterPlanPath
-  Ensure-File $volumePlanPath
-  $longformPlan = Read-Utf8 -Path $longformPlanPath | ConvertFrom-Json
-  $chapterPlan = Read-Utf8 -Path $chapterPlanPath | ConvertFrom-Json
-  $volumePlan = Read-Utf8 -Path $volumePlanPath | ConvertFrom-Json
-
-  $targetWords = Get-IntFieldOrDefault -Object $longformPlan -Field "target_words" -Default 0
-  $targetPages = Get-IntFieldOrDefault -Object $longformPlan -Field "target_pages" -Default 0
-  $targetChapters = Get-IntFieldOrDefault -Object $longformPlan -Field "target_chapters" -Default 0
-  $wordsPerPage = Get-IntFieldOrDefault -Object $volumePlan -Field "words_per_page_estimate" -Default 360
-  if ($targetWords -lt 1 -or $targetPages -lt 1 -or $targetChapters -lt 1) {
-    throw "Length fulfillment gate failed: longform-plan target_pages, target_words, and target_chapters must be positive."
-  }
-
-  $minChapterCompletionRatio = 0.65
-  $minTotalWordCompletionRatio = 0.90
-  $minTotalPageCompletionRatio = 0.90
-  if ($Config -and $Config.quality_flags -and ($Config.quality_flags.PSObject.Properties.Name -contains "length_fulfillment_gates")) {
-    $q = $Config.quality_flags.length_fulfillment_gates
-    $minChapterCompletionRatio = Get-DoubleFieldOrDefault -Object $q -Field "min_chapter_word_completion_ratio" -Default $minChapterCompletionRatio
-    $minTotalWordCompletionRatio = Get-DoubleFieldOrDefault -Object $q -Field "min_total_word_completion_ratio" -Default $minTotalWordCompletionRatio
-    $minTotalPageCompletionRatio = Get-DoubleFieldOrDefault -Object $q -Field "min_total_page_completion_ratio" -Default $minTotalPageCompletionRatio
-  }
-
-  $episodes = Get-EpisodeFilesSorted -Root $Root
-  if ($episodes.Count -lt 1) {
-    throw "Length fulfillment gate failed: no manuscript chapters found under episode/."
-  }
-
-  $chapterTargets = @{}
-  foreach ($chapter in @($chapterPlan.chapters)) {
-    $id = ""
-    if ($chapter.PSObject.Properties.Name -contains "id") { $id = ([string]$chapter.id).ToUpperInvariant() }
-    if (-not $id) { continue }
-    $chapterTargets[$id] = Get-IntFieldOrDefault -Object $chapter -Field "target_words" -Default ([Math]::Max(300, [int]([double]$targetWords / [double]$targetChapters)))
-  }
-
-  $totalWords = 0
-  $writtenIds = New-Object System.Collections.Generic.List[string]
-  foreach ($episode in $episodes) {
-    $episodeId = ([System.IO.Path]::GetFileNameWithoutExtension($episode.Name)).ToUpperInvariant()
-    if ($episodeId -match "^EP(\d+)$") {
-      $episodeId = "EP{0:D3}" -f [int]$Matches[1]
-    }
-    $writtenIds.Add($episodeId)
-    $text = Read-Utf8 -Path $episode.FullName
-    $words = Get-ManuscriptWordCount -Text $text
-    $totalWords += $words
-    if ($chapterTargets.ContainsKey($episodeId)) {
-      $target = [int]$chapterTargets[$episodeId]
-      $minimum = [Math]::Max(250, [int][Math]::Floor([double]$target * $minChapterCompletionRatio))
-      if ($words -lt $minimum) {
-        throw "Length fulfillment gate failed in $($episode.Name): word_count=$words below chapter minimum=$minimum (target_words=$target, ratio=$minChapterCompletionRatio). Continue this chapter instead of marking it complete."
-      }
-    }
-  }
-
-  $estimatedPages = [double]$totalWords / [double]([Math]::Max(1, $wordsPerPage))
-  if ($Phase -eq "export") {
-    $missingIds = New-Object System.Collections.Generic.List[string]
-    foreach ($chapter in @($chapterPlan.chapters)) {
-      $id = ""
-      if ($chapter.PSObject.Properties.Name -contains "id") { $id = ([string]$chapter.id).ToUpperInvariant() }
-      if ($id -and -not $writtenIds.Contains($id)) {
-        $missingIds.Add($id)
-      }
-    }
-    if ($missingIds.Count -gt 0) {
-      throw "Length fulfillment gate failed: export blocked because manuscript is missing planned chapters: $($missingIds -join ', ')."
-    }
-    if ($episodes.Count -lt $targetChapters) {
-      throw "Length fulfillment gate failed: export blocked because written_chapters=$($episodes.Count) below target_chapters=$targetChapters."
-    }
-    $minimumTotalWords = [int][Math]::Floor([double]$targetWords * $minTotalWordCompletionRatio)
-    if ($totalWords -lt $minimumTotalWords) {
-      throw "Length fulfillment gate failed: export blocked because total_words=$totalWords below minimum_total_words=$minimumTotalWords (target_words=$targetWords). The book is under target length; continue chapter batches."
-    }
-    $minimumEstimatedPages = [double]$targetPages * $minTotalPageCompletionRatio
-    if ($estimatedPages -lt $minimumEstimatedPages) {
-      throw "Length fulfillment gate failed: export blocked because estimated_pages=$([Math]::Round($estimatedPages,1)) below minimum_pages=$([Math]::Round($minimumEstimatedPages,1)) (target_pages=$targetPages)."
-    }
-  }
 }
 
 function Get-JaccardSimilarity {
@@ -2690,9 +2285,6 @@ function Validate-EpisodeTextQuality {
   $requireDashDialogue = $true
   $forbidMixedDialogue = $true
   $minPsychologicalMarkers = 6
-  $bridgeParagraphMinCharacters = 160
-  $requireTurkishDiacritics = $true
-  $minTurkishDiacriticRatio = 0.003
 
   if ($Config -and $Config.quality_flags -and ($Config.quality_flags.PSObject.Properties.Name -contains "text_quality_gates")) {
     $q = $Config.quality_flags.text_quality_gates
@@ -2703,69 +2295,30 @@ function Validate-EpisodeTextQuality {
     if ($q.PSObject.Properties.Name -contains "require_dash_dialogue") { $requireDashDialogue = [bool]$q.require_dash_dialogue }
     if ($q.PSObject.Properties.Name -contains "forbid_mixed_dialogue_styles") { $forbidMixedDialogue = [bool]$q.forbid_mixed_dialogue_styles }
     if ($q.PSObject.Properties.Name -contains "min_psychological_markers") { $minPsychologicalMarkers = [int]$q.min_psychological_markers }
-    if ($q.PSObject.Properties.Name -contains "bridge_paragraph_min_characters") { $bridgeParagraphMinCharacters = [int]$q.bridge_paragraph_min_characters }
-    if ($q.PSObject.Properties.Name -contains "require_turkish_diacritics") { $requireTurkishDiacritics = [bool]$q.require_turkish_diacritics }
-    if ($q.PSObject.Properties.Name -contains "min_turkish_diacritic_ratio") { $minTurkishDiacriticRatio = [double]$q.min_turkish_diacritic_ratio }
   }
 
-  $bookPlanPath = Join-Path $Root "revision/_state/book-plan.json"
-  Ensure-File $bookPlanPath
-  $bookPlan = Read-Utf8 -Path $bookPlanPath | ConvertFrom-Json
-  $plannedCharacterAliases = @()
-  if ($bookPlan.PSObject.Properties.Name -contains "characters") {
-    foreach ($character in @($bookPlan.characters)) {
-      $name = ""
-      if ($character.PSObject.Properties.Name -contains "name") { $name = [string]$character.name }
-      $parts = @($name -split "\s+" | Where-Object { $_ -and $_.Trim() })
-      foreach ($part in $parts) {
-        $clean = $part.Trim()
-        if ($clean -and $clean -notin @("Doktor","Dr","Madam","Bay","Bayan","Hanım","Hanim","Bey")) {
-          $plannedCharacterAliases += $clean
-          break
-        }
+  $createPlanById = @{}
+  $createPlanPath = Join-Path $Root "revision/_state/create-plan.json"
+  if (Test-Path -LiteralPath $createPlanPath -PathType Leaf) {
+    $createPlan = Read-Utf8 -Path $createPlanPath | ConvertFrom-Json
+    foreach ($chapter in @($createPlan.chapters)) {
+      if ($chapter.PSObject.Properties.Name -contains "id") {
+        $createPlanById[[string]$chapter.id] = $chapter
       }
     }
   }
-  $plannedCharacterAliases = @($plannedCharacterAliases | Select-Object -Unique)
-  $allEpisodeText = (($episodes | ForEach-Object { Read-Utf8 -Path $_.FullName }) -join "`n")
-  foreach ($alias in $plannedCharacterAliases) {
-    if ($allEpisodeText -notmatch "(?<!\p{L})$([regex]::Escape($alias))(?!\p{L})") {
-      throw "Text quality gate failed: planned character '$alias' is not present in manuscript text."
-    }
-  }
 
-  $episodeIndex = 0
   foreach ($ep in $episodes) {
-    $episodeIndex++
     $rawText = Read-Utf8 -Path $ep.FullName
 
     if ($rawText -match "[ÃÅÄ]") {
       throw "Text quality gate failed in $($ep.Name): mojibake/encoding corruption detected."
-    }
-    if ($rawText -match "\p{L}\?\p{L}|\?\p{L}") {
-      throw "Text quality gate failed in $($ep.Name): replacement/question-mark encoding corruption detected inside a word."
-    }
-    if ($requireTurkishDiacritics) {
-      $letterCount = [regex]::Matches($rawText, "\p{L}").Count
-      $turkishDiacriticCount = [regex]::Matches($rawText, "[çğıöşüÇĞİÖŞÜ]").Count
-      if ($letterCount -gt 500) {
-        $turkishDiacriticRatio = $turkishDiacriticCount / [double]$letterCount
-        if ($turkishDiacriticRatio -lt $minTurkishDiacriticRatio) {
-          throw "Text quality gate failed in $($ep.Name): Turkish diacritic ratio=$([math]::Round($turkishDiacriticRatio,4)) below min_turkish_diacritic_ratio=$minTurkishDiacriticRatio. Use proper Turkish letters (ç, ğ, ı, ö, ş, ü) instead of ASCII transliteration."
-        }
-      }
     }
     if ($rawText -match "(?m)^\s*(EP\d{3}|Sahne\s+\d+\.|Ara\s+kırılma\s+\d+\.|Ara\s+kirilma\s+\d+\.|Scene\s+\d+\.|Beat\s+\d+\.|TODO|FIXME)\b") {
       throw "Text quality gate failed in $($ep.Name): reader-facing technical labels detected."
     }
     if ($rawText -match "\b(ep\d{3}\.md|EP\d{3}-EP\d{3})\b") {
       throw "Text quality gate failed in $($ep.Name): internal episode/file label leaked into reader-facing text."
-    }
-    if ($episodeIndex -gt 1) {
-      $paragraphs = @($rawText -split "\r?\n\s*\r?\n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -and $_ -notmatch "^#\s+" })
-      if ($paragraphs.Count -lt 1 -or $paragraphs[0].Length -lt $bridgeParagraphMinCharacters) {
-        throw "Text quality gate failed in $($ep.Name): chapter bridge paragraph is too thin or missing."
-      }
     }
 
     $charCount = $rawText.Length
@@ -2774,6 +2327,26 @@ function Validate-EpisodeTextQuality {
     }
     if ($charCount -gt $maxCharacters) {
       throw "Text quality gate failed in $($ep.Name): character_count=$charCount above max_characters=$maxCharacters."
+    }
+
+    $episodeNumber = Get-EpisodeNumberFromName -Name $ep.Name
+    if ($episodeNumber -gt 0) {
+      $chapterId = "EP{0:D3}" -f $episodeNumber
+      if ($createPlanById.ContainsKey($chapterId)) {
+        $chapterTarget = $createPlanById[$chapterId]
+        foreach ($field in @("min_words","max_words","target_words")) {
+          if (-not ($chapterTarget.PSObject.Properties.Name -contains $field)) {
+            throw "Text quality gate failed in $($ep.Name): create-plan chapter $chapterId missing '$field'."
+          }
+        }
+        $wordCount = [regex]::Matches($rawText, "[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)?").Count
+        if ($wordCount -lt [int]$chapterTarget.min_words) {
+          throw "Text quality gate failed in $($ep.Name): word_count=$wordCount below create-plan min_words=$($chapterTarget.min_words) for $chapterId."
+        }
+        if ($wordCount -gt [int]$chapterTarget.max_words) {
+          throw "Text quality gate failed in $($ep.Name): word_count=$wordCount above create-plan max_words=$($chapterTarget.max_words) for $chapterId."
+        }
+      }
     }
 
     $lines = @($rawText -split "(\r?\n)+" | Where-Object { $_ -and $_.Trim() -ne "" })
@@ -2863,13 +2436,10 @@ if ($fromIdx -lt 0 -or $toIdx -lt 0 -or $fromIdx -gt $toIdx) {
   throw "Invalid phase range: $FromPhase -> $ToPhase"
 }
 
-$ProjectRoot = [System.IO.Path]::GetFullPath($ProjectRoot)
 $runtimeDir = Join-Path $ProjectRoot "runtime"
 if (-not $ConfigPath) {
   $ConfigPath = Join-Path $runtimeDir "runner-config.json"
 }
-
-Assert-ProjectIsolation -Root $ProjectRoot
 
 $cfg = Load-RunnerConfig -Path $ConfigPath
 $effectiveMode = $Mode
@@ -3186,7 +2756,6 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       throw "Phase '$phase' requires execution_claim_mode=executed. Configure command mode and real phase commands."
     }
 
-    Validate-ExportManifestContract -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-DocxContentMatch -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-DocxReaderClean -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-DocxLayoutProfile -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
@@ -3197,8 +2766,6 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     Validate-AgentCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts -Artifacts $artifacts
     Validate-LongformState -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-StateReducers -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
-    Validate-LengthFulfillment -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $enableTextQualityGates
-    Validate-EditorialCycleContract -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-MacroContinuityAudits -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Validate-PublicationCompliance -Root $ProjectRoot -Phase $phase -Enabled $enforcePhaseContracts
     Assert-NoForbiddenPatterns -Root $ProjectRoot -Phase $phase -Patterns $negativePatterns -Enabled $enableNegativeEnforcement

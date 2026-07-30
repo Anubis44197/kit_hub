@@ -639,6 +639,30 @@
       font-size: 12px;
     }
 
+    .primary-flow {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .primary-flow button {
+      width: 100%;
+      min-height: 38px;
+      border-radius: 7px;
+      font-weight: 700;
+    }
+
+    .primary-flow .primary-action {
+      border-color: rgba(52, 198, 193, 0.55);
+      background: linear-gradient(135deg, rgba(52, 198, 193, 0.28), rgba(21, 126, 123, 0.82));
+      color: #f7ffff;
+    }
+
+    .primary-flow .secondary-action {
+      background: rgba(13, 28, 31, 0.94);
+    }
+
     .workspace {
       grid-column: 2;
       grid-row: 2;
@@ -1003,6 +1027,38 @@
       align-items: center;
       gap: 6px;
       flex-wrap: wrap;
+    }
+
+    .live-edit-panel {
+      display: grid;
+      gap: 12px;
+      white-space: normal;
+    }
+
+    .live-edit-target {
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      padding: 11px;
+      background: rgba(255, 255, 255, 0.025);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .live-edit-result {
+      min-height: 96px;
+      border: 1px solid rgba(52, 198, 193, 0.28);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(52, 198, 193, 0.045);
+      color: var(--text);
+      font: 13px/1.55 var(--display);
+      white-space: pre-wrap;
+    }
+
+    .live-edit-result.empty {
+      color: var(--muted);
+      font-family: var(--ui);
     }
 
     .ledger-grid {
@@ -1375,11 +1431,24 @@
     .agent.done .agent-num { border-color: var(--green); color: var(--green); }
     .agent.running .agent-num { border-color: var(--teal); color: var(--teal); }
     .agent.review .agent-num { border-color: var(--amber); color: var(--amber); }
+    .agent.blocked .agent-num { border-color: var(--danger); color: var(--danger); }
 
     .agent h3 {
       margin: 0;
       font-size: 13px;
       font-weight: 650;
+    }
+
+    .agent-phase {
+      display: inline-flex;
+      margin-left: 6px;
+      padding: 1px 6px;
+      border: 1px solid var(--line-soft);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 500;
+      vertical-align: 1px;
     }
 
     .agent p {
@@ -1423,6 +1492,7 @@
     .agent.done .state::before { background: var(--green); }
     .agent.running .state::before { background: var(--teal); }
     .agent.review .state::before { background: var(--amber); }
+    .agent.blocked .state::before { background: var(--danger); }
 
     .agent-progress {
       height: 4px;
@@ -1599,7 +1669,7 @@
 
     .type-body {
       display: grid;
-      grid-template-columns: minmax(138px, 0.7fr) repeat(4, minmax(185px, 1fr));
+      grid-template-columns: minmax(138px, 0.7fr) repeat(6, minmax(185px, 1fr));
       min-width: 0;
       overflow: auto;
     }
@@ -1755,6 +1825,43 @@
       min-height: 15px;
     }
 
+    .mode-guide {
+      display: grid;
+      gap: 7px;
+      margin: 8px 0;
+    }
+
+    .mode-guide-card {
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      padding: 9px 10px;
+      background: rgba(255,255,255,0.025);
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .mode-guide-card b {
+      display: block;
+      color: var(--text);
+      margin-bottom: 3px;
+      font-size: 12px;
+    }
+
+    .mode-guide-card.active {
+      border-color: rgba(52, 198, 193, 0.45);
+      background: rgba(52, 198, 193, 0.07);
+    }
+
+    .request-label {
+      display: block;
+      margin: 7px 0 5px;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+    }
+
     .hidden { display: none !important; }
 
     @media (max-width: 1180px) {
@@ -1839,6 +1946,7 @@
                 <label>API anahtarı
                   <input id="apiKeyInput" class="secret-input" type="password" autocomplete="off" placeholder="Anahtar repo içine yazılmaz" />
                 </label>
+                <span class="settings-note">API Modu: saglayici, model ve anahtari kaydet; sonra proje ekraninda Pipeline butonu secili fazlari otomatik calistirir.</span>
                 <div class="settings-action-row">
                   <button type="button" id="saveApiSettingsBtn">Kaydet</button>
                   <button type="button" id="testApiSettingsBtn">Test Et</button>
@@ -1894,6 +2002,18 @@
               <option>Biyografi</option>
               <option>Anı</option>
               <option>Araştırma kitabı</option>
+              <option>Akademik metin</option>
+              <option>Makale</option>
+              <option>Blog yazısı</option>
+              <option>Kişisel gelişim</option>
+              <option>İş kitabı</option>
+              <option>Genç yetişkin</option>
+              <option>Fantastik kurgu</option>
+              <option>Bilimkurgu</option>
+              <option>Gizem / Gerilim</option>
+              <option>Romantik kurgu</option>
+              <option>Tarihi kurgu</option>
+              <option>Gezi yazısı</option>
               <option>Çocuk kitabı</option>
               <option>Senaryo</option>
               <option>Şiir kitabı</option>
@@ -1971,7 +2091,19 @@
       </section>
       <div class="side-footer">
         <input class="project-path" id="projectPathInput" placeholder="Proje yolu: C:\Users\...\KitHubProjects\Kitap" aria-label="Proje yolu" />
+        <div class="mode-guide" aria-label="Calisma yolu">
+          <div class="mode-guide-card active" data-mode-guide="IDE">
+            <b>IDE ile yazdir</b>
+            Istegi kaydet. IDE ajani bu projenin runtime/book-request.md dosyasini okur, dosyalari uretir; KitHub denetler.
+          </div>
+          <div class="mode-guide-card" data-mode-guide="API">
+            <b>API ile otomatik yazdir</b>
+            API anahtarini kaydet. Pipeline butonu secili fazlari modele yazdirir ve kanit kapilarindan gecirir.
+          </div>
+        </div>
+        <span class="request-label">IDE/API'nin okuyacagi kitap istegi</span>
         <textarea class="book-request" id="bookRequestInput" placeholder="Kitap isteği: tür, konu, sayfa hedefi, dönem, karakterler, sınırlar..." aria-label="Kitap isteği"></textarea>
+        <input type="file" id="importTextInput" class="hidden" accept=".txt,.md,.markdown,.docx,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
         <div class="phase-controls">
           <select id="fromPhaseSelect" aria-label="Başlangıç fazı">
             <option value="intake">intake</option>
@@ -1994,8 +2126,13 @@
             <option value="export" selected>export</option>
           </select>
         </div>
+        <div class="primary-flow" aria-label="Kitap üretim akışı">
+          <button type="button" class="primary-action" id="planBookBtn">Romanı Planla</button>
+          <button type="button" class="secondary-action" id="writeBookBtn">Planı Onayla ve Yazdır</button>
+        </div>
         <button type="button" class="ghost" id="newProjectBtn">Yeni Proje</button>
         <button type="button" class="ghost" id="bindProjectBtn">Projeyi Bağla</button>
+        <button type="button" class="ghost" id="importTextBtn">Metin İçe Aktar</button>
         <button type="button" class="ghost" id="saveRequestBtn">İsteği Kaydet</button>
         <button type="button" class="ghost" id="refreshProjectBtn">Yenile</button>
         <button type="button" class="ghost" id="saveEpisodeBtn">Bölümü Kaydet</button>
@@ -2051,6 +2188,11 @@
           <summary>Kontrol</summary>
           <div class="control-menu-list">
             <button type="button" data-support-tab="writingCards">Yazım Kartları</button>
+            <button type="button" data-support-tab="typeQuality">Tür Kontrolü</button>
+            <button type="button" data-support-tab="pageNotes">Sayfa Notları</button>
+            <button type="button" data-support-tab="splitChapters">Bölümlere Ayır</button>
+            <button type="button" data-support-tab="apiSmoke">API Testi</button>
+            <button type="button" data-support-tab="liveEdit">Canlı Edit</button>
             <button type="button" data-support-tab="cards">Bölüm Panosu</button>
             <button type="button" data-support-tab="context">Bağlam Defteri</button>
             <button type="button" data-support-tab="analysis">Tekrar Analizi</button>
@@ -2119,6 +2261,7 @@
           <button type="button" class="active" data-type-section="page">Sayfa</button>
           <button type="button" data-type-section="font">Tipografi</button>
           <button type="button" data-type-section="paragraph">Paragraf</button>
+          <button type="button" data-type-section="margins">Kenarlar</button>
           <button type="button" data-type-section="header">Üstbilgi</button>
           <button type="button" data-type-section="numbering">Numaralandırma</button>
         </nav>
@@ -2134,6 +2277,9 @@
               <option value="poetry">Şiir Kitabı</option>
               <option value="screenplay">Senaryo</option>
               <option value="children">Çocuk Kitabı</option>
+              <option value="academic">Akademik / Araştırma</option>
+              <option value="article">Makale / Blog</option>
+              <option value="selfHelp">Kişisel Gelişim / İş</option>
             </select>
           </label>
           <label class="field">Sayfa Boyutu
@@ -2158,7 +2304,7 @@
             <input id="lineHeight" type="number" min="1" max="1.8" step="0.05" value="1.15" />
           </label>
         </div>
-        <div class="type-group" data-type-panel="header">
+        <div class="type-group" data-type-panel="margins">
           <h4>Kenar Boşlukları</h4>
           <label class="field">Üst
             <input id="marginTop" type="number" min="10" max="35" value="18" />
@@ -2178,7 +2324,34 @@
           <label class="field">Paragraf Sonrası
             <input id="after" type="number" min="0" max="12" value="0" />
           </label>
+          <label class="field">Dul/Yetim
+            <select id="widowOrphanControl"><option value="strict">Sıkı koru</option><option value="standard">Standart</option><option value="off">Kapalı</option></select>
+          </label>
           <div class="mini-page"><span class="t">18</span><span class="b">20</span><span class="l">20</span><span class="r">16</span>A</div>
+        </div>
+        <div class="type-group" data-type-panel="header">
+          <h4>Üstbilgi</h4>
+          <label class="field">Bölüm Başlangıcı
+            <select id="chapterStartPolicy"><option value="new_page">Yeni sayfa</option><option value="right_page">Sağ sayfa</option><option value="continuous">Aynı sayfa</option></select>
+          </label>
+          <label class="field">Başlık Hiyerarşisi
+            <select id="headingHierarchyPolicy"><option value="chapter_only">Yalnız bölüm</option><option value="chapter_subhead">Bölüm + alt başlık</option><option value="academic">Akademik başlık</option></select>
+          </label>
+          <label class="field">Üstbilgi
+            <select id="runningHeaderPolicy"><option value="none">Yok</option><option value="book_title">Kitap adı</option><option value="chapter_title">Bölüm adı</option></select>
+          </label>
+        </div>
+        <div class="type-group" data-type-panel="numbering">
+          <h4>Numaralandırma</h4>
+          <label class="field">Sayfa Numarası
+            <select id="pageNumberPosition"><option value="bottom_center">Alt orta</option><option value="bottom_outer">Alt dış</option><option value="top_outer">Üst dış</option><option value="none">Yok</option></select>
+          </label>
+          <label class="field">İçindekiler
+            <select id="tocDepth"><option value="1">Bölüm</option><option value="2">Bölüm + alt başlık</option><option value="0">Yok</option></select>
+          </label>
+          <label class="field">Ön Sayfa Numarası
+            <select id="frontMatterNumbering"><option value="roman_or_unnumbered">Roma/yok</option><option value="none">Yok</option><option value="arabic">Arap rakamı</option></select>
+          </label>
         </div>
       </div>
     </section>
@@ -2291,6 +2464,8 @@
     const sideCollapseBtn = document.getElementById("sideCollapseBtn");
     const zoomSelect = document.getElementById("zoomSelect");
     const bindProjectBtn = document.getElementById("bindProjectBtn");
+    const importTextBtn = document.getElementById("importTextBtn");
+    const importTextInput = document.getElementById("importTextInput");
     const saveEpisodeBtn = document.getElementById("saveEpisodeBtn");
     const bookStats = document.getElementById("bookStats");
     const bookTitle = document.querySelector(".book-title");
@@ -2309,6 +2484,8 @@
     const toPhaseSelect = document.getElementById("toPhaseSelect");
     const newProjectBtn = document.getElementById("newProjectBtn");
     const saveRequestBtn = document.getElementById("saveRequestBtn");
+    const planBookBtn = document.getElementById("planBookBtn");
+    const writeBookBtn = document.getElementById("writeBookBtn");
     const refreshProjectBtn = document.getElementById("refreshProjectBtn");
     let runLogText = "Studio Bridge bekleniyor.";
     const wizardType = document.getElementById("wizardType");
@@ -2356,6 +2533,18 @@
       "Şiir kitabı": ["Şiir Başlığı", "Dize", "Kıta", "Epigraf"],
       "Biyografi": ["Bölüm Başlığı", "Zaman Çizgisi", "Alıntı", "Kaynak Notu"],
       "Araştırma kitabı": ["Bölüm Başlığı", "Alt Başlık", "Alıntı", "Dipnot"],
+      "Akademik metin": ["Bölüm Başlığı", "Alt Başlık", "Alıntı", "Dipnot", "Kaynak Notu"],
+      "Makale": ["Başlık", "Alt Başlık", "Alıntı", "Kaynak Notu"],
+      "Blog yazısı": ["Başlık", "Alt Başlık", "Alıntı", "Geçiş"],
+      "Kişisel gelişim": ["Bölüm Başlığı", "Egzersiz", "Alıntı", "Alt Başlık"],
+      "İş kitabı": ["Bölüm Başlığı", "Vaka", "Çerçeve", "Alt Başlık"],
+      "Genç yetişkin": ["Gövde Metni", "Bölüm Başlığı", "Diyalog", "Alıntı"],
+      "Fantastik kurgu": ["Gövde Metni", "Bölüm Başlığı", "Diyalog", "Dünya Notu"],
+      "Bilimkurgu": ["Gövde Metni", "Bölüm Başlığı", "Diyalog", "Teknik Not"],
+      "Gizem / Gerilim": ["Gövde Metni", "Bölüm Başlığı", "Diyalog", "İpucu Notu"],
+      "Romantik kurgu": ["Gövde Metni", "Bölüm Başlığı", "Diyalog", "İç Monolog"],
+      "Tarihi kurgu": ["Gövde Metni", "Bölüm Başlığı", "Tarih Notu", "Diyalog"],
+      "Gezi yazısı": ["Bölüm Başlığı", "Mekân Notu", "Alıntı", "Alt Başlık"],
       "Deneme": ["Gövde Metni", "Alt Başlık", "Alıntı"],
       "Roman": ["Gövde Metni", "Bölüm Başlığı", "Alıntı"],
       "Hikaye": ["Gövde Metni", "Bölüm Başlığı", "Alıntı"],
@@ -2518,6 +2707,72 @@
         pageNumbering: "body arabic",
         submission: "screenplay_docx"
       },
+      academic: {
+        label: "Akademik / Araştırma",
+        pageSize: "A4 (210 x 297 mm)",
+        printMode: "Tek taraf",
+        frontMatter: "Künye + İçindekiler",
+        font: "Times New Roman",
+        size: 12,
+        line: 1.5,
+        top: 25,
+        inside: 30,
+        outside: 25,
+        indent: 0,
+        after: 6,
+        chapterStart: "new_page",
+        titlePage: "required",
+        toc: "required",
+        preface: "recommended",
+        coverBrief: "optional",
+        backCoverCopy: "optional",
+        pageNumbering: "body arabic",
+        submission: "academic_research_docx"
+      },
+      article: {
+        label: "Makale / Blog",
+        pageSize: "A4 (210 x 297 mm)",
+        printMode: "Tek taraf",
+        frontMatter: "Yalnız metin",
+        font: "Georgia",
+        size: 11,
+        line: 1.35,
+        top: 22,
+        inside: 22,
+        outside: 22,
+        indent: 0,
+        after: 6,
+        chapterStart: "continuous",
+        titlePage: "optional",
+        toc: "optional",
+        preface: "none",
+        coverBrief: "optional",
+        backCoverCopy: "optional",
+        pageNumbering: "body arabic",
+        submission: "article_blog_docx"
+      },
+      selfHelp: {
+        label: "Kişisel Gelişim / İş",
+        pageSize: "A5 (148 x 210 mm)",
+        printMode: "Karşılıklı sayfa",
+        frontMatter: "Künye + İçindekiler",
+        font: "Palatino Linotype",
+        size: 11.5,
+        line: 1.28,
+        top: 20,
+        inside: 21,
+        outside: 17,
+        indent: 0.35,
+        after: 4,
+        chapterStart: "new_page",
+        titlePage: "required",
+        toc: "required",
+        preface: "recommended",
+        coverBrief: "required",
+        backCoverCopy: "required",
+        pageNumbering: "front matter roman/unnumbered, body arabic",
+        submission: "practical_nonfiction_docx"
+      },
       children: {
         label: "Çocuk Kitabı",
         pageSize: "A5 (148 x 210 mm)",
@@ -2542,6 +2797,7 @@
       }
     };
     let selectedWritingCardId = null;
+    let liveEditSuggestion = null;
     const writingCardBoundaryContract = "plan-context-boundary";
 
     function renderChapters() {
@@ -2572,9 +2828,10 @@
     }
 
     function stateLabel(state) {
-      if (state === "done") return "Tamamlandı";
-      if (state === "running") return "Çalışıyor";
+      if (state === "done") return "Tamamlandi";
+      if (state === "running") return "Calisiyor";
       if (state === "review") return "Onay gerekiyor";
+      if (state === "blocked") return "Bloke";
       return "Beklemede";
     }
 
@@ -2592,13 +2849,16 @@
 
     function renderAgents() {
       agentList.innerHTML = agents.map((agent, index) => {
-        const step = processSteps[index] || { title: agent.name, text: agent.text };
+        const step = agent.title
+          ? { title: agent.title, text: agent.text }
+          : (processSteps[index] || { title: agent.name, text: agent.text });
+        const phaseBadge = agent.phaseLabel ? `<span class="agent-phase">${escapeHtml(agent.phaseLabel)}</span>` : "";
         return `
         <article class="agent ${agent.state}" data-agent="${index}">
           <div class="agent-num">${index + 1}</div>
           <div>
-            <h3>${step.title}</h3>
-            <p>${step.text}</p>
+            <h3>${escapeHtml(step.title)} ${phaseBadge}</h3>
+            <p>${escapeHtml(step.text || "")}</p>
             ${agent.evidence?.length ? `<p class="agent-evidence">${agent.evidence.slice(0, 3).map(item => escapeHtml(item.name || item.relativePath || item)).join("<br>")}</p>` : ""}
             <div class="agent-foot">
               <span class="state">${stateLabel(agent.state)}</span>
@@ -2612,14 +2872,18 @@
 
       const done = agents.filter(agent => agent.state === "done").length;
       const review = agents.filter(agent => agent.state === "review").length;
+      const blocked = agents.filter(agent => agent.state === "blocked").length;
       const runningIndex = agents.findIndex(agent => agent.state === "running" || agent.state === "review");
-      const activeIndex = runningIndex >= 0 ? runningIndex : Math.min(done, processSteps.length - 1);
-      const activeStep = processSteps[activeIndex] || processSteps[0];
+      const activeIndex = runningIndex >= 0 ? runningIndex : Math.min(done, Math.max(0, agents.length - 1));
+      const activeAgent = agents[activeIndex] || agents[0] || {};
+      const activeStep = activeAgent.title
+        ? { title: activeAgent.title, text: activeAgent.text }
+        : (processSteps[activeIndex] || processSteps[0]);
       const percent = agents.length ? Math.round((done / agents.length) * 100) : 0;
       document.getElementById("overallProgress").style.width = `${Math.max(12, percent)}%`;
-      document.getElementById("agentSummary").textContent = `${processSteps.length} adımdan ${done}'i tamamlandı. ${review} onay bekliyor.`;
-      if (processTitle) processTitle.textContent = activeStep.title;
-      if (processNote) processNote.textContent = review ? "Devam etmek için kullanıcı onayı bekleniyor." : activeStep.text;
+      document.getElementById("agentSummary").textContent = `${agents.length} ajandan ${done}'i tamamlandi. ${review} onay bekliyor. ${blocked} bloke.`;
+      if (processTitle) processTitle.textContent = activeStep.title || "Ajan akisi bekliyor";
+      if (processNote) processNote.textContent = blocked ? "Bir ajan sozlesme veya kanit hatasiyla durdu." : (review ? "Devam etmek icin kullanici onayi bekleniyor." : (activeStep.text || "Proje baglaninca gercek ajan akisi gorunur."));
     }
 
     function renderQuality(quality) {
@@ -2824,6 +3088,602 @@
       setStatus("Motor olayı: seçilen yazım kartı isteğe eklendi; kullanıcı onayıyla yazım başlatılabilir.");
     }
 
+    function getLiveEditTarget() {
+      const value = manuscriptText.value || "";
+      let start = manuscriptText.selectionStart || 0;
+      let end = manuscriptText.selectionEnd || start;
+      if (start === end && value) {
+        start = value.lastIndexOf("\n\n", Math.max(0, start - 1));
+        start = start === -1 ? 0 : start + 2;
+        end = value.indexOf("\n\n", end);
+        end = end === -1 ? value.length : end;
+      }
+      return { start, end, text: value.slice(start, end).trim(), fullText: value };
+    }
+
+    function normalizeTurkishSpacing(text) {
+      return text
+        .replace(/[ \t]+/g, " ")
+        .replace(/\s+([,.;:!?])/g, "$1")
+        .replace(/([,.;:!?])(?=\S)/g, "$1 ")
+        .replace(/\(\s+/g, "(")
+        .replace(/\s+\)/g, ")")
+        .replace(/“\s+/g, "“")
+        .replace(/\s+”/g, "”")
+        .replace(/\.{3,}/g, "...")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+
+    function tightenProse(text) {
+      let next = normalizeTurkishSpacing(text);
+      [
+        [/\bçok çok\b/gi, "çok"],
+        [/\baslında aslında\b/gi, "aslında"],
+        [/\byavaş yavaş yavaş\b/gi, "yavaş yavaş"],
+        [/\bgözleriyle baktı\b/gi, "baktı"],
+        [/\bdiye düşündü\b/gi, "diye geçirdi içinden"]
+      ].forEach(([pattern, replacement]) => {
+        next = next.replace(pattern, replacement);
+      });
+      return next.trim();
+    }
+
+    function splitSentencesForRhythm(text) {
+      return normalizeTurkishSpacing(text)
+        .replace(/,\s+(ama|fakat|çünkü|oysa|halbuki)\s+/gi, ". $1 ")
+        .replace(/([.!?])\s+([a-zçğıöşü])/g, (_, punc, letter) => `${punc} ${letter.toLocaleUpperCase("tr-TR")}`)
+        .trim();
+    }
+
+    function buildLiveEditSuggestion(command) {
+      const target = getLiveEditTarget();
+      if (!target.text) {
+        liveEditSuggestion = null;
+        renderLiveEditPanel();
+        setStatus("Motor olayı: canlı edit için önce metin yaz veya paragraf seç.");
+        return;
+      }
+      const commands = {
+        tdk: { label: "TDK / Noktalama Temizliği", text: normalizeTurkishSpacing(target.text) },
+        tighten: { label: "Sıkılaştır", text: tightenProse(target.text) },
+        rhythm: { label: "Cümle Ritmi", text: splitSentencesForRhythm(target.text) },
+        quote: {
+          label: "Diyalog / Tırnak Temizliği",
+          text: normalizeTurkishSpacing(target.text).replace(/"([^"]+)"/g, "“$1”").replace(/^\s*-\s+/gm, "— ")
+        }
+      };
+      const result = commands[command] || commands.tdk;
+      liveEditSuggestion = {
+        command,
+        label: result.label,
+        start: target.start,
+        end: target.end,
+        before: target.fullText.slice(target.start, target.end),
+        after: result.text
+      };
+      renderLiveEditPanel();
+      setStatus(`Motor olayı: ${result.label} önerisi hazır; uygulamak için onayla.`);
+    }
+
+    function applyLiveEditSuggestion() {
+      if (!liveEditSuggestion) {
+        setStatus("Motor olayı: uygulanacak canlı edit önerisi yok.");
+        return null;
+      }
+      const applied = { ...liveEditSuggestion };
+      const value = manuscriptText.value || "";
+      manuscriptText.value = value.slice(0, liveEditSuggestion.start) + liveEditSuggestion.after + value.slice(liveEditSuggestion.end);
+      const cursor = liveEditSuggestion.start + liveEditSuggestion.after.length;
+      manuscriptText.focus();
+      manuscriptText.setSelectionRange(liveEditSuggestion.start, cursor);
+      chapterAction.textContent = `${liveEditSuggestion.label} uygulandı`;
+      setRunLog(`Canlı edit uygulandı\nKomut: ${liveEditSuggestion.label}\nÖnceki uzunluk: ${liveEditSuggestion.before.length}\nYeni uzunluk: ${liveEditSuggestion.after.length}`);
+      liveEditSuggestion = null;
+      renderPreview();
+      renderLiveEditPanel();
+      setStatus("Motor olayı: canlı edit seçili metne uygulandı.");
+      return applied;
+    }
+
+    async function markLiveEditAppliedViaBridge(applied) {
+      if (!applied?.artifact || !bridgeOnline) return;
+      const projectRoot = projectPathInput.value.trim() || currentProjectPathHint || "";
+      if (!projectRoot) return;
+      try {
+        await fetch(`${bridgeUrl}/api/live-edit-applied`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            projectRoot,
+            artifact: applied.artifact,
+            chapter: chapters[currentChapterIndex]?.filename || ""
+          })
+        });
+      }
+      catch {
+        setStatus("Motor olayı: canlı edit uygulandı; kanıt dosyası güncellenemedi.");
+      }
+    }
+
+    async function applyAndSaveLiveEditSuggestion() {
+      const applied = applyLiveEditSuggestion();
+      if (!applied) return;
+      await markLiveEditAppliedViaBridge(applied);
+      await saveCurrentEpisode();
+      setStatus("Motor olayı: canlı edit uygulandı, bölüm kaydedildi ve sürüm geçmişine işlendi.");
+    }
+
+    function buildImportedTextRequest(fileName, text) {
+      const sample = text.trim().slice(0, 1800);
+      return [
+        "ICE AKTARILAN METIN GOREVI",
+        `Kaynak dosya: ${fileName}`,
+        `Kelime: ${countWords(text)}`,
+        "",
+        "Kullanici bu metni uygulamada okumak, sayfa uzerinde duzeltmek ve gerekirse kitaplastirmak istiyor.",
+        "Motor once metni tur, hedef okur, yapi, tekrar, TDK ve dizgi acisindan analiz etmeli.",
+        "Kullanici onayi olmadan metni tamamen yeniden yazma.",
+        "",
+        "Ornek / baslangic metni:",
+        sample
+      ].join("\n");
+    }
+
+    function applyImportedText(fileName, text) {
+      manuscriptText.value = text;
+      renderPreview();
+      syncFormatButtons();
+      const request = buildImportedTextRequest(fileName, text);
+      bookRequestInput.value = bookRequestInput.value.trim()
+        ? `${bookRequestInput.value.trim()}\n\n---\n\n${request}`
+        : request;
+      chapterAction.textContent = "İçe aktarılan metin hazır";
+      setRunLog(`Metin içe aktarıldı\nDosya: ${fileName}\nKelime: ${countWords(text)}\nKitap isteğine kitaplaştırma/düzeltme görevi eklendi.`);
+      setStatus("Motor olayı: metin editöre alındı; canlı edit ve planlama akışına bağlandı.");
+    }
+
+    function arrayBufferToBase64(buffer) {
+      const bytes = new Uint8Array(buffer);
+      let binary = "";
+      const chunkSize = 0x8000;
+      for (let index = 0; index < bytes.length; index += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+      }
+      return btoa(binary);
+    }
+
+    async function importDocxFile(file) {
+      if (!bridgeOnline) {
+        setStatus("Motor olayı: DOCX içe aktarma için Studio Bridge açık olmalı.");
+        return;
+      }
+      const maxBytes = 8 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        setStatus("Motor olayı: DOCX dosyası çok büyük; önce daha küçük parçalara ayır.");
+        return;
+      }
+      try {
+        setStatus("Motor olayı: DOCX metni okunuyor...");
+        const contentBase64 = arrayBufferToBase64(await file.arrayBuffer());
+        const response = await fetch(`${bridgeUrl}/api/import-docx`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ filename: file.name, contentBase64 })
+        });
+        const result = await response.json();
+        if (!result.ok) throw new Error(result.error || "DOCX import failed");
+        if (!String(result.text || "").trim()) throw new Error("DOCX içinde okunabilir metin bulunamadı");
+        applyImportedText(file.name, result.text);
+        setRunLog(`DOCX içe aktarıldı\nDosya: ${file.name}\nParagraf: ${result.paragraphs}\nKelime: ${result.words}`);
+      }
+      catch (error) {
+        setStatus(`Motor olayı: DOCX içe aktarma başarısız (${error.message})`);
+      }
+    }
+
+    async function importTextFile(file) {
+      if (!file) return;
+      const maxBytes = 1.5 * 1024 * 1024;
+      if (/\.docx$/i.test(file.name)) {
+        await importDocxFile(file);
+        return;
+      }
+      if (file.size > maxBytes) {
+        setStatus("Motor olayı: dosya çok büyük; önce bölümlere ayırarak içe aktarma gerekir.");
+        return;
+      }
+      const text = await file.text();
+      if (!text.trim()) {
+        setStatus("Motor olayı: içe aktarılan dosyada metin bulunamadı.");
+        return;
+      }
+      applyImportedText(file.name, text);
+    }
+
+    function addLiveEditToRequest() {
+      const target = getLiveEditTarget();
+      if (!target.text) {
+        setStatus("Motor olayı: AI isteği için önce metin veya paragraf seç.");
+        return;
+      }
+      const request = [
+        "CANLI EDIT ISTEGI",
+        "",
+        "Metin:",
+        target.text,
+        "",
+        "Istek: Bu metni tür, plan, karakter ve bağlam sınırlarını bozmadan düzelt. Öneri üret; kullanıcı onayı olmadan nihai metne yazma."
+      ].join("\n");
+      bookRequestInput.value = bookRequestInput.value.trim()
+        ? `${bookRequestInput.value.trim()}\n\n---\n\n${request}`
+        : request;
+      setRunLog(request);
+      setStatus("Motor olayı: canlı edit isteği kitap isteğine eklendi; IDE/API bu isteği okuyabilir.");
+    }
+
+    async function requestLiveEditViaApi() {
+      const target = getLiveEditTarget();
+      if (!target.text) {
+        setStatus("Motor olayı: API önerisi için önce metin veya paragraf seç.");
+        return;
+      }
+      if (!bridgeOnline) {
+        addLiveEditToRequest();
+        setStatus("Motor olayı: Bridge kapalı; canlı edit API yerine kitap isteğine eklendi.");
+        return;
+      }
+      const activeMode = getActiveMode();
+      if (activeMode !== "API") {
+        addLiveEditToRequest();
+        setStatus("Motor olayı: IDE modunda API çağrısı yapılmadı; canlı edit isteği IDE için kaydedildi.");
+        return;
+      }
+      const projectRoot = projectPathInput.value.trim() || currentProjectPathHint || "";
+      const context = [
+        `Yazı türü: ${wizardType.value || "belirtilmedi"}`,
+        `Üslup: ${wizardStyle.value || "belirtilmedi"}`,
+        `Sınırlar: ${wizardBoundaries.value || "belirtilmedi"}`,
+        `Bölüm: ${(chapters[currentChapterIndex]?.title || "açık bölüm yok")}`
+      ].join("\n");
+      try {
+        setStatus("Motor olayı: seçili metin API editörüne gönderiliyor...");
+        const response = await fetch(`${bridgeUrl}/api/live-edit`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            projectRoot,
+            text: target.text,
+            instruction: "Seçili metni TDK, akıcılık, ritim ve kitap dili açısından düzelt. Anlamı ve bağlamı değiştirme.",
+            context
+          })
+        });
+        const result = await response.json();
+        if (!result.ok) throw new Error(result.error || "live edit failed");
+        liveEditSuggestion = {
+          command: "api",
+          label: `API Önerisi (${result.provider || "provider"})`,
+          start: target.start,
+          end: target.end,
+          before: target.fullText.slice(target.start, target.end),
+          after: result.suggestion || "",
+          artifact: result.artifact || ""
+        };
+        renderLiveEditPanel();
+        setRunLog(`API canlı edit önerisi hazır\nModel: ${result.model || ""}\nKanıt: ${result.artifact || "geçici öneri"}`);
+        setStatus("Motor olayı: API önerisi hazır; kullanıcı onayı olmadan metne işlenmedi.");
+      }
+      catch (error) {
+        setStatus(`Motor olayı: API canlı edit başarısız (${error.message})`);
+      }
+    }
+
+    function renderLiveEditPanel() {
+      const target = getLiveEditTarget();
+      notesTitle.textContent = "Canlı Edit";
+      notesContent.innerHTML = `
+        <div class="live-edit-panel">
+          <div class="writing-brief">
+            <b>Sayfa üstünde çalışır</b>
+            <p>Metin seçersen sadece seçili alan, seçmezsen imlecin bulunduğu paragraf hedeflenir. Öneri kullanıcı onayı olmadan metne işlenmez.</p>
+          </div>
+          <div class="support-actions">
+            <button type="button" data-live-edit="tdk">TDK Temizle</button>
+            <button type="button" data-live-edit="tighten">Sıkılaştır</button>
+            <button type="button" data-live-edit="rhythm">Ritmi Düzelt</button>
+            <button type="button" data-live-edit="quote">Diyalog</button>
+            <button type="button" data-live-edit-api>API Önerisi Al</button>
+            <button type="button" data-live-edit-request>AI İsteğine Ekle</button>
+          </div>
+          <div class="live-edit-target"><b>Hedef metin</b><br>${escapeHtml(target.text || "Metin yok. Editörde bir paragraf yaz veya seç.")}</div>
+          <div class="live-edit-result ${liveEditSuggestion ? "" : "empty"}">${escapeHtml(liveEditSuggestion?.after || "Öneri henüz oluşturulmadı.")}</div>
+          <div class="support-actions">
+            <button type="button" class="primary" data-live-edit-apply ${liveEditSuggestion ? "" : "disabled"}>Öneriyi Uygula</button>
+            <button type="button" data-live-edit-apply-save ${liveEditSuggestion ? "" : "disabled"}>Uygula ve Kaydet</button>
+            <button type="button" data-live-edit-clear ${liveEditSuggestion ? "" : "disabled"}>Vazgeç</button>
+          </div>
+        </div>
+      `;
+      notesPanel.classList.add("open");
+      notesPanel.setAttribute("aria-hidden", "false");
+    }
+
+    function getPageNotesKey() {
+      const projectKey = (projectPathInput.value.trim() || currentProjectPathHint || "studio").replace(/[^\w.-]+/g, "_");
+      const chapterKey = chapters[currentChapterIndex]?.filename || chapters[currentChapterIndex]?.id || "draft";
+      return `kithub-page-notes:${projectKey}:${chapterKey}`;
+    }
+
+    function readPageNotes() {
+      try {
+        return JSON.parse(localStorage.getItem(getPageNotesKey()) || "[]");
+      }
+      catch {
+        return [];
+      }
+    }
+
+    function writePageNotes(items) {
+      localStorage.setItem(getPageNotesKey(), JSON.stringify(items));
+    }
+
+    function renderPageNotes() {
+      const target = getLiveEditTarget();
+      const notes = readPageNotes();
+      notesTitle.textContent = "Sayfa Notları";
+      notesContent.innerHTML = `
+        <div class="live-edit-panel">
+          <div class="writing-brief">
+            <b>Okur sayfası üstünde not</b>
+            <p>Seçili metne veya imlecin bulunduğu paragrafa not düşer. Metni değiştirmez; revizyon kararını kullanıcı verir.</p>
+          </div>
+          <div class="live-edit-target"><b>Hedef</b><br>${escapeHtml(target.text || "Önce metinde bir alan seç veya imleci paragraf içine getir.")}</div>
+          <textarea id="pageNoteInput" class="book-request" placeholder="Bu bölüme not yaz..."></textarea>
+          <div class="support-actions">
+            <button type="button" class="primary" data-page-note-save>Notu Kaydet</button>
+            <button type="button" data-page-note-clear>Tüm Notları Temizle</button>
+          </div>
+          <div class="revision-list">
+            ${notes.length ? notes.map(note => `
+              <article class="revision-card">
+                <b>${escapeHtml(note.chapter || "Taslak")}</b>
+                <p>${escapeHtml(note.excerpt)}</p>
+                <small>${escapeHtml(note.note)} · ${escapeHtml(note.createdAt)}</small>
+              </article>
+            `).join("") : `<p class="empty-note">Bu bölüm için not yok.</p>`}
+          </div>
+        </div>
+      `;
+      notesPanel.classList.add("open");
+      notesPanel.setAttribute("aria-hidden", "false");
+    }
+
+    function savePageNote() {
+      const input = document.getElementById("pageNoteInput");
+      const note = input?.value.trim() || "";
+      const target = getLiveEditTarget();
+      if (!note || !target.text) {
+        setStatus("Motor olayı: not için önce metin ve not içeriği gerekir.");
+        return;
+      }
+      const notes = readPageNotes();
+      notes.unshift({
+        id: `note-${Date.now()}`,
+        chapter: chapters[currentChapterIndex]?.title || "Taslak",
+        excerpt: target.text.slice(0, 240),
+        note,
+        createdAt: new Date().toLocaleString("tr-TR")
+      });
+      writePageNotes(notes.slice(0, 80));
+      renderPageNotes();
+      setStatus("Motor olayı: sayfa notu kaydedildi.");
+    }
+
+    function clearPageNotes() {
+      writePageNotes([]);
+      renderPageNotes();
+      setStatus("Motor olayı: bu bölümün sayfa notları temizlendi.");
+    }
+
+    const writingTypeQualityProfiles = {
+      "Roman": ["Tür ve hedef sayfa net", "Karakter sayısı net", "Dönem/mekan net", "Final vaadi net", "Teknik etiket yok", "Tekrar riski düşük", "Bölüm planı bağlı"],
+      "Hikaye": ["Tür ve hedef sayfa net", "Ana çatışma net", "Final vaadi net", "Teknik etiket yok", "Tekrar riski düşük"],
+      "Novella": ["Tür ve hedef sayfa net", "Karakter odağı net", "Bölüm planı bağlı", "Teknik etiket yok", "Tekrar riski düşük"],
+      "Biyografi": ["Kişi ve dönem net", "Kaynak/araştırma notu var", "Kronoloji vaadi var", "Sahte alıntı yasağı var", "Teknik etiket yok"],
+      "Deneme": ["Ana tez net", "Üslup net", "Bölüm/alt başlık akışı var", "Teknik etiket yok", "Tekrar riski düşük"],
+      "Akademik metin": ["Tez/soru net", "Kaynak düzeni var", "Alıntı disiplini var", "Bölüm/alt başlık akışı var", "Teknik etiket yok"],
+      "Makale": ["Ana iddia net", "Okur kitlesi net", "Kaynak düzeni var", "Sonuç vaadi var", "Teknik etiket yok"],
+      "Şiir": ["Tema net", "Ses/ritim hedefi var", "Dize yapısı korunuyor", "Teknik etiket yok"]
+    };
+
+    function evaluateTypeQuality() {
+      const values = collectWizardValues();
+      const text = manuscriptText.value || "";
+      const request = bookRequestInput.value || "";
+      const type = values.type || "Genel";
+      const badMarkers = /\b(EP\d+|SCENE|Sahne\s+\d+|Ajan notu|Yayın notu|runtime\/|episode\/|revision\/)\b/i.test(text);
+      const duplicateRatio = getRepeatedPhraseScore(text);
+      const hasPlan = currentDesignDocs.length > 0 || chapters.length > 1 || /bölüm planı|bolum plani|chapter plan/i.test(request);
+      const checks = [
+        { label: "Tür ve hedef sayfa net", ok: Boolean(values.type && values.pages) },
+        { label: "Karakter sayısı net", ok: Boolean(values.characters || /karakter/i.test(request)) },
+        { label: "Dönem/mekan net", ok: Boolean(values.setting || /mekan|dönem|donem|şehir|sehir/i.test(request)) },
+        { label: "Final vaadi net", ok: Boolean(values.ending || /final|sonuç|sonuc/i.test(request)) },
+        { label: "Kaynak/araştırma notu var", ok: /kaynak|araştırma|arastirma|dipnot|bibliyograf/i.test(request) },
+        { label: "Alıntı disiplini var", ok: /sahte alıntı|sahte alinti|alıntı|alinti|kaynak/i.test(request) },
+        { label: "Bölüm/alt başlık akışı var", ok: hasPlan },
+        { label: "Teknik etiket yok", ok: !badMarkers },
+        { label: "Tekrar riski düşük", ok: duplicateRatio < 18 },
+        { label: "Metin editörde okunabilir", ok: countWords(text) > 20 }
+      ];
+      const wanted = writingTypeQualityProfiles[type] || ["Tür ve hedef sayfa net", "Bölüm/alt başlık akışı var", "Teknik etiket yok", "Tekrar riski düşük", "Metin editörde okunabilir"];
+      return { type, checks: wanted.map(label => checks.find(item => item.label === label) || { label, ok: false }) };
+    }
+
+    function renderTypeQualityPanel() {
+      const result = evaluateTypeQuality();
+      const passed = result.checks.filter(item => item.ok).length;
+      notesTitle.textContent = "Tür Kontrolü";
+      notesContent.innerHTML = `
+        <div class="live-edit-panel">
+          <div class="writing-brief">
+            <b>${escapeHtml(result.type)} kalite kapısı</b>
+            <p>Bu panel yazı türüne göre metni ve kullanıcı isteğini okur; eksikler giderilmeden final güvenli sayılmaz.</p>
+          </div>
+          <div class="quality-meter"><span style="--q:${Math.round((passed / Math.max(1, result.checks.length)) * 100)}%"></span></div>
+          <div class="revision-list">
+            ${result.checks.map(item => `
+              <article class="revision-card">
+                <b>${item.ok ? "Geçti" : "Eksik"} · ${escapeHtml(item.label)}</b>
+                <p>${item.ok ? "Bu kapı mevcut metin veya istek içinde karşılanıyor." : "Yazıma başlamadan önce bu bilgi netleştirilmeli ya da revizyon isteğine eklenmeli."}</p>
+              </article>
+            `).join("")}
+          </div>
+        </div>
+      `;
+      notesPanel.classList.add("open");
+      notesPanel.setAttribute("aria-hidden", "false");
+      setStatus(`Motor olayı: ${result.type} kalite kontrolü açıldı (${passed}/${result.checks.length}).`);
+    }
+
+    function splitTextIntoChapterDrafts(text, targetWords = 1800) {
+      const paragraphs = text.split(/\n\s*\n/g).map(item => item.trim()).filter(Boolean);
+      const chunks = [];
+      let current = [];
+      let words = 0;
+      paragraphs.forEach(paragraph => {
+        const nextWords = countWords(paragraph);
+        if (current.length && words + nextWords > targetWords) {
+          chunks.push(current.join("\n\n"));
+          current = [];
+          words = 0;
+        }
+        current.push(paragraph);
+        words += nextWords;
+      });
+      if (current.length) chunks.push(current.join("\n\n"));
+      return chunks.map((chunk, index) => {
+        const heading = chunk.split(/\r?\n/).map(line => line.trim()).find(line => line && line.length < 90) || `Bölüm ${index + 1}`;
+        return {
+          id: `B${String(index + 1).padStart(2, "0")}`,
+          title: heading.replace(/^#+\s*/, ""),
+          filename: `ep${String(index + 1).padStart(3, "0")}.md`,
+          text: chunk,
+          words: countWords(chunk),
+          state: "wait",
+          heat: { risk: 0, level: "ok", reasons: ["İçe aktarılmış bölüm taslağı"] }
+        };
+      });
+    }
+
+    function estimateChunkWords() {
+      const pages = Number((wizardPages.value || "").replace(/[^\d]/g, ""));
+      if (!pages) return 1800;
+      const estimatedWords = pages * 280;
+      const chapterCount = Math.max(1, Math.ceil(pages / 12));
+      return Math.max(900, Math.min(2600, Math.round(estimatedWords / chapterCount)));
+    }
+
+    function renderSplitChaptersPanel() {
+      const drafts = splitTextIntoChapterDrafts(manuscriptText.value || "", estimateChunkWords());
+      notesTitle.textContent = "Bölümlere Ayır";
+      notesContent.innerHTML = `
+        <div class="live-edit-panel">
+          <div class="writing-brief">
+            <b>Uzun metin bölümleme</b>
+            <p>Mevcut metni hedef sayfaya göre yönetilebilir bölüm taslaklarına ayırır. Uygula demeden editörü değiştirmez.</p>
+          </div>
+          <div class="support-actions">
+            <button type="button" class="primary" data-split-apply ${drafts.length ? "" : "disabled"}>Bölümlere Ayır</button>
+          </div>
+          <div class="revision-list">
+            ${drafts.length ? drafts.map(item => `
+              <article class="revision-card">
+                <b>${escapeHtml(item.id)} · ${escapeHtml(item.title)}</b>
+                <p>${item.words.toLocaleString("tr-TR")} kelime · ${escapeHtml(item.filename)}</p>
+              </article>
+            `).join("") : `<p class="empty-note">Bölümlenecek metin yok.</p>`}
+          </div>
+        </div>
+      `;
+      notesPanel.classList.add("open");
+      notesPanel.setAttribute("aria-hidden", "false");
+    }
+
+    function applyChapterSplit() {
+      const drafts = splitTextIntoChapterDrafts(manuscriptText.value || "", estimateChunkWords());
+      if (!drafts.length) {
+        setStatus("Motor olayı: bölümlenecek metin yok.");
+        return;
+      }
+      chapters = drafts;
+      currentChapterIndex = 0;
+      manuscriptText.value = drafts[0].text;
+      currentEpisodeHandle = null;
+      renderChapters();
+      renderPreview();
+      renderSplitChaptersPanel();
+      const request = [
+        "UZUN METIN BOLUMLENDIRME",
+        `Bolum sayisi: ${drafts.length}`,
+        `Hedef kelime/bolum: ${estimateChunkWords()}`,
+        "Motor bu bolumleri ayri ayri yazim, tutarlilik, tekrar ve dizgi kontrolunden gecirmeli."
+      ].join("\n");
+      bookRequestInput.value = bookRequestInput.value.trim() ? `${bookRequestInput.value.trim()}\n\n---\n\n${request}` : request;
+      setStatus(`Motor olayı: metin ${drafts.length} bölüme ayrıldı; kaydetmek için Bölümü Kaydet veya pipeline kullan.`);
+    }
+
+    async function testLiveEditApi() {
+      if (!bridgeOnline) {
+        setStatus("Motor olayı: API testi için Studio Bridge açık olmalı.");
+        return;
+      }
+      const modeBefore = getActiveMode();
+      if (modeBefore !== "API") {
+        setStatus("Motor olayı: API testi için önce API modu seçilmeli.");
+        return;
+      }
+      try {
+        setStatus("Motor olayı: canlı edit API testi çalışıyor...");
+        const response = await fetch(`${bridgeUrl}/api/live-edit`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            projectRoot: "",
+            text: "Istanbulda yagmur vardi , Munevver pencereyi acti.",
+            instruction: "Türkçe karakter, boşluk ve kitap dili açısından düzelt.",
+            context: "Kısa bağlantı testi. Metin kalıcı dosyaya yazılmayacak."
+          })
+        });
+        const result = await response.json();
+        if (!result.ok) throw new Error(result.error || "API testi başarısız");
+        setRunLog(`Canlı edit API testi geçti\nProvider: ${result.provider}\nModel: ${result.model}\nÖneri: ${result.suggestion}`);
+        setStatus("Motor olayı: canlı edit API testi geçti.");
+      }
+      catch (error) {
+        setRunLog(`Canlı edit API testi başarısız\n${error.message}`);
+        setStatus(`Motor olayı: canlı edit API testi başarısız (${error.message})`);
+      }
+    }
+
+    function renderApiSmokePanel() {
+      notesTitle.textContent = "API Testi";
+      notesContent.innerHTML = `
+        <div class="live-edit-panel">
+          <div class="writing-brief">
+            <b>Gerçek canlı edit testi</b>
+            <p>Kayıtlı API anahtarıyla kısa bir metin gönderir. Başarısızsa sahte başarı üretmez.</p>
+          </div>
+          <div class="support-actions">
+            <button type="button" class="primary" data-api-smoke-run>Canlı Edit API Testi</button>
+          </div>
+          <div class="live-edit-result empty">${escapeHtml(runLogText)}</div>
+        </div>
+      `;
+      notesPanel.classList.add("open");
+      notesPanel.setAttribute("aria-hidden", "false");
+    }
+
     function attachCardBoardDrag() {
       const grid = notesContent.querySelector(".story-card-grid");
       if (!grid) return;
@@ -2907,6 +3767,14 @@
         .filter(([, count]) => count > 1)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 14);
+    }
+
+    function getRepeatedPhraseScore(text) {
+      const words = countWords(text);
+      if (!words) return 0;
+      const repeated = analyzeRepetition(text);
+      const repeatedHits = repeated.reduce((sum, [, count]) => sum + Math.max(0, count - 1), 0);
+      return Math.round((repeatedHits / words) * 100);
     }
 
     function renderTextAnalysis() {
@@ -3120,8 +3988,8 @@
     function applyBlockStyle(style) {
       transformCurrentLines(line => {
         const cleaned = line.replace(/^\s*(#{1,3}\s*|>\s*)/, "").trim();
-        if (["Bölüm Başlığı", "Sahne Başlığı", "Şiir Başlığı", "Alt Başlık"].includes(style)) return cleaned ? `# ${cleaned}` : `# ${style}`;
-        if (["Alıntı", "Epigraf", "Kaynak Notu", "Dipnot"].includes(style)) return cleaned ? `> ${cleaned}` : `> ${style}`;
+        if (["Bölüm Başlığı", "Sahne Başlığı", "Şiir Başlığı", "Alt Başlık", "Başlık"].includes(style)) return cleaned ? `# ${cleaned}` : `# ${style}`;
+        if (["Alıntı", "Epigraf", "Kaynak Notu", "Dipnot", "Egzersiz", "Vaka", "Çerçeve", "Dünya Notu", "Teknik Not", "İpucu Notu", "İç Monolog", "Mekân Notu"].includes(style)) return cleaned ? `> ${cleaned}` : `> ${style}`;
         if (style === "Diyalog") return cleaned ? `- ${cleaned}` : "- Diyalog";
         if (style === "Parantez") return cleaned ? `(${cleaned})` : "(Parantez)";
         if (style === "Geçiş") return cleaned ? cleaned.toLocaleUpperCase("tr-TR") : "KESME:";
@@ -3183,7 +4051,7 @@
     }
 
     function focusTypeSection(section) {
-      const targetSection = section === "numbering" ? "paragraph" : section;
+      const targetSection = section;
       document.querySelectorAll("[data-type-section]").forEach(button => {
         button.classList.toggle("active", button.dataset.typeSection === section);
       });
@@ -3193,7 +4061,8 @@
         page: "sayfa ayarları",
         font: "tipografi ayarları",
         paragraph: "paragraf ayarları",
-        header: "kenar/üstbilgi ayarları",
+        margins: "kenar boşluğu ayarları",
+        header: "üstbilgi ve bölüm başlangıcı",
         numbering: "sayfa numarası ön izlemesi"
       };
       setStatus(`Motor olayı: ${labels[section] || "dizgi bölümü"} açıldı`);
@@ -3322,6 +4191,9 @@
       document.querySelectorAll("[data-mode-panel]").forEach(panel => {
         panel.classList.toggle("active", panel.dataset.modePanel === mode);
       });
+      document.querySelectorAll("[data-mode-guide]").forEach(card => {
+        card.classList.toggle("active", card.dataset.modeGuide === mode);
+      });
     }
 
     function applyProviderDefaults(provider, force = false) {
@@ -3439,10 +4311,14 @@
       finalExportBtn.classList.toggle("is-offline", !hasBridgeProject);
       cleanupProjectBtn.classList.toggle("is-offline", !hasBridgeProject);
       saveRequestBtn.classList.toggle("is-offline", !saveAvailable);
+      planBookBtn.classList.toggle("is-offline", !hasBridgeProject);
+      writeBookBtn.classList.toggle("is-offline", !hasBridgeProject);
       exportBtn.classList.toggle("is-offline", !hasBridgeProject);
 
       newProjectBtn.title = bridgeOnline ? "Studio Bridge ile yeni proje olusturur." : "Studio Bridge kapali: yeni proje motor komutu gerektirir.";
       saveRequestBtn.title = saveAvailable ? "runtime/book-request.md dosyasini kaydeder." : "Once Studio Bridge ac veya proje klasoru bagla.";
+      planBookBtn.title = hasBridgeProject ? "Istegi kaydeder ve kitap planlama akisini baslatir." : "Once Studio Bridge ac ve gercek proje yolu bagla.";
+      writeBookBtn.title = hasBridgeProject ? "Onayli plandan bolum yazimi ve polish akisini baslatir." : "Once Studio Bridge ac ve gercek proje yolu bagla.";
       finalExportBtn.title = hasBridgeProject ? "Final DOCX dosyasini masaustune aktarir." : "Studio Bridge ve gercek proje yolu gerekli.";
       cleanupProjectBtn.title = hasBridgeProject ? "Kullanici onayindan sonra calisma dosyalarini temizler." : "Studio Bridge ve gercek proje yolu gerekli.";
       exportBtn.title = hasBridgeProject ? "Final cikti komutunu hazirlar." : "Once gercek KitHub projesi baglanmali.";
@@ -3500,6 +4376,7 @@
         `- Sınırlar: ${values.boundaries}`,
         "",
         "## Üslup ve Üretim Kuralları",
+        `- Çalışma modu: ${getActiveMode()}`,
         `- Üslup: ${values.style || "Konuya ve türe uygun, tutarlı, akıcı, yayın dosyasına yakışır."}`,
         "- Plan zorunluluğu: Yazıma başlamadan önce karakterler, olay akışı, bölüm dağılımı, sayfa hedefi ve tutarlılık ledgeri çıkarılacak.",
         "- Tutarlılık: Her bölüm önceki bölüm özetleri, karakter durumu, olay ledgeri ve vaat/karşılık listesiyle uyumlu olacak.",
@@ -3511,6 +4388,17 @@
       setRunLog(`Başlangıç sihirbazı kitap isteği oluşturdu.\nDurum: ${validation.complete ? "tam" : "eksik"}\nEksik: ${validation.missing.join(", ") || "yok"}`);
       setStatus(validation.complete ? "Motor olayı: kitap isteği hazır; kaydedilebilir." : "Motor olayı: kitap isteği eksik alanlar içeriyor.");
       return { text, validation };
+    }
+
+    function getBookRequestTextForSave() {
+      const activeMode = getActiveMode();
+      let text = bookRequestInput.value.trim();
+      const modeLine = `- Calisma modu: ${activeMode}`;
+      if (!/^- (Calisma|Çalışma) modu:/m.test(text)) {
+        text = `${text}\n\n## Studio Calisma Baglami\n${modeLine}\n- Kaynak: KitHub Studio arayuzu`.trim();
+        bookRequestInput.value = text;
+      }
+      return text;
     }
 
     async function saveWizardRequest() {
@@ -3664,6 +4552,26 @@
       manuscriptText.readOnly = false;
       if (tab === "writingCards") {
         renderWritingCards();
+        return;
+      }
+      if (tab === "typeQuality") {
+        renderTypeQualityPanel();
+        return;
+      }
+      if (tab === "pageNotes") {
+        renderPageNotes();
+        return;
+      }
+      if (tab === "splitChapters") {
+        renderSplitChaptersPanel();
+        return;
+      }
+      if (tab === "apiSmoke") {
+        renderApiSmokePanel();
+        return;
+      }
+      if (tab === "liveEdit") {
+        renderLiveEditPanel();
         return;
       }
       if (tab === "cards") {
@@ -3865,6 +4773,13 @@
       setSelectIfPresent("layoutProfile", layoutPlan?.layout_profile);
       setSelectIfPresent("printMode", layoutPlan?.print_mode);
       setSelectIfPresent("frontMatter", layoutPlan?.front_matter);
+      setSelectIfPresent("chapterStartPolicy", layoutPlan?.chapter_start_policy);
+      setSelectIfPresent("headingHierarchyPolicy", layoutPlan?.heading_hierarchy_policy);
+      setSelectIfPresent("runningHeaderPolicy", layoutPlan?.running_header_policy);
+      setSelectIfPresent("pageNumberPosition", layoutPlan?.page_number_position);
+      setSelectIfPresent("tocDepth", layoutPlan?.toc_depth);
+      setSelectIfPresent("frontMatterNumbering", layoutPlan?.front_matter_numbering);
+      setSelectIfPresent("widowOrphanControl", layoutPlan?.widow_orphan_control);
       if (layoutPlan?.font_family) {
         document.getElementById("typeFont").value = layoutPlan.font_family;
         document.getElementById("fontSelect").value = layoutPlan.font_family;
@@ -4027,6 +4942,13 @@
       setSelectIfPresent("layoutProfile", layoutPlan.layout_profile);
       setSelectIfPresent("printMode", layoutPlan.print_mode);
       setSelectIfPresent("frontMatter", layoutPlan.front_matter);
+      setSelectIfPresent("chapterStartPolicy", layoutPlan.chapter_start_policy);
+      setSelectIfPresent("headingHierarchyPolicy", layoutPlan.heading_hierarchy_policy);
+      setSelectIfPresent("runningHeaderPolicy", layoutPlan.running_header_policy);
+      setSelectIfPresent("pageNumberPosition", layoutPlan.page_number_position);
+      setSelectIfPresent("tocDepth", layoutPlan.toc_depth);
+      setSelectIfPresent("frontMatterNumbering", layoutPlan.front_matter_numbering);
+      setSelectIfPresent("widowOrphanControl", layoutPlan.widow_orphan_control);
       if (layoutPlan.font_family) {
         document.getElementById("typeFont").value = layoutPlan.font_family;
         if ([...document.getElementById("fontSelect").options].some(option => option.value === layoutPlan.font_family)) {
@@ -4040,20 +4962,18 @@
       if (layoutPlan.margin_outside_mm) document.getElementById("marginOutside").value = layoutPlan.margin_outside_mm;
       applyTypography();
 
-      const evidenceItems = summary.evidence || [];
-      const evidenceText = evidenceItems.map(item => item.name.toLowerCase()).join("\n");
-      agents = defaultAgents.map(agent => {
-        const key = agent.name.toLowerCase().replace(/\s+/g, "-");
-        const words = agent.name.toLowerCase().split(/\s+/);
-        const matchedEvidence = evidenceItems.filter(item => {
-          const name = item.name.toLowerCase();
-          return name.includes(key) || words.every(word => name.includes(word)) || words.some(word => word.length > 6 && name.includes(word));
-        });
-        const matched = matchedEvidence.length > 0 || evidenceText.includes(key);
-        return matched
-          ? { ...agent, state: "done", progress: 100, text: `${agent.text} Bridge proje kanıtı bulundu.`, evidence: matchedEvidence.slice(0, 4) }
-          : { ...agent, state: "idle", progress: 0 };
-      });
+      const flowItems = summary.agentFlow?.items || [];
+      agents = flowItems.length
+        ? flowItems.map(item => ({
+            name: item.name,
+            title: item.name,
+            phaseLabel: item.phaseLabel || item.phase,
+            text: item.text || item.notes || "Gercek ajan durumu sozlesmeden okunuyor.",
+            state: item.state || "idle",
+            progress: Number(item.progress || 0),
+            evidence: item.evidence || []
+          }))
+        : defaultAgents.map(agent => ({ ...agent, state: "idle", progress: 0, text: `${agent.text} Bridge gercek ajan akisini bekliyor.` }));
       renderAgents();
     }
 
@@ -4116,29 +5036,37 @@
     }
 
     async function saveBookRequestViaBridge() {
+      const activeMode = getActiveMode();
+      const nextAction = activeMode === "API"
+        ? "API Modu: Pipeline butonu bu istegi okuyup saglayici/model uzerinden fazlari calistirir."
+        : "IDE Modu: IDE komutu bu proje kokunu acar; ajan runtime/book-request.md dosyasini okur.";
+      const requestText = getBookRequestTextForSave();
       if (!bridgeOnline) {
         if (!projectHandle) {
           setStatus("Motor olayı: kitap isteğini kaydetmek için Studio Bridge aç veya proje klasörü bağla.");
           syncBridgeButtons();
-          return;
+          return false;
         }
         try {
-          await writeTextProjectFile(projectHandle, ["runtime", "book-request.md"], bookRequestInput.value);
-          const wordCount = bookRequestInput.value.trim().split(/\s+/).filter(Boolean).length;
+          await writeTextProjectFile(projectHandle, ["runtime", "book-request.md"], requestText);
+          const wordCount = requestText.trim().split(/\s+/).filter(Boolean).length;
           setRunLog(`Kitap isteği kaydedildi\nYöntem: bağlı klasör\nDosya: runtime/book-request.md\nKelime: ${wordCount}`);
+          setRunLog(`${runLogText}\nSonraki adım: ${nextAction}`);
           setStatus(`Motor olayı: kitap isteği bağlı klasöre kaydedildi (${wordCount} kelime)`);
           syncBridgeButtons();
+          return true;
         }
         catch (error) {
           setStatus(`Motor olayı: kitap isteği klasöre yazılamadı (${error.message})`);
+          return false;
         }
-        return;
+        return false;
       }
       currentProjectPathHint = projectPathInput.value.trim() || currentProjectPathHint;
       if (!currentProjectPathHint || currentProjectPathHint === ".") {
         setStatus("Motor olayı: önce proje yolu yaz veya proje oluştur.");
         syncBridgeButtons();
-        return;
+        return false;
       }
       try {
         const response = await fetch(`${bridgeUrl}/api/save-book-request`, {
@@ -4146,20 +5074,46 @@
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             projectRoot: currentProjectPathHint,
-            text: bookRequestInput.value
+            text: requestText
           })
         });
         const result = await response.json();
         if (!result.ok) throw new Error(result.error || "save-book-request failed");
         const missing = result.checklist?.missing || [];
         setRunLog(`Kitap isteği kaydedildi\nDosya: runtime/book-request.md\nKelime: ${result.words}\nKarakter: ${result.characters}\nZorunlu alanlar: ${missing.length ? "eksik - " + missing.join(", ") : "tam"}`);
+        setRunLog(`${runLogText}\nSonraki adım: ${nextAction}`);
         setStatus(missing.length ? "Motor olayı: kitap isteği kaydedildi ama sihirbaz alanları eksik." : `Motor olayı: kitap isteği kaydedildi (${result.words} kelime)`);
         syncBridgeButtons();
         await refreshProject();
+        return true;
       }
       catch (error) {
         setStatus(`Motor olayı: kitap isteği kaydedilemedi (${error.message})`);
+        return false;
       }
+    }
+
+    async function runUserBookFlow(flow) {
+      if (!bookRequestInput.value.trim()) {
+        setStatus("Motor olayı: önce kitap isteğini yaz veya başlangıç sihirbazından isteği oluştur.");
+        return;
+      }
+      const saved = await saveBookRequestViaBridge();
+      if (!saved) {
+        setStatus("Motor olayı: kitap isteği kaydedilmeden yazım başlatılmadı.");
+        return;
+      }
+      if (flow === "plan") {
+        fromPhaseSelect.value = "intake";
+        toPhaseSelect.value = "design-big";
+        setRunLog(`${runLogText}\nAkış: Romanı Planla\nMotor önce isteği çözer, alternatifleri ve kitap planını üretir; gereken yerde kullanıcı onayı bekler.`);
+      }
+      else {
+        fromPhaseSelect.value = "design-small";
+        toPhaseSelect.value = "polish";
+        setRunLog(`${runLogText}\nAkış: Planı Onayla ve Yazdır\nMotor onaylı plana göre bölüm planını detaylandırır, metni üretir ve editoryal kontrolden geçirir.`);
+      }
+      await copyPipelineCommand();
     }
 
     async function bindProject() {
@@ -4284,6 +5238,9 @@
           if (activeMode === "API" && !apiModel.value.trim()) {
             setStatus("Motor olayı: API modu için önce model ayarını tamamla.");
             return;
+          }
+          if (activeMode === "API") {
+            setApiStatus("API modu pipeline'a baglaniyor; saglayici ayari eksikse motor duracak.", true);
           }
           const response = await fetch(`${bridgeUrl}/api/run-pipeline`, {
             method: "POST",
@@ -4527,6 +5484,7 @@
       const inside = Number(document.getElementById("marginInside").value || 20);
       const outside = Number(document.getElementById("marginOutside").value || 16);
       const pageSize = document.getElementById("pageSize").value;
+      const pageNumberPosition = document.getElementById("pageNumberPosition")?.value || "bottom_center";
       const isA4 = pageSize.includes("A4");
 
       document.documentElement.style.setProperty("--book", `${font}, Garamond, "Times New Roman", serif`);
@@ -4536,6 +5494,12 @@
       bookPage.style.paddingTop = `${Math.max(38, top * 2.7)}px`;
       bookPage.style.paddingLeft = `${Math.max(42, inside * 2.55)}px`;
       bookPage.style.paddingRight = `${Math.max(38, outside * 2.55)}px`;
+      pageNo.style.display = pageNumberPosition === "none" ? "none" : "";
+      pageNo.style.left = pageNumberPosition.includes("center") ? "50%" : "";
+      pageNo.style.right = pageNumberPosition.includes("outer") ? "34px" : "";
+      pageNo.style.top = pageNumberPosition.includes("top") ? "28px" : "";
+      pageNo.style.bottom = pageNumberPosition.includes("bottom") ? "22px" : "";
+      pageNo.style.transform = pageNumberPosition.includes("center") ? "translateX(-50%)" : "";
       previewMeta.textContent = `${isA4 ? "A4 · 210 x 297 mm" : "A5 · 148 x 210 mm"} · ${font} ${size} pt`;
       renderPreview();
     }
@@ -4562,6 +5526,13 @@
       setControlValue("marginOutside", profile.outside);
       setControlValue("indent", profile.indent);
       setControlValue("after", profile.after);
+      setControlValue("chapterStartPolicy", profile.chapterStart || "new_page");
+      setControlValue("headingHierarchyPolicy", profile.headingHierarchy || "chapter_only");
+      setControlValue("runningHeaderPolicy", profile.runningHeader || "none");
+      setControlValue("pageNumberPosition", profile.pageNumberPosition || "bottom_center");
+      setControlValue("tocDepth", profile.tocDepth ?? "1");
+      setControlValue("frontMatterNumbering", profile.frontMatterNumbering || "roman_or_unnumbered");
+      setControlValue("widowOrphanControl", profile.widowOrphan || "strict");
       applyTypography();
       setStatus(`Motor olayı: ${profile.label} kitap şablonu uygulandı`);
     }
@@ -4576,7 +5547,13 @@
         page_size: document.getElementById("pageSize").value,
         print_mode: document.getElementById("printMode").value,
         front_matter: document.getElementById("frontMatter").value,
-        chapter_start_policy: profile.chapterStart,
+        chapter_start_policy: document.getElementById("chapterStartPolicy")?.value || profile.chapterStart,
+        heading_hierarchy_policy: document.getElementById("headingHierarchyPolicy")?.value || profile.headingHierarchy || "chapter_only",
+        running_header_policy: document.getElementById("runningHeaderPolicy")?.value || profile.runningHeader || "none",
+        page_number_position: document.getElementById("pageNumberPosition")?.value || profile.pageNumberPosition || "bottom_center",
+        toc_depth: Number(document.getElementById("tocDepth")?.value ?? profile.tocDepth ?? 1),
+        front_matter_numbering: document.getElementById("frontMatterNumbering")?.value || profile.frontMatterNumbering || "roman_or_unnumbered",
+        widow_orphan_control: document.getElementById("widowOrphanControl")?.value || profile.widowOrphan || "strict",
         title_page_policy: profile.titlePage,
         toc_policy: profile.toc,
         preface_policy: profile.preface,
@@ -4749,7 +5726,8 @@
       const projectRoot = projectPathInput.value.trim() || currentProjectPathHint || "<proje-klasoru>";
       const command = `powershell -ExecutionPolicy Bypass -File scripts/ide_phase_prompt.ps1 -ProjectRoot "${projectRoot}" -Phase create`;
       await navigator.clipboard.writeText(command);
-      setStatus("Motor olayı: IDE ajan komutu panoya kopyalandı");
+      setRunLog(`IDE ajani icin komut kopyalandi\nKomut: ${command}\nIDE bu proje kokundeki runtime/book-request.md dosyasini okuyacak ve KitHub kapilarina uygun dosyalari uretecek.`);
+      setStatus("Motor olayı: IDE ajan komutu panoya kopyalandı; istek runtime/book-request.md dosyasından okunur.");
     });
 
     document.addEventListener("keydown", event => {
@@ -4929,6 +5907,60 @@
         applyWritingCardRequest(requestWritingCard.dataset.writingCardRequest);
         return;
       }
+      const liveEdit = event.target.closest("[data-live-edit]");
+      if (liveEdit) {
+        event.preventDefault();
+        buildLiveEditSuggestion(liveEdit.dataset.liveEdit);
+        return;
+      }
+      if (event.target.closest("[data-live-edit-api]")) {
+        event.preventDefault();
+        requestLiveEditViaApi();
+        return;
+      }
+      if (event.target.closest("[data-live-edit-apply]")) {
+        event.preventDefault();
+        const applied = applyLiveEditSuggestion();
+        markLiveEditAppliedViaBridge(applied);
+        return;
+      }
+      if (event.target.closest("[data-live-edit-apply-save]")) {
+        event.preventDefault();
+        applyAndSaveLiveEditSuggestion();
+        return;
+      }
+      if (event.target.closest("[data-live-edit-clear]")) {
+        event.preventDefault();
+        liveEditSuggestion = null;
+        renderLiveEditPanel();
+        setStatus("Motor olayı: canlı edit önerisi iptal edildi.");
+        return;
+      }
+      if (event.target.closest("[data-live-edit-request]")) {
+        event.preventDefault();
+        addLiveEditToRequest();
+        return;
+      }
+      if (event.target.closest("[data-page-note-save]")) {
+        event.preventDefault();
+        savePageNote();
+        return;
+      }
+      if (event.target.closest("[data-page-note-clear]")) {
+        event.preventDefault();
+        clearPageNotes();
+        return;
+      }
+      if (event.target.closest("[data-split-apply]")) {
+        event.preventDefault();
+        applyChapterSplit();
+        return;
+      }
+      if (event.target.closest("[data-api-smoke-run]")) {
+        event.preventDefault();
+        testLiveEditApi();
+        return;
+      }
       const chooseWritingCard = event.target.closest("[data-writing-card-select], [data-writing-card]");
       if (chooseWritingCard) {
         const cardId = chooseWritingCard.dataset.writingCardSelect || chooseWritingCard.dataset.writingCard;
@@ -4977,7 +6009,7 @@
     document.getElementById("layoutProfile").addEventListener("change", event => {
       applyLayoutProfile(event.target.value);
     });
-    ["pageSize", "printMode", "frontMatter", "typeFont", "typeSize", "lineHeight", "marginTop", "marginInside", "marginOutside", "indent", "after"].forEach(id => {
+    ["pageSize", "printMode", "frontMatter", "typeFont", "typeSize", "lineHeight", "marginTop", "marginInside", "marginOutside", "indent", "after", "chapterStartPolicy", "headingHierarchyPolicy", "runningHeaderPolicy", "pageNumberPosition", "tocDepth", "frontMatterNumbering", "widowOrphanControl"].forEach(id => {
       const control = document.getElementById(id);
       if (!control) return;
       control.addEventListener("input", applyTypography);
@@ -4986,14 +6018,32 @@
     manuscriptText.addEventListener("input", () => {
       renderPreview();
       syncFormatButtons();
+      if (currentTab === "liveEdit") renderLiveEditPanel();
     });
-    manuscriptText.addEventListener("select", syncFormatButtons);
-    manuscriptText.addEventListener("keyup", syncFormatButtons);
-    manuscriptText.addEventListener("click", syncFormatButtons);
+    manuscriptText.addEventListener("select", () => {
+      syncFormatButtons();
+      if (currentTab === "liveEdit") renderLiveEditPanel();
+    });
+    manuscriptText.addEventListener("keyup", () => {
+      syncFormatButtons();
+      if (currentTab === "liveEdit") renderLiveEditPanel();
+    });
+    manuscriptText.addEventListener("click", () => {
+      syncFormatButtons();
+      if (currentTab === "liveEdit") renderLiveEditPanel();
+    });
     projectPathInput.addEventListener("input", syncBridgeButtons);
     newProjectBtn.addEventListener("click", createProjectViaBridge);
     bindProjectBtn.addEventListener("click", bindProject);
+    importTextBtn.addEventListener("click", () => importTextInput.click());
+    importTextInput.addEventListener("change", event => {
+      const file = event.target.files?.[0];
+      importTextFile(file);
+      event.target.value = "";
+    });
     saveRequestBtn.addEventListener("click", saveBookRequestViaBridge);
+    planBookBtn.addEventListener("click", () => runUserBookFlow("plan"));
+    writeBookBtn.addEventListener("click", () => runUserBookFlow("write"));
     refreshProjectBtn.addEventListener("click", refreshProject);
     saveEpisodeBtn.addEventListener("click", saveCurrentEpisode);
     finalExportBtn.addEventListener("click", exportFinalViaBridge);

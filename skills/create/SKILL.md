@@ -12,12 +12,11 @@ Write book chapters with a multi-agent pipeline and strict validation. Legacy fi
 ## Pipeline
 1. Chapter blueprint (`episode-architect`)
 2. Continuity report (`continuity-bridge`)
-3. Chapter context selection (`context-saliency-gate`)
-4. Draft writing (`episode-creator`)
-5. Turkish language and book-mode polish (`tdk-polisher`, CREATE mode) [mandatory]
-6. Book layout normalization (`tdk-layout-agent`) [mandatory when `book_mode.enabled=true`]
-7. Validation (`quality-verifier`, CREATE mode)
-8. Retry loop on REWRITE verdict (bounded)
+3. Draft writing (`episode-creator`)
+4. Turkish language and book-mode polish (`tdk-polisher`, CREATE mode) [mandatory]
+5. Book layout normalization (`tdk-layout-agent`) [mandatory when `book_mode.enabled=true`]
+6. Validation (`quality-verifier`, CREATE mode)
+7. Retry loop on REWRITE verdict (bounded)
 
 ## Upstream Parity Notes
 - This create contract intentionally follows stricter upstream-style guardrails:
@@ -27,8 +26,8 @@ Write book chapters with a multi-agent pipeline and strict validation. Legacy fi
 
 ## Config Source
 - `novel-config.md` is required.
-- `revision/_state/open-source-story-model.json` is required and governs chapter/scene cards, character depth, plot progression, world continuity, cross-references, and reader-output cleanup.
-- `revision/_state/story-bible.json`, `revision/_state/chapter-continuity-chain.json`, and `revision/_state/context-saliency-map.json` are required and govern what story context the writer agent may see for each chapter.
+- `revision/_state/create-plan.json` is required and is the per-chapter production board.
+- `revision/_state/design-hashes.json` is required and locks the approved design baseline.
 
 ## Create Target Contract (Mandatory)
 If `novel-config.md` includes a `create_quality` block, the values below are mandatory gates:
@@ -111,7 +110,8 @@ Rule:
 - Do not run `quality-verifier` before `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` exist.
 - If `book_mode.enabled=true`, do not run `quality-verifier` before `09_tdk-layout_issues_EP{NNN}.json` and `09_tdk-layout_report_EP{NNN}.md` exist.
 - Do not accept `PASS` if create target contract metrics are missing in verifier report.
-- Do not accept `PASS` unless `revision/_workspace/create_editorial-cycle_EP{RANGE}.json` exists and follows `skills/polish/references/editorial-cycle-schema.md`.
+- Do not accept `PASS` if the chapter word count is outside the `min_words` / `max_words` range in `revision/_state/create-plan.json`.
+- Do not continue if `revision/_state/design-hashes.json` no longer matches the approved design files; run rewrite impact analysis instead.
 - If any mandatory artifact is missing, stop with explicit artifact-missing error.
 
 ## Longform Progression State Contract
@@ -127,31 +127,6 @@ Every created chapter must update `revision/_state/chapter-summaries.json` with:
 
 The next chapter's `previous_chapter_result` must connect to the previous chapter's `next_causal_link`. Repeating the same event, summary, or irreversible change is a hard failure.
 
-## Length Fulfillment Contract
-Target length is variable. A user may request 10, 50, 245, 500, or more pages. Do not collapse the request into a fixed three-part story.
-
-Before drafting, load `revision/_state/longform-plan.json`, `revision/_state/volume-plan.json`, and `revision/_state/chapter-plan.json`. Treat these as the production contract:
-- `target_pages` defines the requested book scale.
-- `target_words` defines the minimum manuscript mass needed for that scale.
-- `target_chapters` defines how many reader-facing chapters must exist before export.
-- each chapter `target_words` defines the chapter budget.
-- `max_chapters_per_batch` defines how many chapters may be written before state ledgers must be updated and reloaded.
-
-If the model cannot finish the whole target in one response, write only the approved batch, update all state ledgers, and continue with the next batch. Never mark the book complete, request export, or claim final delivery while planned chapters are missing or total words/pages are under target.
-
-## Context Saliency Contract
-Before `episode-creator` writes a chapter batch, `context-saliency-gate` must produce:
-- `revision/_workspace/context-saliency-gate_EP{RANGE}.json`
-- `revision/_workspace/context-saliency-gate_EP{RANGE}.md`
-
-The writer agent may use only:
-- the current chapter card from `chapter-plan.json`
-- prior chapter dependency from `chapter-continuity-chain.json`
-- visible items selected in `context-saliency-map.json`
-- approved user constraints from `book-brief.json` and `book-dna.json`
-
-The writer agent must not load stale projects, sample manuscripts, unrelated DOCX files, hidden future reveals, or the full raw Story Bible. If chapter context selection is missing or ambiguous, stop with `BLOCKED` instead of drafting.
-
 ## Macro Continuity Audit Contract
 Read `revision/_state/volume-plan.json.audit_schedule`. When generated chapters reach a scheduled marker such as `EP010`, emit:
 - `revision/_workspace/macro-continuity-audit_EP010.json`
@@ -162,9 +137,14 @@ The JSON must include `run_id`, `through_chapter`, `verdict`, `checked_ledgers`,
 ## Outputs
 - `episode/epNNN.md` (legacy storage path for chapter NNN)
 - workspace reports under `{work_dir}/_workspace/`
-- context saliency gate reports for every generated chapter batch
 - mandatory TDK polisher outputs (`08_tdk-polisher_*`)
 - mandatory layout outputs when book mode is enabled (`09_tdk-layout_*`)
 - verifier report with explicit target metrics and request compliance result
-- editorial cycle JSON report (`create_editorial-cycle_EP{RANGE}.json`)
 - updated create progress plan
+
+## Create Progress Board
+After every chapter attempt, update `revision/_state/create-plan.json`:
+- increment `attempts`
+- set `status` to `drafted`, `verified`, or `rewrite_required`
+- record `actual_words`, `actual_characters`, `verifier_artifact`, and `state_update_artifacts`
+- preserve the approved `target_words`, `min_words`, and `max_words`

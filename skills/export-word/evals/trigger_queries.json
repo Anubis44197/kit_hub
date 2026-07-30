@@ -1,0 +1,42 @@
+{
+  "skill_name": "export-word",
+  "trigger_threshold": 0.5,
+  "queries": [
+    {
+      "id": "export-trigger-docx",
+      "query": "The manuscript is validated. Export it to DOCX with front matter and cover package checks.",
+      "should_trigger": true,
+      "reason": "The user requests final DOCX packaging."
+    },
+    {
+      "id": "export-trigger-approval-gate",
+      "query": "Test export with approval=false and confirm it blocks with E_EXPORT_APPROVAL.",
+      "should_trigger": true,
+      "reason": "The request is explicitly about export approval behavior."
+    },
+    {
+      "id": "export-trigger-print-ready",
+      "query": "Prepare the publisher-review-ready Word package and verify DOCX integrity.",
+      "should_trigger": true,
+      "reason": "The request names Word package and DOCX validation."
+    },
+    {
+      "id": "export-no-trigger-draft",
+      "query": "Write EP004 from the approved design plan.",
+      "should_trigger": false,
+      "reason": "Drafting belongs to create."
+    },
+    {
+      "id": "export-no-trigger-polish",
+      "query": "Fix punctuation and paragraph spacing in the current chapter.",
+      "should_trigger": false,
+      "reason": "Language and layout correction belongs to polish."
+    },
+    {
+      "id": "export-no-trigger-concept",
+      "query": "Create three possible book concepts for this genre.",
+      "should_trigger": false,
+      "reason": "Concept selection belongs to propose."
+    }
+  ]
+}

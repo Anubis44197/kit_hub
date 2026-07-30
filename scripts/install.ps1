@@ -10,7 +10,6 @@ $templateSource = Join-Path (Split-Path -Parent $scriptRoot) "runtime/runner-con
 $runtimeDir = Join-Path $ProjectRoot "runtime"
 $runsDir = Join-Path $runtimeDir "runs"
 $approvalsDir = Join-Path $runtimeDir "approvals"
-$statusPath = Join-Path $runtimeDir "project-status.json"
 $templatePath = Join-Path $runtimeDir "runner-config.template.json"
 $configPath = Join-Path $runtimeDir "runner-config.json"
 
@@ -145,23 +144,8 @@ function Ensure-ApprovalFile {
 
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "design-freeze.json") -Title "Design Freeze Approval"
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "story-choice.json") -Title "Story Choice Approval" -ExtraFields @{ selected_option = ""; note = "Set approved=true and selected_option to 1, 2, or 3 only after the user chooses the story direction." }
-Ensure-ApprovalFile -Path (Join-Path $approvalsDir "book-plan-approval.json") -Title "Book Plan Approval" -ExtraFields @{ approved_plan_id = ""; accepted_plan_summary = ""; accepted_writing_type = ""; accepted_genre = ""; accepted_targets = @{ target_pages = 0; target_words = 0; target_chapters = 0 }; note = "Set approved=true only after the user reviews design/04_book_plan.md, design/05_chapter_plan.md, design/06_layout_plan.md and the matching revision/_state plan JSON files. accepted_targets and accepted_writing_type/genre must match the approved plan." }
-Ensure-ApprovalFile -Path (Join-Path $approvalsDir "length-depth-approval.json") -Title "Length Depth Approval" -ExtraFields @{ risk_acknowledged = $false; note = "Set approved=true and risk_acknowledged=true only when the user accepts that the requested page count may limit character depth, pacing, or genre complexity." }
+Ensure-ApprovalFile -Path (Join-Path $approvalsDir "book-plan-approval.json") -Title "Book Plan Approval" -ExtraFields @{ approved_plan_id = ""; note = "Set approved=true only after the user reviews design/04_book_plan.md, design/05_chapter_plan.md, design/06_layout_plan.md and the matching revision/_state plan JSON files." }
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "rewrite-approval.json") -Title "Rewrite Approval"
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "export-approval.json") -Title "Export Approval"
-Ensure-ApprovalFile -Path (Join-Path $approvalsDir "cleanup-approval.json") -Title "Cleanup Approval" -ExtraFields @{ final_output_preserved = $false; user_confirmed_book_finished = $false; note = "Set approved=true, final_output_preserved=true, and user_confirmed_book_finished=true only after the user explicitly says the book is finished and working files should be removed. This is not implied by export approval." }
-
-if (-not (Test-Path -LiteralPath $statusPath -PathType Leaf)) {
-  $status = [ordered]@{
-    schema_version = "1.0.0"
-    status = "draft"
-    final_output_path = ""
-    cleanup_allowed = $false
-    cleanup_completed_at = ""
-    note = "The app must not clean working files until cleanup-approval.json is explicitly approved by the user."
-  }
-  Write-Utf8Bom -Path $statusPath -Content ($status | ConvertTo-Json -Depth 10)
-  Write-Host "[install] created project status: $statusPath"
-}
 
 Write-Host "[install] runtime bootstrap complete."

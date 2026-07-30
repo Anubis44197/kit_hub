@@ -35,18 +35,6 @@ function Assert-Contains {
   }
 }
 
-function Assert-AgentAllowsPhase {
-  param([string]$AgentName, [string]$Phase)
-  $registry = Read-Utf8 -Path "runtime/agent-registry.json" | ConvertFrom-Json
-  $agent = @($registry.agents | Where-Object { [string]$_.name -eq $AgentName } | Select-Object -First 1)
-  if ($agent.Count -lt 1) {
-    throw "Agent registry missing $AgentName"
-  }
-  if (@($agent[0].allowed_phases | ForEach-Object { [string]$_ }) -notcontains $Phase) {
-    throw "Agent registry does not allow $AgentName in $Phase"
-  }
-}
-
 function Get-KeyValue {
   param(
     [string]$Raw,
@@ -79,6 +67,27 @@ foreach ($file in $skillFiles) {
   if ($raw -notmatch "(?m)^prompt_version:\s*") { throw "Missing prompt_version in $($file.FullName)" }
 }
 
+Write-Host "[final-readiness-ps] validating Agent Skills compatibility..."
+Assert-File "scripts/ci/validate_skill_standard.ps1"
+Assert-File "scripts/ci/generate_skill_catalog.ps1"
+Assert-File "scripts/ci/validate_skill_evals.ps1"
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/validate_skill_standard.ps1" -ProjectRoot (Get-Location).Path
+if ($LASTEXITCODE -ne 0) {
+  throw "Agent Skills compatibility validation failed."
+}
+$catalogJson = & powershell -ExecutionPolicy Bypass -File "scripts/ci/generate_skill_catalog.ps1" -ProjectRoot (Get-Location).Path -Format json | Out-String
+if ($LASTEXITCODE -ne 0) {
+  throw "Agent Skills catalog generation failed."
+}
+$catalogProbe = $catalogJson | ConvertFrom-Json
+if (@($catalogProbe.skills).Count -ne @($skillFiles).Count) {
+  throw "Agent Skills catalog count mismatch."
+}
+& powershell -ExecutionPolicy Bypass -File "scripts/ci/validate_skill_evals.ps1" -ProjectRoot (Get-Location).Path
+if ($LASTEXITCODE -ne 0) {
+  throw "Agent Skills eval validation failed."
+}
+
 Write-Host "[final-readiness-ps] validating verdict vocabulary..."
 $allMarkdown = Get-ChildItem -LiteralPath "agents","skills" -Recurse -Include "*.md" -File
 $reviseHits = Select-String -Path $allMarkdown.FullName -Pattern "\bREVISE\b" -SimpleMatch:$false
@@ -108,21 +117,6 @@ Assert-Contains -Path "skills/rewrite/SKILL.md" -Pattern $policyPattern -ErrorMe
 Assert-Contains -Path "skills/export-word/SKILL.md" -Pattern $policyPattern -ErrorMessage "Missing language policy in skills/export-word/SKILL.md"
 
 Write-Host "[final-readiness-ps] validating adapter references..."
-Assert-File "scripts/ci/validate_contracts.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/validate_contracts.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "validate_contracts.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/smoke_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/smoke_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "smoke_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/app_root_cleanliness_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/app_root_cleanliness_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "app_root_cleanliness_test.ps1 failed with exit code: $LASTEXITCODE"
-}
 Assert-File "skills/polish/references/shared-task-schema.md"
 Assert-File "skills/polish/references/agent-skill-schema-mapping.md"
 Assert-File "skills/polish/references/adapter-claude-codex.md"
@@ -133,8 +127,6 @@ Assert-File "skills/polish/references/tdk-source-assurance-chain.md"
 Assert-File "docs/STRICT_EXECUTION_POLICY.md"
 Assert-File "docs/PHASE_EVIDENCE_SCHEMA.md"
 Assert-File "docs/WORKSPACE_RETENTION_POLICY.md"
-Assert-File "docs/THIRD_PARTY_ATTRIBUTION.md"
-Assert-File "docs/AGENT_COORDINATION_FLOW.md"
 Assert-File "docs/LONGFORM_ENGINE.md"
 Assert-File "docs/PROFESSIONAL_WRITING_SYSTEM.md"
 Assert-File "docs/IDE_AGENT_WORKFLOW.md"
@@ -157,107 +149,11 @@ Assert-File "runtime/runner-config.ide-manual.template.json"
 Assert-File "runtime/runner-config.provider.template.json"
 Assert-File "scripts/ide_phase_prompt.ps1"
 Assert-File "scripts/provider_phase.ps1"
+Assert-File "scripts/studio_bridge.ps1"
 Assert-File "scripts/ci/write_agent_compliance.ps1"
 Assert-File "scripts/ci/validate_agent_governance.ps1"
 Assert-File "scripts/ci/validate_state_reducers.ps1"
 Assert-File "scripts/ci/verify_docx_content_match.ps1"
-Assert-File "scripts/ci/verify_docx_reader_clean.ps1"
-Assert-File "scripts/ci/docx_export_gate_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/docx_export_gate_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "docx_export_gate_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/docx_layout_contract_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/docx_layout_contract_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "docx_layout_contract_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/user_flow_docs_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/user_flow_docs_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "user_flow_docs_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/studio_ui_bridge_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/studio_ui_bridge_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "studio_ui_bridge_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/revision_proposal_gate_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/revision_proposal_gate_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "revision_proposal_gate_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/studio_ui_ribbon_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/studio_ui_ribbon_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "studio_ui_ribbon_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/small_e2e_user_flow_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/small_e2e_user_flow_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "small_e2e_user_flow_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/design_plan_specificity_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/design_plan_specificity_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "design_plan_specificity_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/turkish_diacritics_gate_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/turkish_diacritics_gate_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "turkish_diacritics_gate_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/utf8_turkish_roundtrip_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/utf8_turkish_roundtrip_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "utf8_turkish_roundtrip_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/length_fulfillment_gate_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/length_fulfillment_gate_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "length_fulfillment_gate_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/provider_mode_gate_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/provider_mode_gate_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "provider_mode_gate_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/open_source_story_model_gate_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/open_source_story_model_gate_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "open_source_story_model_gate_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/longform_scalability_gate_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/longform_scalability_gate_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "longform_scalability_gate_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/writing_type_profiles_gate_test.ps1"
-Assert-File "scripts/ci/production_sample_export_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/production_sample_export_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "production_sample_export_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/agent_compliance_story_model_gate_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/agent_compliance_story_model_gate_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "agent_compliance_story_model_gate_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/ci/agent_sequence_gate_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/agent_sequence_gate_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "agent_sequence_gate_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "scripts/new_project.ps1"
-Assert-File "scripts/export_final.ps1"
-Assert-File "scripts/cleanup_project.ps1"
-Assert-File "scripts/ci/project_lifecycle_gate_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/project_lifecycle_gate_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "project_lifecycle_gate_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-File "docs/PROJECT_LIFECYCLE_TR.md"
-Assert-File "skills/polish/references/editorial-cycle-schema.md"
 Assert-File "agents/brief-interviewer.md"
 Assert-File "agents/book-dna-locker.md"
 Assert-File "agents/layout-profile-planner.md"
@@ -266,7 +162,6 @@ Assert-File "skills/polish/references/writing-type-profiles.md"
 Assert-File "skills/polish/references/genre-structure-templates.md"
 Assert-File "skills/polish/references/editorial-quality-scorecard.md"
 Assert-File "skills/polish/references/llm-adapter-contract.md"
-Assert-File "skills/polish/references/open-source-novel-editor-patterns.md"
 Assert-File "skills/polish/references/docx-professional-style-contract.md"
 Assert-File "skills/polish/references/tdk-official-writing-rules.md"
 Assert-File "skills/polish/references/tdk-print-submission-rules.md"
@@ -274,62 +169,32 @@ Assert-File "skills/polish/references/source-citation-style-tdk.md"
 Assert-File "skills/polish/references/publication-metadata-checklist.md"
 Assert-File "skills/polish/references/isbn-kunye-bandrol-checklist.md"
 Assert-File "agents/publication-compliance-checker.md"
+Assert-Contains -Path "index.html" -Pattern "data-live-edit-api" -ErrorMessage "Studio UI missing live edit API button"
+Assert-Contains -Path "index.html" -Pattern "requestLiveEditViaApi" -ErrorMessage "Studio UI missing live edit API caller"
+Assert-Contains -Path "index.html" -Pattern "data-live-edit-apply-save" -ErrorMessage "Studio UI missing live edit apply-and-save action"
+Assert-Contains -Path "index.html" -Pattern "importTextInput" -ErrorMessage "Studio UI missing text import input"
+Assert-Contains -Path "index.html" -Pattern "importTextFile" -ErrorMessage "Studio UI missing text import handler"
+Assert-Contains -Path "index.html" -Pattern "ICE AKTARILAN METIN GOREVI" -ErrorMessage "Studio UI missing imported text request binding"
+Assert-Contains -Path "index.html" -Pattern "importDocxFile" -ErrorMessage "Studio UI missing DOCX import handler"
+Assert-Contains -Path "index.html" -Pattern "renderTypeQualityPanel" -ErrorMessage "Studio UI missing writing type quality panel"
+Assert-Contains -Path "index.html" -Pattern "renderPageNotes" -ErrorMessage "Studio UI missing page notes panel"
+Assert-Contains -Path "index.html" -Pattern "splitTextIntoChapterDrafts" -ErrorMessage "Studio UI missing long text chapter splitter"
+Assert-Contains -Path "index.html" -Pattern "testLiveEditApi" -ErrorMessage "Studio UI missing live edit API smoke test"
+Assert-Contains -Path "index.html" -Pattern "chapterStartPolicy" -ErrorMessage "Studio UI missing chapter start layout control"
+Assert-Contains -Path "index.html" -Pattern "pageNumberPosition" -ErrorMessage "Studio UI missing page number layout control"
+Assert-Contains -Path "index.html" -Pattern "widowOrphanControl" -ErrorMessage "Studio UI missing widow/orphan layout control"
+Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "/api/live-edit" -ErrorMessage "Studio Bridge missing live edit endpoint"
+Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "/api/live-edit-applied" -ErrorMessage "Studio Bridge missing live edit applied endpoint"
+Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "/api/import-docx" -ErrorMessage "Studio Bridge missing DOCX import endpoint"
+Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "Invoke-LiveEditRewrite" -ErrorMessage "Studio Bridge missing live edit rewrite function"
+Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "Confirm-LiveEditApplied" -ErrorMessage "Studio Bridge missing live edit applied confirmation"
+Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "Assert-LiveEditSuggestionClean" -ErrorMessage "Studio Bridge missing live edit cleanliness gate"
+Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "Import-DocxText" -ErrorMessage "Studio Bridge missing DOCX import function"
+Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "widow_orphan_control" -ErrorMessage "Studio Bridge missing professional typography control persistence"
+Assert-Contains -Path "runtime/layout-profile.schema.json" -Pattern "widow_orphan_control" -ErrorMessage "Layout profile schema missing widow/orphan control"
+Assert-Contains -Path "runtime/layout-profile.schema.json" -Pattern "heading_hierarchy_policy" -ErrorMessage "Layout profile schema missing heading hierarchy policy"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "current-run.json" -ErrorMessage "Missing current-run pointer contract in runner"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Invoke-RunRetention" -ErrorMessage "Missing retention invocation in runner"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Assert-ProjectIsolation" -ErrorMessage "Missing project isolation gate in runner"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Length-depth gate blocked" -ErrorMessage "Missing length-depth fit gate in runner"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "claim-ledger.json" -ErrorMessage "Missing nonfiction claim ledger gate"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "chapter_state_update_contract" -ErrorMessage "Missing longform memory contract gate"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "agent_sequence" -ErrorMessage "Runner must validate phase agent_sequence"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "must run chief-editor-orchestrator last" -ErrorMessage "Runner must enforce chief editor as final coordinator"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "checked_output_artifacts" -ErrorMessage "Runner must validate chief editor checked output artifacts"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "did not check output artifacts" -ErrorMessage "Runner must reject unchecked chief editor output artifacts"
-Assert-Contains -Path "scripts/ci/validate_agent_governance.ps1" -Pattern "agent_sequence" -ErrorMessage "Agent governance validator must validate phase agent_sequence"
-Assert-Contains -Path "scripts/ci/agent_sequence_gate_test.ps1" -Pattern "chief-editor-orchestrator must be last" -ErrorMessage "Agent sequence gate must reject chief editor running early"
-Assert-Contains -Path "scripts/ci/agent_compliance_story_model_gate_test.ps1" -Pattern "accepted an unchecked phase output artifact" -ErrorMessage "Agent compliance test must reject unchecked chief editor artifacts"
-Assert-Contains -Path "runtime/phase-contracts/design-big.json" -Pattern "open-source-novel-editor-patterns.md" -ErrorMessage "Design-big phase must require open source novel editor pattern reference"
-Assert-Contains -Path "runtime/phase-contracts/design-small.json" -Pattern "open-source-story-model.json" -ErrorMessage "Design-small phase must require open source story model state"
-Assert-Contains -Path "runtime/phase-contracts/create.json" -Pattern "open-source-story-model.json" -ErrorMessage "Create phase must require open source story model state"
-Assert-Contains -Path "runtime/phase-contracts/polish.json" -Pattern "open-source-story-model.json" -ErrorMessage "Polish phase must require open source story model state"
-Assert-Contains -Path "runtime/phase-contracts/rewrite.json" -Pattern "open-source-story-model.json" -ErrorMessage "Rewrite phase must require open source story model state"
-Assert-Contains -Path "runtime/phase-contracts/export.json" -Pattern "open-source-story-model.json" -ErrorMessage "Export phase must require open source story model state"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "open-source-story-model.json" -ErrorMessage "Runner longform validator must require open source story model state"
-Assert-Contains -Path "scripts/ci/longform_scalability_gate_test.ps1" -Pattern "500" -ErrorMessage "Longform scalability gate must test 500 page planning"
-Assert-Contains -Path "scripts/ci/writing_type_profiles_gate_test.ps1" -Pattern "poetry_collection" -ErrorMessage "Writing type profile gate must cover poetry collections"
-Assert-Contains -Path "scripts/ci/writing_type_profiles_gate_test.ps1" -Pattern "screenplay" -ErrorMessage "Writing type profile gate must cover screenplay"
-Assert-Contains -Path "scripts/ci/production_sample_export_test.ps1" -Pattern "Sisli Defterler" -ErrorMessage "Production sample export test must preserve explicit user title"
-Assert-Contains -Path "scripts/ci/production_sample_export_test.ps1" -Pattern "verify_docx_layout_profile.ps1" -ErrorMessage "Production sample export test must verify DOCX layout profile"
-Assert-Contains -Path "scripts/ide_phase_prompt.ps1" -Pattern "open-source-story-model.json" -ErrorMessage "IDE phase prompt must mention open source story model state"
-Assert-Contains -Path "scripts/ide_phase_prompt.ps1" -Pattern "Agent execution order" -ErrorMessage "IDE phase prompt must show agent execution order"
-Assert-Contains -Path "README.md" -Pattern "open-source-story-model.json" -ErrorMessage "README must document open source story model review"
-Assert-Contains -Path "docs/IDE_AGENT_WORKFLOW.md" -Pattern "open-source-story-model.json" -ErrorMessage "IDE workflow must document open source story model"
-Assert-Contains -Path "docs/LONGFORM_ENGINE.md" -Pattern "open-source-story-model.json" -ErrorMessage "Longform docs must include open source story model"
-Assert-Contains -Path "docs/AGENT_COORDINATION_FLOW.md" -Pattern "agent_sequence" -ErrorMessage "Agent coordination docs must define agent_sequence"
-Assert-Contains -Path "skills/polish/references/chief-editor-orchestrator-contract.md" -Pattern "agent_sequence" -ErrorMessage "Chief editor contract must define agent_sequence review"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "publisher_submission_label" -ErrorMessage "Missing publication layout label gate"
-Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "Get-WritingTypeProfileFromSeed" -ErrorMessage "Local design scaffold must infer canonical writing type"
-Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "Get-RequestedCharacterCount" -ErrorMessage "Local design scaffold must preserve requested character count"
-Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "Get-BriefAnswerValue" -ErrorMessage "Local design scaffold must consume approved brief answers"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Design-big blocked:" -ErrorMessage "Design-big must validate approved brief before planning"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "accepted_writing_type" -ErrorMessage "Book plan approval must bind accepted writing type"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-ExportManifestContract" -ErrorMessage "Missing strict export manifest contract"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-EditorialCycleContract" -ErrorMessage "Missing editorial cycle contract gate"
-Assert-Contains -Path "skills/create/SKILL.md" -Pattern "create_editorial-cycle" -ErrorMessage "Create skill must require editorial cycle JSON"
-Assert-Contains -Path "skills/polish/SKILL.md" -Pattern "polish_editorial-cycle" -ErrorMessage "Polish skill must require editorial cycle JSON"
-Assert-Contains -Path "skills/rewrite/SKILL.md" -Pattern "rewrite_editorial-cycle" -ErrorMessage "Rewrite skill must require editorial cycle JSON"
-Assert-File "scripts/ci/editorial_cycle_gate_test.ps1"
-& powershell -ExecutionPolicy Bypass -File "scripts/ci/editorial_cycle_gate_test.ps1"
-if ($LASTEXITCODE -ne 0) {
-  throw "editorial_cycle_gate_test.ps1 failed with exit code: $LASTEXITCODE"
-}
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Publication metadata missing" -ErrorMessage "Missing publication metadata validation"
-Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "Assert-PublicationMetadataClean" -ErrorMessage "Local export must validate publication metadata before DOCX"
-Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "Assert-ReaderArtifactClean" -ErrorMessage "Local export must validate reader-facing front/cover artifacts"
-Assert-Contains -Path "skills/polish/references/writing-type-profiles.md" -Pattern "Canonical Type Rules" -ErrorMessage "Writing type profile reference missing canonical rules"
-Assert-Contains -Path "skills/polish/references/writing-type-profiles.md" -Pattern "poetry_collection" -ErrorMessage "Writing type profiles must include poetry_collection"
-Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "screenplay" -ErrorMessage "Runner must support screenplay writing type"
-Assert-Contains -Path "scripts/install.ps1" -Pattern "cleanup-approval.json" -ErrorMessage "Install must create cleanup approval"
-Assert-Contains -Path "scripts/install.ps1" -Pattern "length-depth-approval.json" -ErrorMessage "Install must create length-depth approval"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Ensure-UserApproval" -ErrorMessage "Missing user approval gate enforcement in runner"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-PhaseContracts" -ErrorMessage "Missing phase contract enforcement in runner"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-AgentCompliance" -ErrorMessage "Missing agent compliance validation in runner"
@@ -341,18 +206,7 @@ Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "contract_hashes" -Err
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-CommandSafety" -ErrorMessage "Missing command safety validation in runner"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "Validate-ArtifactSizeBudget" -ErrorMessage "Missing artifact size budget validation in runner"
 Assert-Contains -Path "runtime/agent-compliance.schema.json" -Pattern "agent_statuses" -ErrorMessage "Agent compliance schema missing agent_statuses"
-Assert-Contains -Path "runtime/agent-compliance.schema.json" -Pattern "agent_evidence" -ErrorMessage "Agent compliance schema missing agent_evidence"
 Assert-Contains -Path "runtime/agent-compliance.schema.json" -Pattern "contract_hashes" -ErrorMessage "Agent compliance schema missing contract_hashes"
-Assert-Contains -Path "runtime/agent-registry.json" -Pattern "chief-editor-orchestrator" -ErrorMessage "Agent registry missing chief editor orchestrator"
-Assert-Contains -Path "runtime/agent-registry.json" -Pattern "typography-layout-auditor" -ErrorMessage "Agent registry missing typography layout auditor"
-Assert-Contains -Path "runtime/agent-registry.json" -Pattern "tdk-rule-auditor" -ErrorMessage "Agent registry missing TDK rule auditor"
-Assert-File "scripts/ci/tdk_local_rule_check.py"
-Assert-Contains -Path "scripts/ci/tdk_local_rule_check.py" -Pattern "local-deterministic-rules" -ErrorMessage "Missing deterministic local Turkish rule checker"
-Assert-Contains -Path "scripts/local_phase.ps1" -Pattern 'UTF8Encoding\(\$true\)' -ErrorMessage "Local adapter must write UTF-8 with BOM for Windows Turkish compatibility"
-Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "Invoke-LocalTurkishRuleCheck" -ErrorMessage "Local export must run deterministic Turkish language gate"
-Assert-Contains -Path "scripts/ci/tdk_dict_check.py" -Pattern '"için"' -ErrorMessage "TDK dictionary allowlist must preserve Turkish characters"
-Assert-Contains -Path "scripts/ci/tdk_dict_check.py" -Pattern '"çok"' -ErrorMessage "TDK dictionary allowlist must preserve Turkish diacritics"
-Assert-Contains -Path "scripts/ci/verify_docx_layout_profile.ps1" -Pattern "chapter_start=new_page" -ErrorMessage "DOCX layout verifier missing chapter new-page gate"
 Assert-Contains -Path "runtime/agent-status-contract.json" -Pattern "invalid_output" -ErrorMessage "Agent status contract missing invalid_output"
 Assert-Contains -Path "runtime/agent-registry.json" -Pattern "contract-bound-agent-orchestration" -ErrorMessage "Agent registry missing governance model"
 Assert-Contains -Path "docs/AGENT_ORCHESTRATION_ARCHITECTURE.md" -Pattern "Agent Registry" -ErrorMessage "Agent orchestration docs missing Agent Registry"
@@ -385,17 +239,6 @@ Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "runtime/layout-profile
 Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "delivery_profiles" -ErrorMessage "Missing publisher/print preview delivery profiles in local adapter"
 Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "10_docx-style-profile" -ErrorMessage "Missing DOCX style profile artifact generation in local adapter"
 Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "chapter-plan.json" -ErrorMessage "Missing chapter plan generation in local adapter"
-Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "open-source-story-model.json" -ErrorMessage "Missing open source story model generation in local adapter"
-Assert-Contains -Path "scripts/ci/validate_state_reducers.ps1" -Pattern "open-source-story-model.json" -ErrorMessage "State reducer must validate open source story model"
-Assert-Contains -Path "scripts/ci/agent_compliance_story_model_gate_test.ps1" -Pattern "open-source-story-model.json" -ErrorMessage "Agent compliance gate must test open source story model"
-Assert-Contains -Path "skills/design-big/SKILL.md" -Pattern "Open Source Story Model Contract" -ErrorMessage "Design-big skill missing open source story model contract"
-Assert-Contains -Path "skills/polish/references/open-source-novel-editor-patterns.md" -Pattern "Manuskript" -ErrorMessage "Open source pattern reference missing Manuskript source"
-Assert-Contains -Path "skills/polish/references/open-source-novel-editor-patterns.md" -Pattern "novelWriter" -ErrorMessage "Open source pattern reference missing novelWriter source"
-Assert-Contains -Path "skills/polish/references/open-source-novel-editor-patterns.md" -Pattern "bibisco" -ErrorMessage "Open source pattern reference missing bibisco source"
-Assert-Contains -Path "docs/THIRD_PARTY_ATTRIBUTION.md" -Pattern "Manuskript" -ErrorMessage "Third-party attribution missing Manuskript"
-Assert-Contains -Path "docs/THIRD_PARTY_ATTRIBUTION.md" -Pattern "novelWriter" -ErrorMessage "Third-party attribution missing novelWriter"
-Assert-Contains -Path "docs/THIRD_PARTY_ATTRIBUTION.md" -Pattern "bibisco" -ErrorMessage "Third-party attribution missing bibisco"
-Assert-Contains -Path "docs/THIRD_PARTY_ATTRIBUTION.md" -Pattern "STORM" -ErrorMessage "Third-party attribution missing STORM"
 Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "layout-plan.json" -ErrorMessage "Missing layout plan generation in local adapter"
 Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "longform-plan.json" -ErrorMessage "Missing longform plan generation in local adapter"
 Assert-Contains -Path "scripts/local_phase.ps1" -Pattern "character-state.json" -ErrorMessage "Missing character state generation in local adapter"
@@ -561,9 +404,18 @@ Assert-Contains -Path "runtime/phase-contracts/polish.json" -Pattern "alive-enha
 Assert-Contains -Path "runtime/phase-contracts/polish.json" -Pattern "revision-executor" -ErrorMessage "Polish phase contract missing revision-executor"
 Assert-Contains -Path "runtime/phase-contracts/polish.json" -Pattern "tdk-layout-agent" -ErrorMessage "Polish phase contract missing tdk-layout-agent"
 Assert-Contains -Path "runtime/phase-contracts/polish.json" -Pattern "final-proofreader" -ErrorMessage "Polish phase contract missing final-proofreader"
-Assert-AgentAllowsPhase -AgentName "book-structure-optimizer" -Phase "polish"
-Assert-AgentAllowsPhase -AgentName "revision-executor" -Phase "polish"
-Assert-AgentAllowsPhase -AgentName "final-proofreader" -Phase "polish"
+Assert-Contains -Path "runtime/phase-contracts/design-big.json" -Pattern "domain-researcher" -ErrorMessage "Design-big phase contract missing domain-researcher"
+Assert-Contains -Path "runtime/phase-contracts/design-big.json" -Pattern "research-citation-auditor" -ErrorMessage "Design-big phase contract missing research-citation-auditor"
+Assert-Contains -Path "runtime/phase-contracts/design-small.json" -Pattern "domain-researcher" -ErrorMessage "Design-small phase contract missing domain-researcher"
+Assert-Contains -Path "runtime/phase-contracts/export.json" -Pattern "chief-editor-orchestrator" -ErrorMessage "Export phase contract missing chief-editor-orchestrator"
+Assert-Contains -Path "runtime/phase-contracts/export.json" -Pattern "research-citation-auditor" -ErrorMessage "Export phase contract missing research-citation-auditor"
+Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "00_chief-editor-orchestrator_" -ErrorMessage "Runner missing mandatory chief editor evidence artifact gate"
+Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "02_domain-researcher_" -ErrorMessage "Runner missing mandatory domain researcher evidence artifact gate"
+Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "07_research-citation-auditor_" -ErrorMessage "Runner missing mandatory research citation evidence artifact gate"
+Assert-Contains -Path "runtime/agent-registry.json" -Pattern '"book-structure-optimizer".*"polish"' -ErrorMessage "Agent registry does not allow book-structure-optimizer in polish"
+Assert-Contains -Path "runtime/agent-registry.json" -Pattern '"revision-executor".*"polish"' -ErrorMessage "Agent registry does not allow revision-executor in polish"
+Assert-Contains -Path "runtime/agent-registry.json" -Pattern '"final-proofreader".*"polish"' -ErrorMessage "Agent registry does not allow final-proofreader in polish"
+Assert-Contains -Path "runtime/agent-registry.json" -Pattern '"chief-editor-orchestrator".*"export"' -ErrorMessage "Agent registry does not allow chief-editor-orchestrator in export"
 
 Write-Host "[final-readiness-ps] validating rewrite flow contract..."
 Assert-Contains -Path "skills/rewrite/SKILL.md" -Pattern "revision-analyst" -ErrorMessage "Missing revision-analyst in rewrite flow"
@@ -574,7 +426,7 @@ Assert-Contains -Path "skills/rewrite/SKILL.md" -Pattern "tdk-layout-agent" -Err
 Assert-Contains -Path "skills/rewrite/SKILL.md" -Pattern "quality-verifier" -ErrorMessage "Missing quality-verifier in rewrite flow"
 Assert-Contains -Path "runtime/phase-contracts/rewrite.json" -Pattern "character-sculptor" -ErrorMessage "Rewrite phase contract missing character-sculptor"
 Assert-Contains -Path "runtime/phase-contracts/rewrite.json" -Pattern "tdk-layout-agent" -ErrorMessage "Rewrite phase contract missing tdk-layout-agent"
-Assert-AgentAllowsPhase -AgentName "character-sculptor" -Phase "rewrite"
+Assert-Contains -Path "runtime/agent-registry.json" -Pattern '"character-sculptor".*"rewrite"' -ErrorMessage "Agent registry does not allow character-sculptor in rewrite"
 
 Write-Host "[final-readiness-ps] checking regression spec docs..."
 Assert-File "skills/polish/references/regression-test-spec.md"

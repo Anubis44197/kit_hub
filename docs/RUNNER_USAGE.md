@@ -14,14 +14,6 @@ Important:
 
 ## 1) Install Bootstrap
 
-Create book work in a separate KitHub project, not in the application repository root:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/new_project.ps1 -Name "My Book"
-```
-
-The runner blocks manuscript phases in the `.git` application root. Use the generated project root for intake, planning, writing, revision, and export.
-
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 ```
@@ -32,24 +24,6 @@ This creates:
 - `runtime/approvals/design-freeze.json`
 - `runtime/approvals/rewrite-approval.json`
 - `runtime/approvals/export-approval.json`
-- `runtime/approvals/length-depth-approval.json`
-- `runtime/approvals/cleanup-approval.json`
-
-## Final Output and Cleanup
-
-Exporting does not remove working files. Copy the final DOCX/PDF to the user-selected location:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/export_final.ps1 -ProjectRoot "<project-root>" -DestinationDirectory "$env:USERPROFILE\Desktop"
-```
-
-To remove working files, the user must explicitly approve `runtime/approvals/cleanup-approval.json` with `approved=true` and `final_output_preserved=true`, then run:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/cleanup_project.ps1 -ProjectRoot "<project-root>"
-```
-
-Cleanup never deletes the final output copied outside the project.
 
 ## 2) Manual Mode (Default)
 
@@ -131,22 +105,7 @@ Then run:
 powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase intake -ToPhase export -Mode command
 ```
 
-## 3.1) Automatic Provider Mode
-
-Automatic provider mode is command mode with a real external model/agent CLI connected through `scripts/provider_phase.ps1`.
-
-```powershell
-Copy-Item runtime/runner-config.provider.template.json runtime/runner-config.json -Force
-$env:KITHUB_PROVIDER_EXE="your-agent-cli"
-$env:KITHUB_PROVIDER_ARGS="--project-root ""{project_root}"" --phase {phase} --run-id ""{run_id}"" --prompt-file ""{prompt_file}"""
-powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.json -FromPhase intake -ToPhase export
-```
-
-The provider wrapper writes a phase prompt under `runtime/provider-prompts/` and then calls the configured provider. The provider must write the actual required artifacts for the phase. If it does not, the normal phase-contract, agent-compliance, state, length, TDK/layout, and export gates fail.
-
-This is the correct route for fully automatic book writing. Manual IDE mode remains useful, but it must not be described as proof that autonomous writer agents executed.
-
-## 3.2) Optional Dictionary Check Layer
+## 3.1) Optional Dictionary Check Layer
 
 You can enable an additional dictionary-verification pass for Turkish text quality.
 This runs automatically after `create`, `polish`, and `rewrite` phases.

@@ -1,0 +1,42 @@
+{
+  "skill_name": "polish",
+  "trigger_threshold": 0.5,
+  "queries": [
+    {
+      "id": "polish-trigger-existing-chapters",
+      "query": "EP001 and EP002 are drafted. Run editorial polish, TDK checks, layout review, and final proofing.",
+      "should_trigger": true,
+      "reason": "The user wants post-draft correction and stabilization."
+    },
+    {
+      "id": "polish-trigger-tdk-layout",
+      "query": "Fix Turkish punctuation, dialogue spacing, and paragraph layout for the current chapter batch.",
+      "should_trigger": true,
+      "reason": "The request is language polish plus book layout normalization."
+    },
+    {
+      "id": "polish-trigger-revision-cycle",
+      "query": "Review the drafted chapter, apply corrections, and make sure revision-reviewer passes before export.",
+      "should_trigger": true,
+      "reason": "The request names correction, review, and pre-export polish gates."
+    },
+    {
+      "id": "polish-no-trigger-new-chapter",
+      "query": "Write the next chapter from the approved design plan.",
+      "should_trigger": false,
+      "reason": "New drafting belongs to create."
+    },
+    {
+      "id": "polish-no-trigger-story-options",
+      "query": "Give me three different story concepts to choose from.",
+      "should_trigger": false,
+      "reason": "Proposal generation belongs to propose."
+    },
+    {
+      "id": "polish-no-trigger-docx-package",
+      "query": "Package the final manuscript as a Word file with front matter and cover brief.",
+      "should_trigger": false,
+      "reason": "Final packaging belongs to export-word."
+    }
+  ]
+}

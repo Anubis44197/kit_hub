@@ -1,0 +1,30 @@
+{
+  "skill_name": "export-word",
+  "evals": [
+    {
+      "id": "export-approval-block",
+      "prompt": "Run export with approval=false.",
+      "expected_output": "Export is blocked before DOCX creation and reports E_EXPORT_APPROVAL with explicit missing-consent evidence.",
+      "files": [],
+      "assertions": [
+        "The verdict is BLOCKED.",
+        "The error code is E_EXPORT_APPROVAL.",
+        "book-exporter is not run.",
+        "The output does not create or claim a DOCX artifact."
+      ]
+    },
+    {
+      "id": "export-docx-integrity",
+      "prompt": "Run export with approval=true after all source and publication gates pass.",
+      "expected_output": "The export flow produces a manifest and a structurally valid DOCX with source provenance and reader-facing cleanliness checks.",
+      "files": [],
+      "assertions": [
+        "The output manifest records status EXPORTED or an equivalent successful export state.",
+        "The DOCX header is validated as a ZIP package beginning with PK.",
+        "word/document.xml exists in the DOCX archive.",
+        "The exported content is checked against current episode source snippets.",
+        "Validator metadata, run IDs, blocker lists, and publication review warnings are not inserted into reader-facing DOCX text."
+      ]
+    }
+  ]
+}

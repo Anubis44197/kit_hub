@@ -1,8 +1,7 @@
-# Expected contract - chief-editor-orchestrator
+# Chief Editor Orchestrator Golden Expected
 
-The agent produces a phase verdict with evidence references for every required specialist agent.
-
-- Unsupported PASS claims are rejected.
-- Missing specialist evidence blocks the phase.
-- Official TDK or print-ready claims require provider/layout proof.
-- The final verdict is `PASS`, `REWRITE`, or `BLOCKED`.
+Expected contract:
+- The orchestrator does not write manuscript text.
+- The orchestrator checks required phase agents, handoff chain, approvals, target metrics, state ledgers, TDK/layout reports, and quality-verifier evidence.
+- Missing handoff evidence, missing state updates, stale design hashes, or unsupported PASS claims must produce `BLOCKED` or `REWRITE`.
+- A valid PASS must name checked artifacts and confirm that the chapter remains inside `create-plan.json` target bounds.

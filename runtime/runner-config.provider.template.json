@@ -80,8 +80,8 @@
     }
   },
   "notes": [
-    "Automatic provider mode requires KITHUB_PROVIDER_EXE to point to a real model/agent CLI.",
-    "Optional KITHUB_PROVIDER_ARGS may override arguments and can use {project_root}, {phase}, {run_id}, and {prompt_file}.",
+    "Automatic provider mode requires a configured API provider through Studio settings.",
+    "scripts/provider_phase.ps1 writes only inside the project root and must return contract-compliant artifacts.",
     "If the provider does not produce required artifacts, phase contracts and agent compliance gates fail.",
     "No phase may claim completed autonomous writing without execution_claim_mode=executed evidence."
   ]

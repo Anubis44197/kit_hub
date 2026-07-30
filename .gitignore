@@ -3,8 +3,7 @@ _workspace/
 .DS_Store
 claudedocs/
 .omx/
-.tmp/
-test-run-*/
+_github_push_*/
 
 # Generated book/project outputs. Keep source control clean so agents do not
 # mistake stale smoke-test artifacts for the current manuscript.

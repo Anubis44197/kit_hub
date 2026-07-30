@@ -14,12 +14,13 @@ Big-design outputs must already exist and `runtime/approvals/book-plan-approval.
 
 ## Flow
 1. Validate target chapter range against `revision/_state/chapter-plan.json`.
-2. Load and obey `revision/_state/book-plan.json`, `revision/_state/open-source-story-model.json`, `revision/_state/story-bible.json`, `revision/_state/layout-plan.json`, `revision/_state/longform-plan.json`, `revision/_state/character-state.json`, `revision/_state/plot-ledger.json`, `revision/_state/continuity-ledger.json`, `revision/_state/chapter-continuity-chain.json`, and `revision/_state/context-saliency-map.json`.
+2. Load and obey `revision/_state/book-plan.json`, `revision/_state/layout-plan.json`, `revision/_state/longform-plan.json`, `revision/_state/character-state.json`, `revision/_state/plot-ledger.json`, and `revision/_state/continuity-ledger.json`.
 3. Run focused domain research only when source artifacts will be recorded; otherwise do not claim research.
 4. Orchestrate:
-   - character-architect (detail mode)
+   - episode-architect
+   - continuity-bridge
    - plot-hook-engineer (detail mode)
-   - context-saliency-gate (chapter context selection)
+   - domain-researcher
 5. Validate internal consistency and cause-effect continuity.
 6. Save detailed docs and update `novel-config.md` range mapping.
 
@@ -30,16 +31,11 @@ Big-design outputs must already exist and `runtime/approvals/book-plan-approval.
 - Every scene/chapter detail must advance plot, character, or theme.
 - No reader-facing title may be `EP001`, `Scene 1`, `Sahne 1`, or another technical label.
 - Character knowledge must not exceed `character-state.json`.
-- Scene cards must obey `open-source-story-model.json` outline, character, plot, world, cross-reference, and export models.
-- Chapter cards must obey `story-bible.json`, `chapter-continuity-chain.json`, and `context-saliency-map.json`.
-- Do not pass the full raw Story Bible to writer agents; select only chapter-relevant visible context.
 
 ## Outputs
 - `design/*_character-detail_{range}.md`
 - `design/*_plot-detail_{range}.md`
 - `design/*scene_plan*.md`
 - updated `novel-config.md`
-- updated `revision/_state/chapter-continuity-chain.json`
-- updated `revision/_state/context-saliency-map.json`
-- `revision/_workspace/context-saliency-gate_{range}.json`
-- `revision/_workspace/context-saliency-gate_{range}.md`
+- `revision/_workspace/02_domain-researcher_design-small.md`
+- `revision/_workspace/02_domain-researcher_design-small.json`

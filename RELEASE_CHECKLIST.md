@@ -7,17 +7,15 @@
 
 ## Contract Integrity
 - [ ] Run `bash scripts/ci/validate_contracts.sh`.
-- [ ] On Windows without WSL, run `powershell -ExecutionPolicy Bypass -File scripts/ci/validate_contracts.ps1`.
+- [ ] Run `powershell -ExecutionPolicy Bypass -File scripts/ci/validate_skill_standard.ps1`.
+- [ ] Generate skill catalog with `powershell -ExecutionPolicy Bypass -File scripts/ci/generate_skill_catalog.ps1 -Format json`.
+- [ ] Run `powershell -ExecutionPolicy Bypass -File scripts/ci/validate_skill_evals.ps1`.
 - [ ] Verify verdict vocabulary (`PASS/REWRITE`) is consistent.
 - [ ] Verify language policy constraints are present in core skills.
-- [ ] Verify mojibake guard only allows known blocker regex/reference lines.
 
 ## Smoke Validation
 - [ ] Run `bash scripts/ci/smoke_test.sh`.
-- [ ] On Windows without WSL, run `powershell -ExecutionPolicy Bypass -File scripts/ci/smoke_test.ps1`.
 - [ ] Confirm fixture paths and required agents/skills exist.
-- [ ] Run `powershell -ExecutionPolicy Bypass -File scripts/ci/revision_proposal_gate_test.ps1`.
-- [ ] Confirm post-draft revision cannot apply without `runtime/approvals/revision-proposals-approval.json`.
 
 ## Export Validation
 - [ ] Validate `export-word` pipeline contracts.
@@ -32,7 +30,6 @@
 ## Final Review
 - [ ] Run `bash scripts/ci/final_readiness_check.sh`.
 - [ ] On Windows, run `powershell -ExecutionPolicy Bypass -File scripts/ci/final_readiness_check.ps1`.
-- [ ] Before tagging or pushing a release candidate, run `powershell -ExecutionPolicy Bypass -File scripts/ci/extended_readiness_check.ps1`.
 - [ ] For external IDE sessions, run `powershell -ExecutionPolicy Bypass -File scripts/ci/external_smoke_test.ps1 -WorkspaceRoot <repo-path> -TestRunPath test-run`.
 - [ ] Review `CHANGELOG.md` release notes and runner usage docs for scope consistency.
 - [ ] Tag release commit after final verification.

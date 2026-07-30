@@ -27,7 +27,7 @@
     },
     "typography": {
       "type": "object",
-      "required": ["body_style", "chapter_title_style", "paragraph_first_line_indent_cm", "paragraph_spacing_after_pt", "justification"],
+      "required": ["body_style", "chapter_title_style", "paragraph_first_line_indent_cm", "paragraph_spacing_after_pt", "justification", "widow_orphan_control", "heading_hierarchy_policy", "chapter_start_policy", "running_header_policy"],
       "additionalProperties": true
     },
     "front_matter": { "type": "object" },

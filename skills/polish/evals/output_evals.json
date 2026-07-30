@@ -1,0 +1,29 @@
+{
+  "skill_name": "polish",
+  "evals": [
+    {
+      "id": "polish-contract-artifacts",
+      "prompt": "Polish EP001 in book mode after create produced a draft.",
+      "expected_output": "The polish flow creates diagnostic, correction, TDK, layout, reviewer, and proof artifacts before canonical writeback.",
+      "files": [],
+      "assertions": [
+        "The output includes rule-checker, story-analyst, book-structure-optimizer, developmental-editor, continuity-editor, line-editor, copy-editor, tdk-polisher, tdk-layout-agent, revision-reviewer, and final-proofreader where required.",
+        "revision-reviewer does not run before TDK issue/report artifacts exist.",
+        "Canonical text source follows book_mode rules.",
+        "Reports include run_id and polish step_id metadata."
+      ]
+    },
+    {
+      "id": "polish-mojibake-blocker",
+      "prompt": "Polish a chapter containing mojibake such as yalnÄ±z and Ã§ok.",
+      "expected_output": "The polish workflow reports mojibake as a blocking Turkish text quality issue and does not mark the chapter print-ready until repaired.",
+      "files": [],
+      "assertions": [
+        "The output detects invalid Turkish encoding symptoms.",
+        "The issue is reported as a quality blocker.",
+        "The output does not silently normalize unknown text without evidence.",
+        "The final verdict is not PASS while mojibake remains."
+      ]
+    }
+  ]
+}

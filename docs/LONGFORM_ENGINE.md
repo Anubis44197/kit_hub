@@ -9,11 +9,7 @@ Long books are produced as a controlled sequence of chapters with persistent sta
 All longform runs must keep these files under `revision/_state/`:
 
 - `book-plan.json`: user prompt, selected direction, working title, writing type, genre, theme, premise, point of view, tense, characters, plot arc, and approval requirement.
-- `open-source-story-model.json`: Manuskript, novelWriter, bibisco, and STORM-inspired outline, character, plot, world, cross-reference, research, and export model for the current book.
-- `story-bible.json`: source-of-truth book memory for premise, genre, style, synopsis, characters, worldbuilding, outline, and visibility rules.
 - `chapter-plan.json`: one reader-facing plan entry per chapter, including title, purpose, events, character focus, continuity promises, and target words.
-- `chapter-continuity-chain.json`: ordered chapter links so each chapter continues from the approved prior chapter unless a nonlinear exception is explicitly approved.
-- `context-saliency-map.json`: chapter-specific visible context; writer agents must not receive unrelated old projects, future-only reveals, stale test content, or full raw Story Bible dumps.
 - `layout-plan.json`: trim size, font, line spacing, indentation, words-per-page estimate, page target, word target, chapter target, and chapter start policy.
 - `longform-plan.json`: target pages, target words, target chapters, act map, chapter purposes.
 - `character-state.json`: stable traits, current knowledge, secrets, relationships, and arc position.
@@ -34,9 +30,8 @@ All longform runs must keep these files under `revision/_state/`:
 - Writing cannot start immediately after a simple prompt. `design-big` first produces the book, chapter, and layout plans, then `design-small` is blocked until `runtime/approvals/book-plan-approval.json` is approved by the user.
 - Generate in small batches, preferably 1-3 chapters at a time.
 - Batch size is scale-aware: short work may allow 3 chapters per batch; long 300-500+ page novels should usually write 1 chapter per batch.
-- Before each chapter, load the longform state files, `open-source-story-model.json`, `story-bible.json`, `chapter-continuity-chain.json`, `context-saliency-map.json`, and the current chapter plan.
+- Before each chapter, load the longform state files and the current chapter plan.
 - After each chapter, update character state, plot ledger, chapter summary, continuity ledger, world state, relationship graph, knowledge graph, promise/payoff ledger, timeline, and theme ledger.
-- Before manuscript drafting or rewriting, `context-saliency-gate` must produce a chapter-range report in `revision/_workspace/` and confirm that only selected visible context reaches the writer agent.
 - Each `chapter-summaries.json` entry must include `previous_chapter_result`, `new_event`, `new_information`, `irreversible_change`, `next_causal_link`, and `state_updates`.
 - Never let a character use information that is absent from `character-state.json`.
 - Never let a character use information that is absent from `knowledge-graph.json`.
@@ -54,21 +49,6 @@ The user may ask for 10 pages, 270 pages, 390 pages, 500 pages, or another lengt
 - `epic_longform`: 301+ pages, 5 acts, usually 1 chapter per batch, audit every 10 chapters.
 
 `volume-plan.json` is the source of truth for scale tier, target pages, target words, target chapters, batch size, and macro continuity audit schedule.
-
-## Length Fulfillment Gate
-
-The runner must verify the manuscript against the approved plan, not against what the LLM claims it finished.
-
-For `create`, `polish`, and `rewrite`, every existing chapter must meet its planned chapter word budget closely enough to count as a completed chapter. If a chapter is short, the correct action is to continue that chapter, not to mark it complete.
-
-For `export`, the manuscript must satisfy all of these conditions:
-
-- all planned chapter ids from `chapter-plan.json` exist under `episode/`
-- written chapter count is at least `target_chapters`
-- total manuscript words meet the configured completion ratio for `target_words`
-- estimated pages from `volume-plan.json.words_per_page_estimate` meet the configured completion ratio for `target_pages`
-
-This prevents a 50, 100, 245, or 500 page request from being silently compressed into a short three-part story because of a single model response limit.
 
 ## Long Book Targets
 
@@ -116,7 +96,6 @@ For `create`, `polish`, and `rewrite`, the runner also blocks outputs that look 
 - `relationship-graph.json` must prevent sudden relationship changes without a causing chapter.
 - Repeated paragraph openings inside the same episode are rejected.
 - Duplicate-line ratio is checked so repeated dialogue or transition text cannot pass as a finished chapter.
-- `context-saliency-map.json` entries are rejected when they allow full raw Story Bible access or reference chapters outside `chapter-plan.json`.
 
 These gates are not a replacement for literary editing. They are hard safety rails: if an agent ignores the longform state files or keeps reusing the same scene scaffold, the run fails instead of exporting a misleading DOCX.
 

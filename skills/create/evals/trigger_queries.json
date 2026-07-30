@@ -1,0 +1,42 @@
+{
+  "skill_name": "create",
+  "trigger_threshold": 0.5,
+  "queries": [
+    {
+      "id": "create-trigger-chapter-from-approved-plan",
+      "query": "The book plan is approved. Write chapter 3 using the existing design docs and keep the quality gates active.",
+      "should_trigger": true,
+      "reason": "The user wants chapter drafting from approved design state."
+    },
+    {
+      "id": "create-trigger-manual-ide-phase",
+      "query": "Runner paused at create phase. Generate the required EP001 chapter artifacts in the workspace.",
+      "should_trigger": true,
+      "reason": "The request names the create phase and required chapter artifacts."
+    },
+    {
+      "id": "create-trigger-canonical-writeback",
+      "query": "Draft EP002, run TDK and layout gates, then write the canonical episode file only if verifier passes.",
+      "should_trigger": true,
+      "reason": "The workflow is create plus mandatory polish/layout/verifier gates."
+    },
+    {
+      "id": "create-no-trigger-export-docx",
+      "query": "The manuscript is finished. Export the validated book package to DOCX.",
+      "should_trigger": false,
+      "reason": "DOCX packaging belongs to export-word, not create."
+    },
+    {
+      "id": "create-no-trigger-brief-interview",
+      "query": "Ask me the missing questions before any planning or writing starts.",
+      "should_trigger": false,
+      "reason": "Pre-writing interview belongs to intake."
+    },
+    {
+      "id": "create-no-trigger-structural-rewrite",
+      "query": "Chapter 7 conflicts with the new design. Rewrite it and re-verify the affected continuity.",
+      "should_trigger": false,
+      "reason": "Design-impact rewriting belongs to rewrite."
+    }
+  ]
+}

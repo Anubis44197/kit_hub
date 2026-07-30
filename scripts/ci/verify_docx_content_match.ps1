@@ -81,9 +81,8 @@ function Get-SourceSnippets {
   return $snippets
 }
 
-$manifestFull = Resolve-ProjectPath -Path $ManifestPath
-Ensure-File $manifestFull
-$manifest = Read-Utf8 -Path $manifestFull | ConvertFrom-Json
+Ensure-File $ManifestPath
+$manifest = Read-Utf8 -Path $ManifestPath | ConvertFrom-Json
 foreach ($field in @("source_files","output_docx_path")) {
   if (-not ($manifest.PSObject.Properties.Name -contains $field)) {
     throw "Export manifest missing '$field': $ManifestPath"

@@ -51,6 +51,7 @@ Rules:
 - Follow agent_sequence exactly.
 - Write only allowed output roots for the phase.
 - Emit runtime/agent-compliance/$Phase.json with concrete agent evidence.
+- Emit mandatory per-agent evidence reports when required by the phase: chief editor, domain researcher, and research citation auditor reports under revision/_workspace/.
 - For create/polish/rewrite, update all required state ledgers.
 - For export, do not invent missing manuscript, front matter, cover, or publication data.
 - Never claim official TDK/web/source research without source artifacts.

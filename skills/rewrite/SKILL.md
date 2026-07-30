@@ -10,18 +10,31 @@ prompt_version: "1.0.0"
 Apply structural rewrites after design changes.
 
 ## Pipeline
-1. Divergence analysis (`revision-analyst`)
-2. Context selection (`context-saliency-gate`)
-3. Character impact review (`character-sculptor`)
-4. Rewrite execution (`episode-rewriter`)
-5. Turkish language and book-mode polish (`tdk-polisher`, REWRITE mode) [mandatory]
-6. Book layout normalization (`tdk-layout-agent`) [mandatory when `book_mode.enabled=true`]
-7. Verification (`quality-verifier`, REWRITE mode)
-8. Retry loop (bounded)
-9. Mark rewritten episodes for re-polish
+1. Divergence analysis (`revision-analyst` + `character-sculptor`)
+2. Rewrite execution (`episode-rewriter`)
+3. Turkish language and book-mode polish (`tdk-polisher`, REWRITE mode) [mandatory]
+4. Book layout normalization (`tdk-layout-agent`) [mandatory when `book_mode.enabled=true`]
+5. Verification (`quality-verifier`, REWRITE mode)
+6. Retry loop (bounded)
+7. Mark rewritten episodes for re-polish
 
 ## Config Source
 - `novel-config.md`
+- `revision/_state/design-hashes.json` is the approved design baseline.
+- `revision/_state/create-plan.json` is the chapter production board and must be updated when rewritten chapters change status.
+
+## Design Change Impact Gate
+Before rewriting story text, compare the approved design baseline against the current design/state files.
+
+If any approved design source changed, emit `revision/_workspace/rewrite-impact-report.json` with:
+- `run_id`
+- `changed_design_sources`
+- `affected_chapters`
+- `impact_level` (`CRITICAL` | `MAJOR` | `MINOR`)
+- `required_actions`
+- `verdict` (`REWRITE_REQUIRED` | `NO_REWRITE_REQUIRED`)
+
+No rewritten chapter may be accepted without this report when design drift exists.
 
 ## Language Policy
 - Chapter/story content language must be Turkish.
@@ -64,13 +77,6 @@ Apply structural rewrites after design changes.
   - `skills/polish/references/handoff-contract.md`
 
 ## Final Episode Writeback Rule (Mandatory)
-- Proposal-first revision is mandatory before any user-requested post-draft rewrite.
-- First run `scripts/revision_proposals.ps1` or produce equivalent artifacts:
-  - `revision/_workspace/draft-v1-lock.json`
-  - `revision/_workspace/revision-proposals.json`
-  - `revision/_workspace/revision-proposals.md`
-- Do not overwrite `episode/epNNN.md` until `runtime/approvals/revision-proposals-approval.json` explicitly approves the exact proposal id.
-- Replacement text must be written under `revision/_workspace/proposed/` and applied only through `scripts/apply_revision.ps1` or an equivalent audited apply step.
 - If `book_mode.enabled=true`, canonical final text source is:
   - `{WORK_DIR}/_workspace/09_tdk-layout_bookmode_EP{NNN}.md`
 - If `book_mode.enabled=false`, canonical final text source is:
@@ -78,21 +84,11 @@ Apply structural rewrites after design changes.
 - Orchestrator must write canonical text back to:
   - `episode/epNNN.md`
 
-## Open Source Story Model Contract
-- `revision/_state/open-source-story-model.json` is mandatory before rewrite.
-- Rewrite agents must preserve its outline, character, plot, world, cross-reference, research and export models unless the user explicitly approves a plan change.
-- Any rewrite that changes character knowledge, relationship state, plot promises, settings, source claims or scene order must update the matching state ledger in the same phase.
-
-## Context Saliency Contract
-- `revision/_state/story-bible.json`, `revision/_state/chapter-continuity-chain.json`, and `revision/_state/context-saliency-map.json` are mandatory before rewrite.
-- Rewrites may use only chapter-relevant visible context selected by `context-saliency-gate`.
-- Rewrites may not introduce future-only reveals, unplanned character knowledge, stale sample text, unrelated project material, or raw full Story Bible dumps.
-- `context-saliency-gate` must run before `episode-rewriter` whenever the rewrite changes plot, character behavior, knowledge, setting, or causal continuity.
-
 ## Mandatory Artifact Gates
 - Do not run `quality-verifier` before `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` exist.
 - If `book_mode.enabled=true`, do not run `quality-verifier` before `09_tdk-layout_issues_EP{NNN}.json` and `09_tdk-layout_report_EP{NNN}.md` exist.
-- Do not accept `PASS` unless `revision/_workspace/rewrite_editorial-cycle_EP{RANGE}.json` exists and follows `skills/polish/references/editorial-cycle-schema.md`.
+- Do not accept `PASS` if the rewritten chapter word count is outside the `min_words` / `max_words` range in `revision/_state/create-plan.json`.
+- Do not accept `PASS` if `revision/_workspace/rewrite-impact-report.json` is required but missing.
 - If any mandatory artifact is missing, stop with explicit artifact-missing error.
 
 ## Outputs
@@ -100,6 +96,5 @@ Apply structural rewrites after design changes.
 - mandatory TDK polisher outputs (`08_tdk-polisher_*`)
 - mandatory layout outputs when book mode is enabled (`09_tdk-layout_*`)
 - rewrite reports/logs/plans
-- editorial cycle JSON report (`rewrite_editorial-cycle_EP{RANGE}.json`)
 - unified rewrite report schema:
   - `skills/rewrite/references/rewrite-report-unified-schema.md`

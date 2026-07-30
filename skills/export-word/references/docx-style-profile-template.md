@@ -20,18 +20,17 @@ docx_style_profile:
     size: "A5"            # A5 | A4 | custom
     width_mm: 148
     height_mm: 210
-    margin_top_mm: 18
+    margin_top_mm: 20
     margin_bottom_mm: 20
-    margin_inside_mm: 20
-    margin_outside_mm: 16
+    margin_inside_mm: 18
+    margin_outside_mm: 18
   typography:
-    font_family: "Garamond"
-    font_size_pt: 11.5
+    font_family: "Times New Roman"
+    font_size_pt: 11
     line_spacing: 1.15
-    paragraph_first_line_indent_cm: 0.55
+    paragraph_first_line_indent_cm: 0.6
     paragraph_spacing_after_pt: 0
     justification: "both"
-    first_paragraph_after_chapter_indent_cm: 0
   headings:
     chapter_prefix: ""
     chapter_title_style: "KitHubChapterTitle"

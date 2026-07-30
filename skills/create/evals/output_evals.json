@@ -1,0 +1,29 @@
+{
+  "skill_name": "create",
+  "evals": [
+    {
+      "id": "create-contract-gated-chapter",
+      "prompt": "Create EP001 from an approved book plan with book_mode.enabled=true.",
+      "expected_output": "A chapter draft is produced only through create -> tdk-polisher -> tdk-layout-agent -> quality-verifier, with canonical writeback from the layout artifact after PASS.",
+      "files": [],
+      "assertions": [
+        "The output records run_id and create step_id metadata.",
+        "The flow includes episode-architect, continuity-bridge, episode-creator, tdk-polisher, tdk-layout-agent, and quality-verifier.",
+        "Canonical episode text is written from 09_tdk-layout_bookmode_EP001.md when book_mode.enabled=true.",
+        "Any REWRITE verdict blocks canonical writeback."
+      ]
+    },
+    {
+      "id": "create-request-compliance-failure",
+      "prompt": "Create EP002 with a request_contract that requires first-person narration and no fantasy elements.",
+      "expected_output": "The quality verifier treats request_contract as a hard axis and returns REWRITE if the draft violates required narration or content constraints.",
+      "files": [],
+      "assertions": [
+        "The output checks REQUEST_COMPLIANCE explicitly.",
+        "The verifier reports concrete evidence for any mismatch.",
+        "A request mismatch prevents PASS.",
+        "The output avoids inventing approval for unresolved user constraints."
+      ]
+    }
+  ]
+}

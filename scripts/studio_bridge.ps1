@@ -336,6 +336,238 @@ function Save-ProviderSettings {
   }
 }
 
+function Get-ChatTextFromProviderResponse {
+  param([object]$Response, [string]$Provider)
+  if ($Provider -eq "anthropic") {
+    return ((@($Response.content) | ForEach-Object { [string]$_.text }) -join "`n").Trim()
+  }
+  if ($Provider -eq "gemini") {
+    return ((@($Response.candidates[0].content.parts) | ForEach-Object { [string]$_.text }) -join "`n").Trim()
+  }
+  return ([string]$Response.choices[0].message.content).Trim()
+}
+
+function Invoke-ProviderTextRewrite {
+  param(
+    [object]$Settings,
+    [string]$ApiKey,
+    [string]$Prompt,
+    [int]$MaxTokens = 1200
+  )
+
+  $provider = [string]$Settings.provider
+  $model = [string]$Settings.model
+  $baseUrl = [string]$Settings.baseUrl
+  if (-not $model.Trim()) { throw "API model is required." }
+  if (-not $ApiKey.Trim()) { throw "API key is required." }
+  if (-not $baseUrl.Trim()) {
+    if ($provider -eq "anthropic") { $baseUrl = "https://api.anthropic.com/v1/messages" }
+    elseif ($provider -eq "gemini") { $baseUrl = "https://generativelanguage.googleapis.com/v1beta" }
+    elseif ($provider -eq "openrouter") { $baseUrl = "https://openrouter.ai/api/v1/chat/completions" }
+    else { $baseUrl = "https://api.openai.com/v1/chat/completions" }
+  }
+
+  if ($provider -eq "anthropic") {
+    $headers = @{ "x-api-key" = $ApiKey; "anthropic-version" = "2023-06-01"; "content-type" = "application/json" }
+    $body = @{ model = $model; max_tokens = $MaxTokens; messages = @(@{ role = "user"; content = $Prompt }) } | ConvertTo-Json -Depth 20
+    return Invoke-RestMethod -Method Post -Uri $baseUrl -Headers $headers -Body $body -TimeoutSec 120
+  }
+  if ($provider -eq "gemini") {
+    $uri = "$($baseUrl.TrimEnd('/'))/models/$model`:generateContent?key=$ApiKey"
+    $body = @{ contents = @(@{ parts = @(@{ text = $Prompt }) }) } | ConvertTo-Json -Depth 20
+    return Invoke-RestMethod -Method Post -Uri $uri -ContentType "application/json" -Body $body -TimeoutSec 120
+  }
+
+  $headers = @{ Authorization = "Bearer $ApiKey"; "content-type" = "application/json" }
+  if ($provider -eq "openrouter") {
+    $headers["HTTP-Referer"] = "http://127.0.0.1:8765"
+    $headers["X-Title"] = "KitHub Studio"
+  }
+  $body = @{
+    model = $model
+    temperature = 0.25
+    max_tokens = $MaxTokens
+    messages = @(
+      @{ role = "system"; content = "You are KitHub Studio's Turkish manuscript editor. Return only the revised passage. Do not add headings, explanations, markdown fences, file names, scene labels, or technical notes." },
+      @{ role = "user"; content = $Prompt }
+    )
+  } | ConvertTo-Json -Depth 20
+  return Invoke-RestMethod -Method Post -Uri $baseUrl -Headers $headers -Body $body -TimeoutSec 120
+}
+
+function Assert-LiveEditSuggestionClean {
+  param([string]$Text)
+  if (-not $Text.Trim()) { throw "Live edit returned empty text." }
+  $blocked = @('```', 'EP001', 'SCENE', 'Sahne 1', 'Ajan notu', 'Yayin notu', 'runtime/', 'revision/', 'episode/')
+  foreach ($item in $blocked) {
+    if ($Text -match [regex]::Escape($item)) {
+      throw "Live edit rejected: suggestion contains technical/control marker '$item'."
+    }
+  }
+}
+
+function Invoke-LiveEditRewrite {
+  param([object]$Payload)
+
+  $text = [string]$Payload.text
+  $instruction = [string]$Payload.instruction
+  $context = [string]$Payload.context
+  $projectRoot = ""
+  if ($Payload.projectRoot) {
+    $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  }
+  if (-not $text.Trim()) { throw "Live edit text is required." }
+  if ($text.Length -gt 12000) { throw "Live edit text is too long. Select a smaller passage." }
+  if (-not $instruction.Trim()) { $instruction = "Metni TDK, akicilik ve kitap dili acisindan duzelt." }
+
+  $providerSettings = Read-Utf8JsonIfExists -Path (Get-ProviderSettingsPath)
+  if (-not $providerSettings) { throw "API mode blocked: provider settings are not saved." }
+  $protectedKey = [string]$providerSettings.apiKeyProtected
+  if (-not $protectedKey.Trim()) { throw "API mode blocked: API key is missing." }
+  $apiKey = Unprotect-ProviderSecret -ProtectedSecret $protectedKey
+
+  $prompt = @"
+GOREV: Secili Turkce metni kullanici onayina sunulacak bir oneri olarak duzelt.
+
+KURAL:
+- Sadece duzeltilmis metni dondur.
+- Aciklama, baslik, madde listesi, kod blogu, dosya yolu, EP/scene etiketi yazma.
+- Anlami, olay sirasini, karakter bilgisini ve anlatici bakisini bozma.
+- Turkce karakterleri koru; bozuk karakter uretme.
+- TDK noktalama/bosluk ve kitap dili temizligine dikkat et.
+
+KULLANICI KOMUTU:
+$instruction
+
+BAGLAM:
+$context
+
+METIN:
+$text
+"@
+
+  $response = Invoke-ProviderTextRewrite -Settings $providerSettings -ApiKey $apiKey -Prompt $prompt
+  $suggestion = Get-ChatTextFromProviderResponse -Response $response -Provider ([string]$providerSettings.provider)
+  Assert-LiveEditSuggestionClean -Text $suggestion
+
+  $artifact = $null
+  if ($projectRoot.Trim()) {
+    $workspace = Join-Path $projectRoot "revision/_workspace"
+    if (-not (Test-Path -LiteralPath $workspace -PathType Container)) {
+      New-Item -ItemType Directory -Path $workspace -Force | Out-Null
+    }
+    $id = (Get-Date).ToString("yyyyMMdd-HHmmss")
+    $artifact = "revision/_workspace/live-edit-$id.json"
+    Write-Utf8Json -Path (Join-Path $projectRoot ($artifact -replace "/", "\")) -Value ([ordered]@{
+      schema_version = "1.0.0"
+      created_at = (Get-Date).ToString("o")
+      provider = [string]$providerSettings.provider
+      model = [string]$providerSettings.model
+      instruction = $instruction
+      context = $context
+      source_text = $text
+      suggestion = $suggestion
+      applied = $false
+      approval_required = $true
+    })
+  }
+
+  return [ordered]@{
+    ok = $true
+    provider = [string]$providerSettings.provider
+    model = [string]$providerSettings.model
+    suggestion = $suggestion
+    artifact = $artifact
+  }
+}
+
+function Confirm-LiveEditApplied {
+  param([object]$Payload)
+
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $artifact = [string]$Payload.artifact
+  if (-not $artifact.Trim()) {
+    return [ordered]@{ ok = $true; updated = $false; reason = "no artifact" }
+  }
+  $path = Resolve-ProjectChildPath -ProjectRoot $projectRoot -RelativePath $artifact
+  $record = Read-Utf8JsonIfExists -Path $path
+  if (-not $record) { throw "Live edit artifact not found: $artifact" }
+  $record | Add-Member -NotePropertyName applied -NotePropertyValue $true -Force
+  $record | Add-Member -NotePropertyName applied_at -NotePropertyValue (Get-Date).ToString("o") -Force
+  $record | Add-Member -NotePropertyName applied_by -NotePropertyValue "KitHub Studio user approval" -Force
+  if ($Payload.chapter) {
+    $record | Add-Member -NotePropertyName chapter -NotePropertyValue ([string]$Payload.chapter) -Force
+  }
+  Write-Utf8Json -Path $path -Value $record
+  return [ordered]@{ ok = $true; updated = $true; artifact = $artifact }
+}
+
+function Import-DocxText {
+  param([object]$Payload)
+
+  $filename = [string]$Payload.filename
+  $contentBase64 = [string]$Payload.contentBase64
+  if (-not $filename.Trim().ToLowerInvariant().EndsWith(".docx")) {
+    throw "Only .docx files are supported."
+  }
+  if (-not $contentBase64.Trim()) {
+    throw "DOCX content is missing."
+  }
+
+  Add-Type -AssemblyName System.IO.Compression | Out-Null
+  Add-Type -AssemblyName System.IO.Compression.FileSystem | Out-Null
+  $bytes = [System.Convert]::FromBase64String($contentBase64)
+  if ($bytes.Length -gt (8 * 1024 * 1024)) {
+    throw "DOCX file is too large for Studio import."
+  }
+
+  $memory = [System.IO.MemoryStream]::new($bytes)
+  $archive = $null
+  try {
+    $archive = [System.IO.Compression.ZipArchive]::new($memory, [System.IO.Compression.ZipArchiveMode]::Read)
+    $entry = $archive.GetEntry("word/document.xml")
+    if (-not $entry) {
+      throw "DOCX document body was not found."
+    }
+    $reader = [System.IO.StreamReader]::new($entry.Open(), [System.Text.Encoding]::UTF8)
+    try {
+      $documentXml = $reader.ReadToEnd()
+    }
+    finally {
+      $reader.Dispose()
+    }
+
+    $doc = [System.Xml.XmlDocument]::new()
+    $doc.PreserveWhitespace = $true
+    $doc.LoadXml($documentXml)
+    $paragraphs = @()
+    foreach ($paragraphNode in @($doc.GetElementsByTagName("w:p"))) {
+      $parts = @()
+      foreach ($textNode in @($paragraphNode.GetElementsByTagName("w:t"))) {
+        if ($null -ne $textNode.InnerText) {
+          $parts += [string]$textNode.InnerText
+        }
+      }
+      $paragraph = (($parts -join "") -replace "\s+", " ").Trim()
+      if ($paragraph) {
+        $paragraphs += $paragraph
+      }
+    }
+    $text = ($paragraphs -join "`r`n`r`n").Trim()
+    return [ordered]@{
+      ok = $true
+      filename = $filename
+      text = $text
+      paragraphs = @($paragraphs).Count
+      words = Get-WordCount -Text $text
+    }
+  }
+  finally {
+    if ($archive) { $archive.Dispose() }
+    $memory.Dispose()
+  }
+}
+
 function Get-WordCount {
   param([string]$Text)
   if (-not $Text.Trim()) { return 0 }
@@ -580,6 +812,106 @@ function Get-ChapterHeatmap {
   return $items
 }
 
+function Get-AgentFlowSummary {
+  param([string]$ProjectRoot)
+
+  $phaseOrder = @("intake", "propose", "design-big", "design-small", "create", "polish", "rewrite", "export")
+  $phaseLabels = @{
+    "intake" = "Baslangic"
+    "propose" = "Oneri"
+    "design-big" = "Buyuk Plan"
+    "design-small" = "Bolum Plani"
+    "create" = "Yazim"
+    "polish" = "Editor"
+    "rewrite" = "Revizyon"
+    "export" = "Yayin"
+  }
+  $contractsDir = Join-Path $RepoRoot "runtime/phase-contracts"
+  $complianceDir = Join-Path $ProjectRoot "runtime/agent-compliance"
+  $items = @()
+  $phaseItems = @()
+  $total = 0
+  $completed = 0
+  $blocked = 0
+  $review = 0
+
+  foreach ($phase in $phaseOrder) {
+    $contractPath = Join-Path $contractsDir "$phase.json"
+    $contract = Read-Utf8JsonIfExists -Path $contractPath
+    if (-not $contract) { continue }
+
+    $manifestPath = Join-Path $complianceDir "$phase.json"
+    $manifest = Read-Utf8JsonIfExists -Path $manifestPath
+    $manifestStatusByAgent = @{}
+    $manifestNotesByAgent = @{}
+    if ($manifest -and $manifest.PSObject.Properties.Name -contains "agent_statuses") {
+      foreach ($statusItem in @($manifest.agent_statuses)) {
+        $agentName = [string]$statusItem.agent
+        if (-not $agentName.Trim()) { continue }
+        $key = $agentName.ToLowerInvariant()
+        $manifestStatusByAgent[$key] = [string]$statusItem.status
+        $manifestNotesByAgent[$key] = [string]$statusItem.notes
+      }
+    }
+
+    $phaseRequired = @($contract.required_agents)
+    $phaseDone = 0
+    $phaseBlocked = 0
+    foreach ($agentName in $phaseRequired) {
+      $total++
+      $agentKey = ([string]$agentName).ToLowerInvariant()
+      $rawStatus = if ($manifestStatusByAgent.ContainsKey($agentKey)) { $manifestStatusByAgent[$agentKey] } else { "" }
+      $state = "idle"
+      if ($rawStatus -eq "completed") {
+        $state = "done"
+        $completed++
+        $phaseDone++
+      }
+      elseif ($rawStatus -in @("failed", "blocked", "timed_out", "invalid_output")) {
+        $state = "blocked"
+        $blocked++
+        $phaseBlocked++
+      }
+      elseif ($manifest -and [string]$manifest.contract_status -eq "BLOCKED") {
+        $state = "review"
+        $review++
+      }
+
+      $items += [ordered]@{
+        name = [string]$agentName
+        phase = $phase
+        phaseLabel = if ($phaseLabels.ContainsKey($phase)) { $phaseLabels[$phase] } else { $phase }
+        state = $state
+        progress = if ($state -eq "done") { 100 } elseif ($state -eq "review") { 50 } else { 0 }
+        status = if ($rawStatus) { $rawStatus } else { "waiting" }
+        text = if ($state -eq "done") { "Sozlesmeye uygun kanit var." } elseif ($state -eq "blocked") { "Ajan ciktisi gecersiz veya bloke." } elseif ($state -eq "review") { "Faz kullanici veya duzeltme bekliyor." } else { "Bu faz henuz tamamlanmadi." }
+        evidence = if ($manifest) { @([ordered]@{ name = "$phase.json"; relativePath = "runtime/agent-compliance/$phase.json"; bytes = 0 }) } else { @() }
+        notes = if ($manifestNotesByAgent.ContainsKey($agentKey)) { $manifestNotesByAgent[$agentKey] } else { "" }
+      }
+    }
+
+    $phaseItems += [ordered]@{
+      phase = $phase
+      label = if ($phaseLabels.ContainsKey($phase)) { $phaseLabels[$phase] } else { $phase }
+      requiredAgents = [object[]]@($phaseRequired)
+      manifest = if ($manifest) { "runtime/agent-compliance/$phase.json" } else { "" }
+      contractStatus = if ($manifest) { [string]$manifest.contract_status } else { "WAITING" }
+      completed = $phaseDone
+      blocked = $phaseBlocked
+      total = $phaseRequired.Count
+    }
+  }
+
+  return [ordered]@{
+    total = $total
+    completed = $completed
+    blocked = $blocked
+    review = $review
+    items = [object[]]@($items)
+    phases = [object[]]@($phaseItems)
+  }
+}
+
 function Get-ProjectSummary {
   param([object]$Payload)
 
@@ -698,6 +1030,7 @@ function Get-ProjectSummary {
     }
     quality = Get-QualityAudit -Chapters $chapters -Exports $exports -Approvals $approvals -Reports $reports -LongformPlan (Read-Utf8JsonIfExists -Path (Join-Path $stateDir "longform-plan.json"))
     chapterHeatmap = [object[]]@(Get-ChapterHeatmap -Chapters $chapters -ChapterPlan (Read-Utf8JsonIfExists -Path (Join-Path $stateDir "chapter-plan.json")) -ChapterSummaries (Read-Utf8JsonIfExists -Path (Join-Path $stateDir "chapter-summaries.json")) -ContinuityLedger (Read-Utf8JsonIfExists -Path (Join-Path $stateDir "continuity-ledger.json")))
+    agentFlow = Get-AgentFlowSummary -ProjectRoot $projectRoot
     lifecycle = [ordered]@{
       status = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot "runtime/project-status.json")
       finalExport = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot "runtime/final-export-manifest.json")
@@ -835,6 +1168,12 @@ function Save-LayoutPlan {
   $coverBriefPolicy = if ($Payload.cover_brief_policy) { [string]$Payload.cover_brief_policy } else { "required" }
   $backCoverCopyPolicy = if ($Payload.back_cover_copy_policy) { [string]$Payload.back_cover_copy_policy } else { "required" }
   $pageNumberingPolicy = if ($Payload.page_numbering_policy) { [string]$Payload.page_numbering_policy } else { "front matter roman/unnumbered, body arabic" }
+  $pageNumberPosition = if ($Payload.page_number_position) { [string]$Payload.page_number_position } else { "bottom_center" }
+  $tocDepth = if ($Payload.toc_depth -ne $null) { [int]$Payload.toc_depth } else { 1 }
+  $frontMatterNumbering = if ($Payload.front_matter_numbering) { [string]$Payload.front_matter_numbering } else { "roman_or_unnumbered" }
+  $runningHeaderPolicy = if ($Payload.running_header_policy) { [string]$Payload.running_header_policy } else { "none" }
+  $headingHierarchyPolicy = if ($Payload.heading_hierarchy_policy) { [string]$Payload.heading_hierarchy_policy } else { "chapter_only" }
+  $widowOrphanControl = if ($Payload.widow_orphan_control) { [string]$Payload.widow_orphan_control } else { "strict" }
   $publisherSubmissionLabel = if ($Payload.publisher_submission_label) { [string]$Payload.publisher_submission_label } else { "publisher_submission_docx" }
   if ($font -notin @("Garamond", "Times New Roman", "Georgia", "Palatino Linotype", "Courier New")) {
     throw "Unsupported font_family: $font"
@@ -854,6 +1193,12 @@ function Save-LayoutPlan {
   }
   if ($indent -lt 0 -or $indent -gt 1.5) { throw "paragraph_first_line_indent_cm must be between 0 and 1.5." }
   if ($after -lt 0 -or $after -gt 12) { throw "paragraph_spacing_after_pt must be between 0 and 12." }
+  if ($pageNumberPosition -notin @("bottom_center", "bottom_outer", "top_outer", "none")) { throw "Unsupported page_number_position: $pageNumberPosition" }
+  if ($tocDepth -lt 0 -or $tocDepth -gt 2) { throw "toc_depth must be between 0 and 2." }
+  if ($frontMatterNumbering -notin @("roman_or_unnumbered", "none", "arabic")) { throw "Unsupported front_matter_numbering: $frontMatterNumbering" }
+  if ($runningHeaderPolicy -notin @("none", "book_title", "chapter_title")) { throw "Unsupported running_header_policy: $runningHeaderPolicy" }
+  if ($headingHierarchyPolicy -notin @("chapter_only", "chapter_subhead", "academic")) { throw "Unsupported heading_hierarchy_policy: $headingHierarchyPolicy" }
+  if ($widowOrphanControl -notin @("strict", "standard", "off")) { throw "Unsupported widow_orphan_control: $widowOrphanControl" }
 
   $isA4 = $pageSize -match "A4"
   $widthMm = if ($isA4) { 210 } else { 148 }
@@ -887,6 +1232,9 @@ function Save-LayoutPlan {
   $layout["paragraph_spacing_after_pt"] = $after
   $layout["chapter_start_policy"] = $chapterStartPolicy
   $layout["chapter_title_policy"] = "reader-facing titles only; no EP labels, no scene labels, no technical markers"
+  $layout["heading_hierarchy_policy"] = $headingHierarchyPolicy
+  $layout["running_header_policy"] = $runningHeaderPolicy
+  $layout["widow_orphan_control"] = $widowOrphanControl
   $layout["publisher_submission_label"] = $publisherSubmissionLabel
   $layout["front_matter_pages_estimate"] = if ($frontMatterSelection -match "Yaln") { 1 } else { 6 }
   $layout["back_matter_pages_estimate"] = 0
@@ -898,6 +1246,7 @@ function Save-LayoutPlan {
     title_page = $titlePagePolicy
     copyright_page = "external_metadata_pending"
     toc = $tocPolicy
+    toc_depth = $tocDepth
     preface = $prefacePolicy
   }
   $layout["back_matter"] = [ordered]@{
@@ -906,9 +1255,11 @@ function Save-LayoutPlan {
   }
   $layout["page_numbering"] = [ordered]@{
     policy = $pageNumberingPolicy
-    front_matter = if ($pageNumberingPolicy -match "front") { "roman_or_unnumbered" } else { "none" }
+    position = $pageNumberPosition
+    front_matter = $frontMatterNumbering
     body = "arabic_from_first_chapter"
   }
+  $layout["toc_depth"] = $tocDepth
   $layout["cover"] = [ordered]@{
     front_cover_brief = $coverBriefPolicy
     back_cover_copy = $backCoverCopyPolicy
@@ -952,8 +1303,11 @@ function Save-LayoutPlan {
       paragraph_first_line_indent_cm = $indent
       paragraph_spacing_after_pt = $after
       justification = "both"
+      widow_orphan_control = $widowOrphanControl
+      heading_hierarchy_policy = $headingHierarchyPolicy
       chapter_start_policy = $chapterStartPolicy
       chapter_title_policy = $layout["chapter_title_policy"]
+      running_header_policy = $runningHeaderPolicy
     }
     front_matter = $layout["front_matter"]
     back_matter = $layout["back_matter"]
@@ -1078,8 +1432,20 @@ function Invoke-Pipeline {
     "-Mode", $mode
   )
 
-  if ($mode -eq "command" -and -not $Payload.configPath) {
-    $Payload | Add-Member -NotePropertyName configPath -NotePropertyValue (Join-Path $RepoRoot "runtime/runner-config.provider.template.json") -Force
+  if ($mode -eq "command") {
+    $providerSettingsPath = Get-ProviderSettingsPath
+    $providerSettings = Read-Utf8JsonIfExists -Path $providerSettingsPath
+    if (-not $providerSettings) {
+      throw "API mode blocked: provider settings are not saved. Open settings and save API provider, model, and key first."
+    }
+    $protectedKey = [string]$providerSettings.apiKeyProtected
+    if (-not $protectedKey.Trim()) {
+      throw "API mode blocked: API key is missing. Open settings and save the key first."
+    }
+    Set-ProviderEnvironment -Settings $providerSettings -ApiKey (Unprotect-ProviderSecret -ProtectedSecret $protectedKey)
+    if (-not $Payload.configPath) {
+      $Payload | Add-Member -NotePropertyName configPath -NotePropertyValue (Join-Path $RepoRoot "runtime/runner-config.provider.template.json") -Force
+    }
   }
 
   if ($Payload.configPath) {
@@ -1360,6 +1726,24 @@ try {
         if ($method -eq "POST" -and $path -eq "/api/provider-settings") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           Write-JsonHttpResponse -Stream $stream -Value (Save-ProviderSettings -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/live-edit") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Invoke-LiveEditRewrite -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/live-edit-applied") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Confirm-LiveEditApplied -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/import-docx") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Import-DocxText -Payload $payload)
           continue
         }
 

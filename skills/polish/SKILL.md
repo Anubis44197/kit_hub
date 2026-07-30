@@ -16,7 +16,6 @@ Run systematic editorial correction over existing chapters.
    - book-structure-optimizer
    - developmental-editor
    - continuity-editor
-   - context-saliency-gate
    - research-citation-auditor when writing type is nonfiction or fact-bearing
    - alive-enhancer
 2. Correction execution (`revision-executor`)
@@ -87,22 +86,10 @@ Run systematic editorial correction over existing chapters.
 - Orchestrator must write canonical text back to:
   - `episode/epNNN.md`
 
-## Open Source Story Model Contract
-- `revision/_state/open-source-story-model.json` is mandatory before polish.
-- Polish agents must preserve its outline, character, plot, world, cross-reference, research and export models.
-- Any polish change that alters character knowledge, relationship state, plot promises, settings, source claims or scene order must update the matching state ledger in the same phase.
-
-## Context Saliency Contract
-- `revision/_state/story-bible.json`, `revision/_state/chapter-continuity-chain.json`, and `revision/_state/context-saliency-map.json` are mandatory before polish.
-- `context-saliency-gate` must confirm that polish changes stay inside the visible chapter context.
-- Polish may not introduce future-only reveals, unplanned characters, stale sample text, unrelated project content, or character knowledge absent from `knowledge-graph.json`.
-- If polish needs new context, update the appropriate state ledger first and explain the reason in the workspace report.
-
 ## Mandatory Artifact Gates
 - Do not run `revision-reviewer` before `08_tdk-polisher_issues_EP{NNN}.json` and `08_tdk-polisher_report_EP{NNN}.md` exist.
 - If `book_mode.enabled=true`, do not run `revision-reviewer` before `09_tdk-layout_issues_EP{NNN}.json` and `09_tdk-layout_report_EP{NNN}.md` exist.
-- Do not run export before `revision/_state/open-source-story-model.json`, `revision/_state/writing-type-profile.json`, `revision/_state/genre-structure-template.json`, `revision/_state/editorial-quality-scorecard.json`, and `revision/_state/llm-adapter-contract.json` exist.
-- Do not accept `PASS` unless `revision/_workspace/polish_editorial-cycle_EP{RANGE}.json` exists and follows `skills/polish/references/editorial-cycle-schema.md`.
+- Do not run export before `revision/_state/writing-type-profile.json`, `revision/_state/genre-structure-template.json`, `revision/_state/editorial-quality-scorecard.json`, and `revision/_state/llm-adapter-contract.json` exist.
 - If any mandatory artifact is missing, stop with explicit artifact-missing error.
 
 ## Outputs
@@ -112,6 +99,5 @@ Run systematic editorial correction over existing chapters.
 - optional dictionary verification report (`10_tdk-dictionary-check_<phase>.json`)
 - mandatory layout outputs when book mode is enabled (`09_tdk-layout_*`)
 - professional editorial reports from developmental, continuity, line, copy, research/citation, and final proof stages
-- editorial cycle JSON report (`polish_editorial-cycle_EP{RANGE}.json`)
 - professional writing state files in `revision/_state/`
 - updated fix plan and trackers
