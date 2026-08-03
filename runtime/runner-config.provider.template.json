@@ -25,7 +25,7 @@
     "export": ""
   },
   "quality_flags": {
-    "enable_dictionary_check": false,
+    "enable_dictionary_check": true,
     "dictionary_check_command": "powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot \"{project_root}\" -Phase {phase} -RunId {run_id} {require_provider_arg}",
     "require_dictionary_provider": true,
     "require_phase_evidence": true,

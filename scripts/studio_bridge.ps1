@@ -398,7 +398,7 @@ function Invoke-ProviderTextRewrite {
 function Assert-LiveEditSuggestionClean {
   param([string]$Text)
   if (-not $Text.Trim()) { throw "Live edit returned empty text." }
-  $blocked = @('```', 'EP001', 'SCENE', 'Sahne 1', 'Ajan notu', 'Yayin notu', 'runtime/', 'revision/', 'episode/')
+  $blocked = @('```', 'EP001', 'SCENE', 'Sahne 1', 'Ajan notu', 'Yayın notu', 'runtime/', 'revision/', 'episode/')
   foreach ($item in $blocked) {
     if ($Text -match [regex]::Escape($item)) {
       throw "Live edit rejected: suggestion contains technical/control marker '$item'."
@@ -594,14 +594,14 @@ function Test-Approved {
 function Get-BookRequestChecklist {
   param([string]$Text)
   $checks = @(
-    [ordered]@{ key = "writing_type"; label = "Tür"; ok = ($Text -match "(?im)^\s*-\s*T.{0,2}r\s*:") },
-    [ordered]@{ key = "target_pages"; label = "Hedef sayfa"; ok = ($Text -match "(?im)^\s*-\s*Hedef sayfa\s*:") },
-    [ordered]@{ key = "premise"; label = "Konu"; ok = ($Text -match "(?im)^\s*-\s*Konu\s*:") },
-    [ordered]@{ key = "characters"; label = "Karakterler"; ok = ($Text -match "(?im)^\s*-\s*Karakter") },
-    [ordered]@{ key = "setting"; label = "Dönem ve mekân"; ok = ($Text -match "(?im)^\s*-\s*D.{0,2}nem") },
-    [ordered]@{ key = "narration"; label = "Anlatıcı"; ok = ($Text -match "(?im)^\s*-\s*Anlat") },
-    [ordered]@{ key = "ending"; label = "Final"; ok = ($Text -match "(?im)^\s*-\s*Final") },
-    [ordered]@{ key = "boundaries"; label = "Sınırlar"; ok = ($Text -match "(?im)^\s*-\s*S.{0,2}n.{0,2}r") }
+    [ordered]@{ key = "writing_type"; label = "Tür"; ok = ($Text -match "(?im)^\s*-\s*T.{0,2}r\s*:[ \t]*\S") },
+    [ordered]@{ key = "target_pages"; label = "Hedef sayfa"; ok = ($Text -match "(?im)^\s*-\s*Hedef sayfa\s*:[ \t]*\S") },
+    [ordered]@{ key = "premise"; label = "Konu"; ok = ($Text -match "(?im)^\s*-\s*Konu\s*:[ \t]*\S") },
+    [ordered]@{ key = "characters"; label = "Karakterler"; ok = ($Text -match "(?im)^\s*-\s*Karakter[^\r\n]*:[ \t]*\S") },
+    [ordered]@{ key = "setting"; label = "Dönem ve mekân"; ok = ($Text -match "(?im)^\s*-\s*D.{0,2}nem[^\r\n]*:[ \t]*\S") },
+    [ordered]@{ key = "narration"; label = "Anlatıcı"; ok = ($Text -match "(?im)^\s*-\s*Anlat[^\r\n]*:[ \t]*\S") },
+    [ordered]@{ key = "ending"; label = "Final"; ok = ($Text -match "(?im)^\s*-\s*Final[^\r\n]*:[ \t]*\S") },
+    [ordered]@{ key = "boundaries"; label = "Sınırlar"; ok = ($Text -match "(?im)^\s*-\s*S.{0,2}n.{0,2}r[^\r\n]*:[ \t]*\S") }
   )
   $missing = @($checks | Where-Object { $_.ok -ne $true } | ForEach-Object { $_.label })
   return [ordered]@{
@@ -643,7 +643,9 @@ function Get-QualityAudit {
 
   $hasDocx = @($Exports | Where-Object { $_.kind -eq "DOCX" }).Count -gt 0
   $reportText = (@($Reports) | ForEach-Object { ([string]$_.name + "`n" + [string]$_.text).ToLowerInvariant() }) -join "`n"
-  $hasTdk = $reportText -match "tdk|turkish|diacritics|yaz"
+  $hasTdk = $reportText -match "(?i)\btdk\b|dictionary|turkish|diacritics"
+  $tdkSkipped = $reportText -match "(?i)status\s*[:=]\s*skipped|provider unavailable|provider bulunamad"
+  $tdkDetail = if (-not $hasTdk) { "TDK/dictionary report bekleniyor" } elseif ($tdkSkipped) { "TDK sağlayıcısı yok; rapor skipped" } else { "TDK/dictionary denetimi kanıtı bulundu" }
   $hasContinuity = $reportText -match "continuity|tutarl|character|plot|ledger"
   $hasTypography = $reportText -match "typography|layout|docx|dizgi|mizanpaj"
 
@@ -652,7 +654,7 @@ function Get-QualityAudit {
     [ordered]@{ key = "chapters"; label = "Bölüm doluluğu"; ok = ($chapterCount -gt 0 -and $emptyChapters -eq 0); detail = "$chapterCount bölüm, $emptyChapters boş" },
     [ordered]@{ key = "length"; label = "Uzunluk hedefi"; ok = ($targetPages -eq 0 -or $lengthRatio -ge 0.85); detail = "$estimatedPages / $targetPages tahmini sayfa" },
     [ordered]@{ key = "continuity"; label = "Tutarlılık raporu"; ok = $hasContinuity; detail = "karakter/olay kanıtı" },
-    [ordered]@{ key = "language"; label = "Türkçe/TDK raporu"; ok = $hasTdk; detail = "dil denetimi kanıtı" },
+    [ordered]@{ key = "language"; label = "Türkçe/TDK raporu"; ok = ($hasTdk -and -not $tdkSkipped); detail = $tdkDetail },
     [ordered]@{ key = "layout"; label = "Dizgi/DOCX raporu"; ok = ($hasTypography -or $hasDocx); detail = "mizanpaj/export kanıtı" },
     [ordered]@{ key = "export"; label = "Final DOCX"; ok = $hasDocx; detail = if ($hasDocx) { "DOCX bulundu" } else { "DOCX bekleniyor" } }
   )
@@ -817,14 +819,14 @@ function Get-AgentFlowSummary {
 
   $phaseOrder = @("intake", "propose", "design-big", "design-small", "create", "polish", "rewrite", "export")
   $phaseLabels = @{
-    "intake" = "Baslangic"
-    "propose" = "Oneri"
-    "design-big" = "Buyuk Plan"
-    "design-small" = "Bolum Plani"
-    "create" = "Yazim"
-    "polish" = "Editor"
+    "intake" = "Başlangıç"
+    "propose" = "Öneri"
+    "design-big" = "Büyük Plan"
+    "design-small" = "Bölüm Planı"
+    "create" = "Yazım"
+    "polish" = "Editör"
     "rewrite" = "Revizyon"
-    "export" = "Yayin"
+    "export" = "Yayın"
   }
   $contractsDir = Join-Path $RepoRoot "runtime/phase-contracts"
   $complianceDir = Join-Path $ProjectRoot "runtime/agent-compliance"
@@ -884,7 +886,7 @@ function Get-AgentFlowSummary {
         state = $state
         progress = if ($state -eq "done") { 100 } elseif ($state -eq "review") { 50 } else { 0 }
         status = if ($rawStatus) { $rawStatus } else { "waiting" }
-        text = if ($state -eq "done") { "Sozlesmeye uygun kanit var." } elseif ($state -eq "blocked") { "Ajan ciktisi gecersiz veya bloke." } elseif ($state -eq "review") { "Faz kullanici veya duzeltme bekliyor." } else { "Bu faz henuz tamamlanmadi." }
+        text = if ($state -eq "done") { "Sözleşmeye uygun kanıt var." } elseif ($state -eq "blocked") { "Ajan çıktısı geçersiz veya bloke." } elseif ($state -eq "review") { "Faz kullanıcı veya düzeltme bekliyor." } else { "Bu faz henüz tamamlanmadı." }
         evidence = if ($manifest) { @([ordered]@{ name = "$phase.json"; relativePath = "runtime/agent-compliance/$phase.json"; bytes = 0 }) } else { @() }
         notes = if ($manifestNotesByAgent.ContainsKey($agentKey)) { $manifestNotesByAgent[$agentKey] } else { "" }
       }
@@ -1006,9 +1008,24 @@ function Get-ProjectSummary {
   $revisionDraftLock = Read-Utf8JsonIfExists -Path (Join-Path $workspaceDir "draft-v1-lock.json")
   $revisionApproval = Read-Utf8JsonIfExists -Path (Join-Path $approvalDir "revision-proposals-approval.json")
 
+  $runnerConfigPath = Join-Path $ProjectRoot "runtime/runner-config.json"
+  $runnerConfig = Read-Utf8JsonIfExists -Path $runnerConfigPath
+  $executionSource = "project"
+  if (-not $runnerConfig) {
+    $runnerConfig = Read-Utf8JsonIfExists -Path (Join-Path $RepoRoot "runtime/runner-config.json")
+    $executionSource = "repository-default"
+  }
+  $execution = [ordered]@{
+    mode = if ($runnerConfig) { [string]$runnerConfig.execution_mode } else { "unknown" }
+    claimMode = if ($runnerConfig -and $runnerConfig.quality_flags) { [string]$runnerConfig.quality_flags.execution_claim_mode } else { "unknown" }
+    criticalClaimsRequired = if ($runnerConfig -and $runnerConfig.quality_flags) { [bool]$runnerConfig.quality_flags.require_executed_claims_for_critical_phases } else { $false }
+    source = $executionSource
+  }
+
   return [ordered]@{
     ok = $true
     projectRoot = $projectRoot
+    execution = $execution
     name = Split-Path -Leaf $projectRoot
     bookRequest = Read-Utf8TextIfExists -Path (Join-Path $projectRoot "runtime/book-request.md")
     bookRequestChecklist = Get-BookRequestChecklist -Text (Read-Utf8TextIfExists -Path (Join-Path $projectRoot "runtime/book-request.md"))
@@ -1409,12 +1426,16 @@ function Invoke-Pipeline {
   if ($validPhases -notcontains $toPhase) { throw "Invalid toPhase: $toPhase" }
   if ($validModes -notcontains $mode) { throw "Invalid mode: $mode" }
 
+  if ($mode -eq "manual" -and -not $Payload.configPath) {
+    $Payload | Add-Member -NotePropertyName configPath -NotePropertyValue "runtime/runner-config.ide-manual.template.json" -Force
+  }
+
   if ($toPhase -in @("design-big", "design-small", "create", "polish", "rewrite", "export")) {
     $bookRequestPath = Join-Path $projectRoot "runtime/book-request.md"
     $bookRequest = Read-Utf8TextIfExists -Path $bookRequestPath
     $checklist = Get-BookRequestChecklist -Text $bookRequest
     if ($checklist.complete -ne $true) {
-      throw "Studio pipeline blocked: book request is incomplete. Missing: $($checklist.missing -join ', '). Use the Baslangic Sihirbazi before running design/create/export."
+      throw "Studio pipeline blocked: book request is incomplete. Missing: $($checklist.missing -join ', '). Use the Başlangıç Sihirbazı before running design/create/export."
     }
   }
 

@@ -1946,7 +1946,7 @@
                 <label>API anahtarı
                   <input id="apiKeyInput" class="secret-input" type="password" autocomplete="off" placeholder="Anahtar repo içine yazılmaz" />
                 </label>
-                <span class="settings-note">API Modu: saglayici, model ve anahtari kaydet; sonra proje ekraninda Pipeline butonu secili fazlari otomatik calistirir.</span>
+                <span class="settings-note">API Modu: sağlayıcı, model ve anahtarı kaydet; sonra proje ekranında Pipeline butonu seçili fazları otomatik çalıştırır.</span>
                 <div class="settings-action-row">
                   <button type="button" id="saveApiSettingsBtn">Kaydet</button>
                   <button type="button" id="testApiSettingsBtn">Test Et</button>
@@ -1970,7 +1970,7 @@
             </section>
           </div>
         </details>
-        <button type="button" class="primary" id="exportBtn">Dışa Aktar</button>
+        <button type="button" class="primary" id="exportBtn" title="Export fazını çalıştırır; final DOCX kopyalama ayrı düğmedir.">Export Fazını Çalıştır</button>
       </div>
     </header>
 
@@ -2080,8 +2080,8 @@
       <section class="nav-section">
         <div class="nav-title"><span>Dışa Aktarım</span><span>Sonuç</span></div>
         <ul class="chapter-list" id="exportList">
-          <li><button type="button" data-export-info="A5 baskı DOCX final export aşamasında üretilir."><span>◇</span><span>A5 Baskı DOCX</span><small>Hazır</small><i class="dot done"></i></button></li>
-          <li><button type="button" data-export-info="Kapak briefi kapak tasarım girdilerini taşır."><span>◇</span><span>Kapak Briefi</span><small>Hazır</small><i class="dot done"></i></button></li>
+          <li><button type="button" data-export-info="A5 baskı DOCX, Export fazı tamamlandıktan sonra üretilir."><span>◇</span><span>A5 Baskı DOCX</span><small>Export bekler</small><i class="dot wait"></i></button></li>
+          <li><button type="button" data-export-info="Kapak briefi Export fazında yayın paketine eklenir."><span>◇</span><span>Kapak Briefi</span><small>Export bekler</small><i class="dot wait"></i></button></li>
           <li><button type="button" data-export-info="Temizlik onayı kullanıcı romanı bitirdim dediğinde çalışır."><span>◇</span><span>Temizlik Onayı</span><small>Bekler</small><i class="dot wait"></i></button></li>
         </ul>
       </section>
@@ -2091,14 +2091,14 @@
       </section>
       <div class="side-footer">
         <input class="project-path" id="projectPathInput" placeholder="Proje yolu: C:\Users\...\KitHubProjects\Kitap" aria-label="Proje yolu" />
-        <div class="mode-guide" aria-label="Calisma yolu">
+        <div class="mode-guide" aria-label="Çalışma yolu">
           <div class="mode-guide-card active" data-mode-guide="IDE">
-            <b>IDE ile yazdir</b>
-            Istegi kaydet. IDE ajani bu projenin runtime/book-request.md dosyasini okur, dosyalari uretir; KitHub denetler.
+            <b>IDE ile yazdır</b>
+            İsteği kaydet. IDE ajanı bu projenin runtime/book-request.md dosyasını okur, dosyaları üretir; KitHub denetler.
           </div>
           <div class="mode-guide-card" data-mode-guide="API">
-            <b>API ile otomatik yazdir</b>
-            API anahtarini kaydet. Pipeline butonu secili fazlari modele yazdirir ve kanit kapilarindan gecirir.
+            <b>API ile otomatik yazdır</b>
+            API anahtarını kaydet. Pipeline butonu seçili fazları modele yazdırır ve kanıt kapılarından geçirir.
           </div>
         </div>
         <span class="request-label">IDE/API'nin okuyacagi kitap istegi</span>
@@ -2370,7 +2370,7 @@
       <div class="agent-summary">
         <div class="label">Genel İlerleme</div>
         <div class="progress-line"><span id="overallProgress"></span></div>
-        <div class="book-meta" id="agentSummary">9 ajandan 5'i tamamlandı. 2 onay bekliyor.</div>
+        <div class="book-meta" id="agentSummary">Proje bağlanınca ajan kanıtı gösterilir.</div>
         <div class="audit-panel">
           <header>
             <span>Kitap Sağlığı</span>
@@ -2385,7 +2385,7 @@
           </header>
           <div class="audit-list" id="lifecycleList"></div>
           <div class="lifecycle-actions">
-            <button type="button" class="ghost" id="finalExportBtn">Finali Masaüstüne Aktar</button>
+            <button type="button" class="ghost" id="finalExportBtn">Final DOCX'i Masaüstüne Kopyala</button>
             <button type="button" class="ghost danger" id="cleanupProjectBtn">Bitti Onayıyla Temizle</button>
           </div>
         </div>
@@ -2395,6 +2395,8 @@
 
   <script>
     let chapters = [];
+
+    let agentEvidenceMode = "Yürütme kanıtı: proje bağlanmadı.";
 
     let agents = [
       { name: "Brief Interviewer", text: "Kullanıcının konu, tür, hedef uzunluk ve sınırlarını toplar.", state: "idle", progress: 0 },
@@ -2881,9 +2883,9 @@
         : (processSteps[activeIndex] || processSteps[0]);
       const percent = agents.length ? Math.round((done / agents.length) * 100) : 0;
       document.getElementById("overallProgress").style.width = `${Math.max(12, percent)}%`;
-      document.getElementById("agentSummary").textContent = `${agents.length} ajandan ${done}'i tamamlandi. ${review} onay bekliyor. ${blocked} bloke.`;
-      if (processTitle) processTitle.textContent = activeStep.title || "Ajan akisi bekliyor";
-      if (processNote) processNote.textContent = blocked ? "Bir ajan sozlesme veya kanit hatasiyla durdu." : (review ? "Devam etmek icin kullanici onayi bekleniyor." : (activeStep.text || "Proje baglaninca gercek ajan akisi gorunur."));
+      document.getElementById("agentSummary").textContent = `${agents.length} ajandan ${done}'i tamamlandı. ${review} onay bekliyor. ${blocked} bloke. ${agentEvidenceMode}`;
+      if (processTitle) processTitle.textContent = activeStep.title || "Ajan akışı bekliyor";
+      if (processNote) processNote.textContent = blocked ? "Bir ajan sözleşme veya kanıt hatasıyla durdu." : (review ? "Devam etmek için kullanıcı onayı bekleniyor." : (activeStep.text || "Proje bağlanınca gerçek ajan akışı görünür."));
     }
 
     function renderQuality(quality) {
@@ -3238,6 +3240,7 @@
       bookRequestInput.value = bookRequestInput.value.trim()
         ? `${bookRequestInput.value.trim()}\n\n---\n\n${request}`
         : request;
+      syncWizardFromRequestText(bookRequestInput.value);
       chapterAction.textContent = "İçe aktarılan metin hazır";
       setRunLog(`Metin içe aktarıldı\nDosya: ${fileName}\nKelime: ${countWords(text)}\nKitap isteğine kitaplaştırma/düzeltme görevi eklendi.`);
       setStatus("Motor olayı: metin editöre alındı; canlı edit ve planlama akışına bağlandı.");
@@ -4290,8 +4293,8 @@
       if (settings.apiModel) apiModel.value = settings.apiModel;
       if (settings.apiBaseUrl) apiBaseUrl.value = settings.apiBaseUrl;
       if (settings.mode) activateMode(settings.mode, false);
-      finalExportBtn.textContent = settingsOutputTarget.value === "Masaüstü" ? "Finali Masaüstüne Aktar" : "Finali Dışa Aktar";
-      exportBtn.textContent = settingsOutputTarget.value === "Masaüstü" ? "Dışa Aktar" : "Dışa Aktar";
+      finalExportBtn.textContent = settingsOutputTarget.value === "Masaüstü" ? "Final DOCX'i Masaüstüne Kopyala" : "Final DOCX'i Seçili Konuma Kopyala";
+      exportBtn.textContent = "Export Fazını Çalıştır";
       applyTypography();
       setStatus(`Motor olayı: ayarlar uygulandı (${settingsOutputTarget.value})`);
     }
@@ -4303,9 +4306,14 @@
     function syncBridgeButtons() {
       const projectText = (projectPathInput.value || currentProjectPathHint || "").trim();
       const hasLocalProject = Boolean(projectHandle);
-      const hasBridgeProject = bridgeOnline && Boolean(projectText);
+      const hasBridgeProject = bridgeOnline && bridgeProjectActive && Boolean(currentProjectPathHint);
       const saveAvailable = bridgeOnline || hasLocalProject;
       const hasAnyProject = hasLocalProject || hasBridgeProject;
+      projectPathInput.title = hasBridgeProject
+        ? `Aktif proje: ${currentProjectPathHint}`
+        : hasLocalProject
+          ? `Bağlı klasör: ${projectHandle.name}`
+          : "Proje yolu yazıldıysa Projeyi Bağla düğmesine bas.";
 
       newProjectBtn.classList.toggle("is-offline", !bridgeOnline);
       finalExportBtn.classList.toggle("is-offline", !hasBridgeProject);
@@ -4316,12 +4324,12 @@
       exportBtn.classList.toggle("is-offline", !hasBridgeProject);
 
       newProjectBtn.title = bridgeOnline ? "Studio Bridge ile yeni proje olusturur." : "Studio Bridge kapali: yeni proje motor komutu gerektirir.";
-      saveRequestBtn.title = saveAvailable ? "runtime/book-request.md dosyasini kaydeder." : "Once Studio Bridge ac veya proje klasoru bagla.";
-      planBookBtn.title = hasBridgeProject ? "Istegi kaydeder ve kitap planlama akisini baslatir." : "Once Studio Bridge ac ve gercek proje yolu bagla.";
-      writeBookBtn.title = hasBridgeProject ? "Onayli plandan bolum yazimi ve polish akisini baslatir." : "Once Studio Bridge ac ve gercek proje yolu bagla.";
-      finalExportBtn.title = hasBridgeProject ? "Final DOCX dosyasini masaustune aktarir." : "Studio Bridge ve gercek proje yolu gerekli.";
-      cleanupProjectBtn.title = hasBridgeProject ? "Kullanici onayindan sonra calisma dosyalarini temizler." : "Studio Bridge ve gercek proje yolu gerekli.";
-      exportBtn.title = hasBridgeProject ? "Final cikti komutunu hazirlar." : "Once gercek KitHub projesi baglanmali.";
+      saveRequestBtn.title = saveAvailable ? "runtime/book-request.md dosyasını kaydeder." : "Önce Studio Bridge aç veya proje klasörü bağla.";
+      planBookBtn.title = hasBridgeProject ? "İsteği kaydeder ve kitap planlama akışını başlatır." : "Önce Studio Bridge aç ve gerçek proje yolu bağla.";
+      writeBookBtn.title = hasBridgeProject ? "Onaylı plandan bölüm yazımı ve polish akışını başlatır." : "Önce Studio Bridge aç ve gerçek proje yolu bağla.";
+      finalExportBtn.title = hasBridgeProject ? "Export onayından sonra final DOCX'i seçili konuma kopyalar." : "Studio Bridge ve gerçek proje yolu gerekli.";
+      cleanupProjectBtn.title = hasBridgeProject ? "Kullanıcı onayından sonra çalışma dosyalarını temizler." : "Studio Bridge ve gercek proje yolu gerekli.";
+      exportBtn.title = hasBridgeProject ? "Export fazını çalıştırır; final DOCX kopyalama ayrı düğmedir." : "Önce gerçek KitHub projesini bağlayın.";
     }
 
     function setRunLog(message) {
@@ -4340,6 +4348,62 @@
         style: wizardStyle.value.trim(),
         boundaries: wizardBoundaries.value.trim()
       };
+    }
+
+    function readRequestField(text, labelPattern) {
+      const match = String(text || "").match(new RegExp("^\\s*-\\s*" + labelPattern + "\\s*:[ \\t]*(\\S.*)$", "im"));
+      return match ? match[1].trim() : "";
+    }
+
+    function validateBookRequestText(text) {
+      const checks = [
+        ["Tür", "T.{0,2}r"],
+        ["Hedef sayfa", "Hedef sayfa"],
+        ["Konu", "Konu"],
+        ["Karakterler", "Karakter[^:]*"],
+        ["Dönem ve mekân", "D.{0,2}nem[^:]*"],
+        ["Anlatıcı", "Anlat[^:]*"],
+        ["Final", "Final[^:]*"],
+        ["Sınırlar", "S.{0,2}n.{0,2}r[^:]*"]
+      ];
+      const missing = checks.filter(([, pattern]) => !readRequestField(text, pattern)).map(([label]) => label);
+      return { complete: missing.length === 0, missing };
+    }
+
+    function syncWizardFromRequestText(text) {
+      const fields = [
+        [wizardType, "T.{0,2}r"],
+        [wizardPages, "Hedef sayfa"],
+        [wizardCharacters, "Karakter[^:]*"],
+        [wizardNarrator, "Anlat[^:]*"],
+        [wizardPremise, "Konu"],
+        [wizardSetting, "D.{0,2}nem[^:]*"],
+        [wizardEnding, "Final[^:]*"],
+        [wizardBoundaries, "S.{0,2}n.{0,2}r[^:]*"]
+      ];
+      fields.forEach(([field, pattern]) => {
+        const value = readRequestField(text, pattern);
+        if (value && !field.value.trim()) field.value = value;
+      });
+      validateWizard();
+    }
+
+    function focusFirstMissingWizardField(missing) {
+      const fields = {
+        "Tür": wizardType,
+        "Hedef sayfa": wizardPages,
+        "Konu": wizardPremise,
+        "Karakterler": wizardCharacters,
+        "Dönem ve mekân": wizardSetting,
+        "Anlatıcı": wizardNarrator,
+        "Final": wizardEnding,
+        "Sınırlar": wizardBoundaries
+      };
+      const field = fields[missing?.[0]];
+      if (field) {
+        field.focus();
+        field.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     }
 
     function validateWizard(values = collectWizardValues()) {
@@ -4393,9 +4457,21 @@
     function getBookRequestTextForSave() {
       const activeMode = getActiveMode();
       let text = bookRequestInput.value.trim();
-      const modeLine = `- Calisma modu: ${activeMode}`;
-      if (!/^- (Calisma|Çalışma) modu:/m.test(text)) {
-        text = `${text}\n\n## Studio Calisma Baglami\n${modeLine}\n- Kaynak: KitHub Studio arayuzu`.trim();
+      syncWizardFromRequestText(text);
+      let requestValidation = validateBookRequestText(text);
+      const wizardValidation = validateWizard();
+
+      if (!requestValidation.complete && wizardValidation.complete) {
+        const generated = buildWizardRequestText().text;
+        const preserved = text && text !== generated ? `\n\n---\n\n${text}` : "";
+        text = `${generated}${preserved}`.trim();
+        bookRequestInput.value = text;
+        requestValidation = validateBookRequestText(text);
+      }
+
+      const modeLine = `- Çalışma modu: ${activeMode}`;
+      if (!/^- Çalışma modu:/m.test(text)) {
+        text = `${text}\n\n## Studio Çalışma Bağlamı\n${modeLine}\n- Kaynak: KitHub Studio arayüzü`.trim();
         bookRequestInput.value = text;
       }
       return text;
@@ -4879,6 +4955,7 @@
       currentProjectPathHint = summary.projectRoot || currentProjectPathHint;
       projectPathInput.value = currentProjectPathHint;
       bookRequestInput.value = summary.bookRequest || bookRequestInput.value;
+      syncWizardFromRequestText(bookRequestInput.value);
       syncBridgeButtons();
 
       const bookPlan = summary.bookPlan || {};
@@ -4962,18 +5039,25 @@
       if (layoutPlan.margin_outside_mm) document.getElementById("marginOutside").value = layoutPlan.margin_outside_mm;
       applyTypography();
 
+      const execution = summary.execution || {};
+      const claimMode = execution.claimMode || "unknown";
+      agentEvidenceMode = claimMode === "executed"
+        ? "Yürütme kanıtı: gerçek komut çalıştı."
+        : claimMode === "simulated"
+          ? "Yürütme kanıtı: dosya/harici ajan; canlı süreç doğrulanmıyor."
+          : "Yürütme kanıtı: mod bilgisi bulunamadı.";
       const flowItems = summary.agentFlow?.items || [];
       agents = flowItems.length
         ? flowItems.map(item => ({
             name: item.name,
             title: item.name,
             phaseLabel: item.phaseLabel || item.phase,
-            text: item.text || item.notes || "Gercek ajan durumu sozlesmeden okunuyor.",
+            text: item.text || item.notes || "Gerçek ajan durumu sözleşmeden okunuyor.",
             state: item.state || "idle",
             progress: Number(item.progress || 0),
             evidence: item.evidence || []
           }))
-        : defaultAgents.map(agent => ({ ...agent, state: "idle", progress: 0, text: `${agent.text} Bridge gercek ajan akisini bekliyor.` }));
+        : defaultAgents.map(agent => ({ ...agent, state: "idle", progress: 0, text: `${agent.text} Bridge gerçek ajan akışını bekliyor.` }));
       renderAgents();
     }
 
@@ -5038,9 +5122,17 @@
     async function saveBookRequestViaBridge() {
       const activeMode = getActiveMode();
       const nextAction = activeMode === "API"
-        ? "API Modu: Pipeline butonu bu istegi okuyup saglayici/model uzerinden fazlari calistirir."
+        ? "API Modu: Pipeline butonu bu isteği okuyup sağlayıcı/model üzerinden fazları çalıştırır."
         : "IDE Modu: IDE komutu bu proje kokunu acar; ajan runtime/book-request.md dosyasini okur.";
       const requestText = getBookRequestTextForSave();
+      const requestValidation = validateBookRequestText(requestText);
+      if (!requestValidation.complete) {
+        wizardMissing.textContent = `Eksik: ${requestValidation.missing.join(", ")}`;
+        setRunLog(`Kitap isteği kaydedilmedi. Eksik alanlar: ${requestValidation.missing.join(", ")}`);
+        setStatus("Motor olayı: önce başlangıç sihirbazındaki zorunlu alanları doldur.");
+        focusFirstMissingWizardField(requestValidation.missing);
+        return false;
+      }
       if (!bridgeOnline) {
         if (!projectHandle) {
           setStatus("Motor olayı: kitap isteğini kaydetmek için Studio Bridge aç veya proje klasörü bağla.");
@@ -5094,7 +5186,7 @@
     }
 
     async function runUserBookFlow(flow) {
-      if (!bookRequestInput.value.trim()) {
+      if (!bookRequestInput.value.trim() && !validateWizard().complete) {
         setStatus("Motor olayı: önce kitap isteğini yaz veya başlangıç sihirbazından isteği oluştur.");
         return;
       }
@@ -5230,17 +5322,18 @@
       currentProjectPathHint = projectPathInput.value.trim() || currentProjectPathHint;
       const fromPhase = fromPhaseSelect.value;
       const toPhase = toPhaseSelect.value;
-      const command = `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot "${currentProjectPathHint}" -FromPhase ${fromPhase} -ToPhase ${toPhase}`;
+      const activeMode = getActiveMode();
+      const configPath = activeMode === "API" ? "runtime/runner-config.provider.template.json" : "runtime/runner-config.ide-manual.template.json";
+      const command = `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot "${currentProjectPathHint}" -FromPhase ${fromPhase} -ToPhase ${toPhase} -ConfigPath "${configPath}"`;
       if (bridgeOnline && currentProjectPathHint && currentProjectPathHint !== "." && !currentProjectPathHint.startsWith(".")) {
         try {
           setStatus(`Motor olayı: pipeline çalışıyor (${fromPhase} → ${toPhase})...`);
-          const activeMode = getActiveMode();
           if (activeMode === "API" && !apiModel.value.trim()) {
             setStatus("Motor olayı: API modu için önce model ayarını tamamla.");
             return;
           }
           if (activeMode === "API") {
-            setApiStatus("API modu pipeline'a baglaniyor; saglayici ayari eksikse motor duracak.", true);
+            setApiStatus("API modu pipeline'a bağlanıyor; sağlayıcı ayarı eksikse motor duracak.", true);
           }
           const response = await fetch(`${bridgeUrl}/api/run-pipeline`, {
             method: "POST",
@@ -5250,7 +5343,7 @@
               fromPhase,
               toPhase,
               mode: activeMode === "API" ? "command" : "manual",
-              configPath: activeMode === "API" ? "runtime/runner-config.provider.template.json" : ""
+              configPath
             })
           });
           const result = await response.json();
