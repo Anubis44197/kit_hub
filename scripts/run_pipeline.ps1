@@ -456,8 +456,7 @@ function Validate-PhaseArtifacts {
         "revision/_workspace/*tdk-polisher*issues*EP*.json"
       ) -BasePath $Root
       Ensure-Any -Patterns @("revision/_state/*.json") -BasePath $Root
-    }
-    "export" {
+    }    "export" {
       Ensure-Any -Patterns @(
         "revision/_workspace/10_export-word_manifest_EP*.json",
         "revision/_workspace/10_docx-style-profile_EP*.json",
@@ -517,18 +516,18 @@ function Get-PhaseOutputArtifacts {
       $patterns = @("_workspace/01_proposals*.md","*_proposal.md","runtime/approvals/story-choice.json")
     }
     "design-big" {
-      $patterns = @("novel-config.md","design/*_bootstrap.md","design/02_character_core.md","design/*_character*.md","design/03_macro_plot_hooks.md","design/*plot*hook*.md","design/04_book_plan.md","design/05_chapter_plan.md","design/06_layout_plan.md","runtime/approvals/book-plan-approval.json","revision/_state/*.json")
+      $patterns = @("novel-config.md","design/*_bootstrap.md","design/02_character_core.md","design/*_character*.md","design/03_macro_plot_hooks.md","design/*plot*hook*.md","design/04_book_plan.md","design/05_chapter_plan.md","design/06_layout_plan.md","runtime/approvals/book-plan-approval.json","revision/_state/*.json","revision/_workspace/02_domain-researcher_design-big.md","revision/_workspace/02_domain-researcher_design-big.json","revision/_workspace/07_research-citation-auditor_design-big.md","revision/_workspace/07_research-citation-auditor_design-big.json")
     }
     "design-small" {
-      $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md")
+      $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md","revision/_workspace/02_domain-researcher_design-small.md","revision/_workspace/02_domain-researcher_design-small.json")
     }
     "create" {
-      $patterns = @("episode/ep*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
+      $patterns = @("episode/ep*.md","revision/_workspace/*.md","revision/_workspace/*.json","revision/_state/*.json")
     }
     "polish" {
       $patterns = @("episode/ep*.md","revision/_workspace/*revision-reviewer*EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/10_tdk-dictionary-check_polish.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
     }
-    "rewrite" {
+"rewrite" {
       $patterns = @(
         "episode/ep*.md",
         "revision/_workspace/rewrite-impact-report.json",
@@ -565,6 +564,20 @@ function Get-PhaseOutputArtifacts {
     $hits = Get-ChildItem -Path $resolved -ErrorAction SilentlyContinue -File | Select-Object -ExpandProperty FullName
     if ($hits) {
       $files += $hits
+    }
+  }
+
+  $compliancePath = Join-Path $Root ("runtime/agent-compliance/" + $Phase + ".json")
+  if (Test-Path -LiteralPath $compliancePath -PathType Leaf) {
+    $compliance = Read-Utf8 -Path $compliancePath | ConvertFrom-Json
+    if ($compliance.PSObject.Properties.Name -contains "output_artifacts") {
+      foreach ($artifact in @($compliance.output_artifacts)) {
+        $rel = ConvertTo-RelativeContractPath -Path ([string]$artifact)
+        $artifactPath = Join-Path $Root $rel
+        if (Test-Path -LiteralPath $artifactPath -PathType Leaf) {
+          $files += (Resolve-Path -LiteralPath $artifactPath).Path
+        }
+      }
     }
   }
 
@@ -2236,7 +2249,18 @@ function Validate-CrossChapterProgression {
     if ($chain.Count -lt $episodes.Count) {
       throw "Cross-chapter progression gate failed: plot-ledger cause_effect_chain has $($chain.Count) entries for $($episodes.Count) chapters."
     }
-    $uniqueEffects = @($chain | ForEach-Object { [string]$_.effect } | Where-Object { $_.Trim() -ne "" } | Sort-Object -Unique)
+    $effects = @($chain | ForEach-Object {
+      if ($_ -is [string]) {
+        [string]$_
+      }
+      else {
+        [string]$_.effect
+      }
+    } | Where-Object { $_.Trim() -ne "" })
+    $uniqueEffects = @($effects | Sort-Object -Unique)
+    if ($effects.Count -lt $chain.Count) {
+      throw "Cross-chapter progression gate failed: plot-ledger cause_effect_chain contains an empty effect."
+    }
     if ($uniqueEffects.Count -lt $chain.Count) {
       throw "Cross-chapter progression gate failed: plot-ledger cause_effect_chain effects are duplicated."
     }

@@ -159,20 +159,52 @@ function Restore-ProjectVersion {
   $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
   $versionId = [string]$Payload.versionId
   $confirmation = [string]$Payload.confirmation
-  if ($versionId -notmatch "^\d{8}-\d{6}$") { throw "Invalid versionId: $versionId" }
-  if ($confirmation.Trim().ToLowerInvariant() -notin @("geri dön", "surume don", "sürüme dön")) {
-    throw "Restore requires explicit confirmation text: geri dön"
+  if ($versionId -notmatch '^\d{8}-\d{6}$') { throw "Invalid versionId: $versionId" }
+  $confirmationNormalized = $confirmation.Trim().Normalize([System.Text.NormalizationForm]::FormC).ToLowerInvariant()
+  $validConfirmations = @(
+    ("geri d" + [char]0x00F6 + "n"),
+    "geri don",
+    ("geri d" + [char]0x00C3 + [char]0x00B6 + "n"),
+    "surume don",
+    ("s" + [char]0x00FC + "r" + [char]0x00FC + "me " + [char]0x00F6 + "n"),
+    ("s" + [char]0x00C3 + [char]0x00BC + "r" + [char]0x00C3 + [char]0x00BC + "me d" + [char]0x00C3 + [char]0x00B6 + "n")
+  )
+  if ($validConfirmations -notcontains $confirmationNormalized) {
+    $confirmationHint = "geri d" + [char]0x00F6 + "n"
+    throw "Restore requires explicit confirmation text: $confirmationHint"
   }
 
   $versionRoot = Join-Path $projectRoot "revision/_versions/$versionId"
   $manifest = Read-Utf8JsonIfExists -Path (Join-Path $versionRoot "manifest.json")
   if (-not $manifest) { throw "Version manifest not found: $versionId" }
 
-  New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Geri dönüş öncesi otomatik kayıt" -Title "Geri dönüş öncesi"
+  New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Geri dönüş öncesi otomatik kayıt" -Title "Geri dönüş öncesi" | Out-Null
 
+  $manifestPaths = @{}
   foreach ($file in @($manifest.files)) {
-    $relative = [string]$file.relativePath
-    if (-not $relative.Trim()) { continue }
+    $relative = ([string]$file.relativePath).Trim().Replace("\", "/")
+    if ($relative) { $manifestPaths[$relative.ToLowerInvariant()] = $true }
+  }
+
+  $orphanFiles = @()
+  foreach ($relativeDir in @("runtime", "design", "episode", "revision/_state")) {
+    $dir = Join-Path $projectRoot $relativeDir
+    if (-not (Test-Path -LiteralPath $dir -PathType Container)) { continue }
+    foreach ($currentFile in @(Get-ChildItem -LiteralPath $dir -File -Recurse | Where-Object {
+      $_.FullName -notmatch "\\revision\\_versions\\" -and $_.Extension -match "^\.(md|json|txt)$"
+    })) {
+      $currentRelative = (Get-RelativeProjectPath -ProjectRoot $projectRoot -Path $currentFile.FullName).ToLowerInvariant()
+      if (-not $manifestPaths.ContainsKey($currentRelative)) { $orphanFiles += $currentRelative }
+    }
+  }
+  if (@($orphanFiles).Count -gt 0) {
+    throw "Restore blocked: snapshot does not contain current project files: $($orphanFiles -join ', '). Review or remove these files explicitly, then retry."
+  }
+
+  $restoredFiles = @()
+  foreach ($file in @($manifest.files)) {
+    $relative = ([string]$file.relativePath).Trim().Replace("\", "/")
+    if (-not $relative) { continue }
     $source = Join-Path (Join-Path $versionRoot "files") ($relative -replace "/", "\")
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
     $target = Resolve-ProjectChildPath -ProjectRoot $projectRoot -RelativePath $relative
@@ -181,17 +213,18 @@ function Restore-ProjectVersion {
       New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
     }
     Copy-Item -LiteralPath $source -Destination $target -Force
+    $restoredFiles += $relative
   }
 
   return [ordered]@{
     ok = $true
     projectRoot = $projectRoot
     restoredVersion = $versionId
-    restoredFiles = @($manifest.files).Count
+    restoredFiles = @($restoredFiles).Count
+    orphanFiles = @()
     versions = Get-ProjectVersionHistory -ProjectRoot $projectRoot
   }
 }
-
 function Get-ProviderSettingsPath {
   $appData = [Environment]::GetFolderPath("ApplicationData")
   if (-not $appData.Trim()) {
