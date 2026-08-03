@@ -347,8 +347,8 @@ function Validate-PhaseArtifacts {
     "propose" {
       Ensure-Any -Patterns @(
         "_workspace/01_proposals.md",
-        "_workspace/01_proposals*.md",
-        "*_proposal.md"
+        "revision/_workspace/01_proposals*.md",
+        "revision/_workspace/*_proposal.md"
       ) -BasePath $Root
     }
     "design-big" {
@@ -444,7 +444,7 @@ function Validate-PhaseArtifacts {
       ) -BasePath $Root
       Ensure-Any -Patterns @("revision/_state/*.json") -BasePath $Root
     }
-    "rewrite" {
+        "rewrite" {
       Ensure-Any -Patterns @("episode/ep*.md") -BasePath $Root
       Ensure-Any -Patterns @(
         "revision/_workspace/*rewrite*report*.md",
@@ -456,7 +456,8 @@ function Validate-PhaseArtifacts {
         "revision/_workspace/*tdk-polisher*issues*EP*.json"
       ) -BasePath $Root
       Ensure-Any -Patterns @("revision/_state/*.json") -BasePath $Root
-    }    "export" {
+    }
+    "export" {
       Ensure-Any -Patterns @(
         "revision/_workspace/10_export-word_manifest_EP*.json",
         "revision/_workspace/10_docx-style-profile_EP*.json",
@@ -513,7 +514,7 @@ function Get-PhaseOutputArtifacts {
       $patterns = @("runtime/book-brief.json","runtime/book-dna.json","runtime/layout-profile.json","runtime/approvals/book-brief-approval.json")
     }
     "propose" {
-      $patterns = @("_workspace/01_proposals*.md","*_proposal.md","runtime/approvals/story-choice.json")
+      $patterns = @("revision/_workspace/01_proposals*.md","revision/_workspace/*_proposal.md","runtime/approvals/story-choice.json")
     }
     "design-big" {
       $patterns = @("novel-config.md","design/*_bootstrap.md","design/02_character_core.md","design/*_character*.md","design/03_macro_plot_hooks.md","design/*plot*hook*.md","design/04_book_plan.md","design/05_chapter_plan.md","design/06_layout_plan.md","runtime/approvals/book-plan-approval.json","revision/_state/*.json","revision/_workspace/02_domain-researcher_design-big.md","revision/_workspace/02_domain-researcher_design-big.json","revision/_workspace/07_research-citation-auditor_design-big.md","revision/_workspace/07_research-citation-auditor_design-big.json")
@@ -522,12 +523,12 @@ function Get-PhaseOutputArtifacts {
       $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md","revision/_workspace/02_domain-researcher_design-small.md","revision/_workspace/02_domain-researcher_design-small.json")
     }
     "create" {
-      $patterns = @("episode/ep*.md","revision/_workspace/*.md","revision/_workspace/*.json","revision/_state/*.json")
+      $patterns = @("episode/ep*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/*quality*verdict*EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/*tdk-polisher*issues*EP*.json","revision/_state/*.json")
     }
     "polish" {
       $patterns = @("episode/ep*.md","revision/_workspace/*revision-reviewer*EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/10_tdk-dictionary-check_polish.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
     }
-"rewrite" {
+    "rewrite" {
       $patterns = @(
         "episode/ep*.md",
         "revision/_workspace/rewrite-impact-report.json",
