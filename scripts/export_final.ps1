@@ -55,14 +55,22 @@ if (-not (Test-Path -LiteralPath $DestinationDirectory -PathType Container)) {
   New-Item -ItemType Directory -Path $DestinationDirectory | Out-Null
 }
 
+$baseName = [System.IO.Path]::GetFileNameWithoutExtension($docx[0].Name)
+$extension = [System.IO.Path]::GetExtension($docx[0].Name)
 $destPath = Join-Path $DestinationDirectory $docx[0].Name
-Copy-Item -LiteralPath $docx[0].FullName -Destination $destPath -Force
+$collisionIndex = 0
+while (Test-Path -LiteralPath $destPath -PathType Leaf) {
+  $collisionIndex++
+  $destPath = Join-Path $DestinationDirectory ("{0} ({1}){2}" -f $baseName, $collisionIndex, $extension)
+}
+Copy-Item -LiteralPath $docx[0].FullName -Destination $destPath
 
 $manifest = [ordered]@{
   schema_version = "1.0.0"
   project_root = $ProjectRoot
   source_docx = $docx[0].FullName
   final_output_path = $destPath
+  collision_renamed = ($collisionIndex -gt 0)
   exported_at = (Get-Date).ToString("o")
   cleanup_note = "Final output was copied outside the working project. The user must read/review the book and explicitly approve cleanup before working files are removed."
 }
@@ -76,6 +84,7 @@ $cleanupApproval = [ordered]@{
   approved_at = ""
   final_output_preserved = $true
   final_output_path = $destPath
+  collision_renamed = ($collisionIndex -gt 0)
   user_confirmed_book_finished = $false
   user_must_confirm_book_finished = $true
   note = "Do not set approved=true until the user has read/reviewed the final book and explicitly says the book is finished and working files may be removed."

@@ -1,4 +1,4 @@
-# Novel Writing Engine
+﻿# Novel Writing Engine
 
 Professional multi-agent pipeline for Turkish novel, story, and print-ready book production.
 
@@ -346,7 +346,13 @@ The runner rejects a fake brief approval. The brief must contain structured `req
 | Skill eval contracts | `powershell -ExecutionPolicy Bypass -File scripts/ci/validate_skill_evals.ps1` |
 | External IDE smoke test (Windows) | `powershell -ExecutionPolicy Bypass -File scripts/ci/external_smoke_test.ps1 -WorkspaceRoot <repo-path> -TestRunPath test-run` |
 | DOCX structural integrity | `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_docx_integrity.ps1 -DocxPath <absolute-path-to-docx>` |
-| Dictionary verification | `powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot . -Phase polish -RunId RUN-LOCAL` (manual mode may report `skipped`; provider mode requires the provider) |
+| Dictionary verification | `powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot . -Phase polish -RunId RUN-LOCAL` (a skipped/provider-unavailable result fails closed) |
+| 36-agent fixture validation | `powershell -ExecutionPolicy Bypass -File scripts/ci/fixture_agent_runner.ps1` (reports `fixture_validation`, not autonomous provider execution) |
+| Existing-project config migration | `powershell -ExecutionPolicy Bypass -File scripts/ci/migrate_project.ps1 -ProjectRoot <project-path>` |
+| State consistency validation | `powershell -ExecutionPolicy Bypass -File scripts/ci/validate_state_consistency.ps1 -ProjectRoot <project-path>` |
+| Run integrity validation | `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_run_integrity.ps1 -ProjectRoot <project-path>` |
+| Real local provider fixture execution | `powershell -ExecutionPolicy Bypass -File scripts/ci/provider_agent_runner.ps1 -Provider ollama -Model qwen2.5:0.5b` (local 36-agent execution; external providers require explicit data-transfer approval) |
+| Browser DOM E2E render | `powershell -ExecutionPolicy Bypass -File scripts/ci/browser_e2e_test.ps1` (desktop/mobile PASS; interactive keyboard/focus/zoom remains explicit UNKNOWN until controllable browser session is available) |
 
 ## Local Preview Policy
 - Studio is the local preview and control surface.

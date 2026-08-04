@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$WorkspaceRoot = (Get-Location).Path,
   [string]$TestRunPath = "test-run",
   [switch]$RequireDocx
@@ -38,11 +38,9 @@ try {
     throw "final_readiness_check.ps1 failed with exit code: $LASTEXITCODE"
   }
 
-  $resolvedTestRun = Join-Path $WorkspaceRoot $TestRunPath
-  if (-not (Test-Path -LiteralPath $resolvedTestRun)) {
-    Write-Host "[external-smoke] test-run folder not found, skipping run-artifact checks."
-    Write-Host "[external-smoke] PASS (repo-level checks only)"
-    return
+  $resolvedTestRun = if ([System.IO.Path]::IsPathRooted($TestRunPath)) { [System.IO.Path]::GetFullPath($TestRunPath) } else { Join-Path $WorkspaceRoot $TestRunPath }
+  if (-not (Test-Path -LiteralPath $resolvedTestRun -PathType Container)) {
+    throw "External smoke requires a real test-run folder: $resolvedTestRun"
   }
 
   Write-Host "[external-smoke] checking external run artifacts..."

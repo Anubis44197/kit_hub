@@ -236,6 +236,7 @@ function Validate-CommandSafety {
 
   $blockedPatterns = @(
     @{ pattern = "(?i)\bInvoke-Expression\b|\biex\b"; reason = "nested Invoke-Expression is not allowed in configured phase commands" },
+    @{ pattern = '[;&|<>`]|\$\(|\$\{|\r|\n'; reason = "PowerShell command operators and interpolation are not allowed in configured phase commands" },
     @{ pattern = "(?i)\bRemove-Item\b[^\r\n]*(?:-Recurse|-Force)|\brm\s+-rf\b|\bdel\s+/[fsq]\b"; reason = "destructive delete commands are not allowed in phase commands" },
     @{ pattern = "(?i)\bgit\s+reset\s+--hard\b|\bgit\s+clean\b[^\r\n]*\s-[^\r\n]*f"; reason = "destructive git commands are not allowed in phase commands" },
     @{ pattern = "(?i)(?:curl|wget|Invoke-WebRequest|iwr)[^\r\n]*(?:\||;|&&)[^\r\n]*(?:sh|bash|powershell|pwsh|cmd|iex|Invoke-Expression)"; reason = "remote download piped into execution is not allowed" },
@@ -858,7 +859,7 @@ function Invoke-DictionaryCheck {
 
   Write-Host "[runner] dictionary-check: $cmd"
   Validate-CommandSafety -Command $cmd -Root $Root -Enabled $CommandSafetyEnabled
-  Invoke-Expression $cmd
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -Command $cmd
   if ($LASTEXITCODE -ne 0) {
     throw "Dictionary check failed (exit=$LASTEXITCODE): $cmd"
   }
@@ -2760,7 +2761,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       $step.command = $cmd
       Validate-CommandSafety -Command $cmd -Root $ProjectRoot -Enabled $enableCommandSafety
       Write-Host "[runner] executing: $cmd"
-      Invoke-Expression $cmd
+      & powershell.exe -NoProfile -ExecutionPolicy Bypass -Command $cmd
       if ($LASTEXITCODE -ne 0) {
         throw "Phase command failed (exit=$LASTEXITCODE): $cmd"
       }
@@ -2910,6 +2911,11 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
   })
 }
 
+$integrityScript = Join-Path $PSScriptRoot "ci/verify_run_integrity.ps1"
+if (Test-Path -LiteralPath $integrityScript -PathType Leaf) {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $integrityScript -ProjectRoot $ProjectRoot
+  if ($LASTEXITCODE -ne 0) { throw "Run integrity verification failed (exit=$LASTEXITCODE)." }
+}
 $summary.status = "completed"
 $summary.finished_at = (Get-Date).ToString("o")
 Write-RunJournalEvent -Path $runJournalPath -RunId $runId -Phase "run" -StepId "run" -EventType "run.completed" -Metadata ([ordered]@{ steps = @($summary.steps).Count })

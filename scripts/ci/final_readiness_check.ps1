@@ -452,6 +452,13 @@ Assert-File "scripts/ci/verify_docx_layout_profile.ps1"
 Assert-File "scripts/ci/external_smoke_test.ps1"
 Assert-File "scripts/ci/tdk_dict_check.py"
 Assert-File "scripts/ci/tdk_dict_check.ps1"
+Assert-File "scripts/ci/provider_agent_runner.ps1"
+Assert-File "scripts/ci/browser_e2e_test.ps1"
+if ((Read-Utf8 -Path "scripts/run_pipeline.ps1") -match '(?m)^\s*Invoke-Expression\s+\$cmd') { throw "Direct Invoke-Expression command execution remains in runner." }
+foreach ($contractPath in @(Get-ChildItem "runtime/phase-contracts/*.json" -File)) {
+  $contract = Read-Utf8 -Path $contractPath.FullName | ConvertFrom-Json
+  if (@($contract.allowed_output_patterns) -contains "revision/_workspace/*.md" -or @($contract.allowed_output_patterns) -contains "revision/_workspace/*.json") { throw "Broad workspace output pattern remains: $($contractPath.Name)" }
+}
 
 Write-Host "[final-readiness-ps] checking agent golden placeholders..."
 foreach ($agent in $agentFiles) {

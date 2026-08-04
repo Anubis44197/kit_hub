@@ -1,9 +1,16 @@
-param(
+﻿param(
   [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
-  [int]$Port = 8765
+  [int]$Port = 8765,
+  [string]$SessionToken = ""
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $SessionToken.Trim()) {
+  $tokenBytes = New-Object byte[] 32
+  [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($tokenBytes)
+  $SessionToken = [Convert]::ToBase64String($tokenBytes)
+}
+$script:SessionToken = $SessionToken
 
 function Resolve-ExistingDirectory {
   param([string]$Path)
@@ -340,6 +347,13 @@ function Save-ProviderSettings {
 
   $path = Get-ProviderSettingsPath
   $existing = Read-Utf8JsonIfExists -Path $path
+  $existingProvider = if ($existing) { [string]$existing.provider } else { "" }
+  $existingBaseUrl = if ($existing) { [string]$existing.baseUrl } else { "" }
+  if ($baseUrl.Trim()) {
+    try { $uri = [Uri]$baseUrl } catch { throw "Invalid API endpoint URL." }
+    if ($uri.Scheme -ne "https" -or -not $uri.Host -or $uri.UserInfo) { throw "API endpoint must be an HTTPS URL without embedded credentials." }
+  }
+  if (-not $apiKey.Trim() -and $existing -and ($existingProvider -ne $provider -or $existingBaseUrl -ne $baseUrl)) { throw "Changing provider or endpoint requires entering a new API key." }
   $protected = if ($apiKey.Trim()) { Protect-ProviderSecret -Secret $apiKey } elseif ($existing) { [string]$existing.apiKeyProtected } else { "" }
   if (-not $protected.Trim()) { throw "API key is required for API mode." }
 
@@ -1165,11 +1179,80 @@ function Save-BookRequest {
     throw "Book request text is empty."
   }
   $checklist = Get-BookRequestChecklist -Text $text
+  if ($checklist.complete -ne $true) { throw "Book request is incomplete: $($checklist.missing -join ", ")" }
+  $pagesMatch = [regex]::Match($text, "(?im)^\s*-\s*Hedef sayfa\s*:\s*(\d+)")
+  if (-not $pagesMatch.Success -or [int]$pagesMatch.Groups[1].Value -lt 1 -or [int]$pagesMatch.Groups[1].Value -gt 10000) { throw "Target pages must be an integer between 1 and 10000." }
+  $charactersMatch = [regex]::Match($text, "(?im)^\s*-\s*Karakter[^:]*:\s*(\d+)")
+  if (-not $charactersMatch.Success -or [int]$charactersMatch.Groups[1].Value -lt 1 -or [int]$charactersMatch.Groups[1].Value -gt 1000) { throw "Character count must be an integer between 1 and 1000." }
   [System.IO.File]::WriteAllText((Join-Path $runtimeDir "book-request.md"), $text, [System.Text.UTF8Encoding]::new($true))
   $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Kitap isteği kaydedildi" -Title "Kitap isteği"
   return [ordered]@{ ok = $true; relativePath = "runtime/book-request.md"; characters = $text.Length; words = Get-WordCount -Text $text; checklist = $checklist; version = $snapshot }
 }
 
+function Get-PageNotesPath {
+  param([string]$ProjectRoot, [string]$ChapterKey)
+  $notesDir = Join-Path $ProjectRoot "runtime/page-notes"
+  if (-not (Test-Path -LiteralPath $notesDir -PathType Container)) { New-Item -ItemType Directory -Path $notesDir -Force | Out-Null }
+  $safe = [regex]::Replace($ChapterKey, '[^A-Za-z0-9._-]+', '_').Trim('_')
+  if (-not $safe) { $safe = 'draft' }
+  if ($safe.Length -gt 80) { $safe = $safe.Substring(0,80) }
+  return Join-Path $notesDir "$safe.json"
+}
+function Read-PageNotes {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $path = Get-PageNotesPath -ProjectRoot $projectRoot -ChapterKey ([string]$Payload.chapterKey)
+  $stored = Read-Utf8JsonIfExists -Path $path
+  return [ordered]@{ ok = $true; chapterKey = [string]$Payload.chapterKey; notes = if ($stored -and $stored.notes) { @($stored.notes) } else { @() } }
+}
+function Save-PageNotes {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $chapterKey = [string]$Payload.chapterKey
+  if (-not $chapterKey.Trim()) { throw 'chapterKey is required.' }
+  $notes = @($Payload.notes | Select-Object -First 80)
+  foreach ($note in $notes) { if ([string]$note.note -and ([string]$note.note).Length -gt 4000) { throw 'Page note is too long.' } }
+  $path = Get-PageNotesPath -ProjectRoot $projectRoot -ChapterKey $chapterKey
+  Write-Utf8Json -Path $path -Value ([ordered]@{ schema_version = '1.0.0'; chapterKey = $chapterKey; updatedAt = (Get-Date).ToString('o'); notes = $notes })
+  return [ordered]@{ ok = $true; relativePath = (Get-RelativeProjectPath -ProjectRoot $projectRoot -Path $path); count = $notes.Count }
+}
+function Get-ProjectDiagnostics {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $checks = @()
+  foreach ($relative in @('.kithub-project.json','runtime/runner-config.json','runtime/agent-registry.json','runtime/agent-status-contract.json','runtime/project-status.json')) {
+    $full = Join-Path $projectRoot $relative
+    $checks += [ordered]@{ path = $relative; exists = (Test-Path -LiteralPath $full -PathType Leaf) }
+  }
+  $pointer = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot 'runtime/current-run.json')
+  $report = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot 'runtime/run-integrity-report.json')
+  $issues = @($checks | Where-Object { -not $_.exists } | ForEach-Object { "Missing: $($_.path)" })
+  if ($report -and [string]$report.verdict -eq 'BLOCKED') { $issues += 'Run integrity is blocked.' }
+  return [ordered]@{ ok = ($issues.Count -eq 0); projectRoot = $projectRoot; bridge = 'online'; checks = $checks; currentRun = $pointer; integrity = $report; issues = $issues }
+}
+
+function Get-RestorePreview {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $versionId = [string]$Payload.versionId
+  if ($versionId -notmatch '^\d{8}-\d{6}$') { throw "Invalid versionId: $versionId" }
+  $versionRoot = Join-Path $projectRoot "revision/_versions/$versionId"
+  $manifest = Read-Utf8JsonIfExists -Path (Join-Path $versionRoot 'manifest.json')
+  if (-not $manifest) { throw "Version manifest not found: $versionId" }
+  $manifestPaths = @{}
+  foreach ($file in @($manifest.files)) { $relative = ([string]$file.relativePath).Trim().Replace('\','/'); if ($relative) { $manifestPaths[$relative.ToLowerInvariant()] = $true } }
+  $orphans = @()
+  foreach ($relativeDir in @('runtime','design','episode','revision/_state')) {
+    $dir = Join-Path $projectRoot $relativeDir
+    if (-not (Test-Path -LiteralPath $dir -PathType Container)) { continue }
+    foreach ($currentFile in @(Get-ChildItem -LiteralPath $dir -File -Recurse | Where-Object { $_.FullName -notmatch '\\revision\\_versions\\' -and $_.Extension -match '^\.(md|json|txt)$' })) {
+      $relative = (Get-RelativeProjectPath -ProjectRoot $projectRoot -Path $currentFile.FullName).ToLowerInvariant()
+      if (-not $manifestPaths.ContainsKey($relative)) { $orphans += $relative }
+    }
+  }
+  $missing = @($manifest.files | Where-Object { -not (Test-Path -LiteralPath (Join-Path (Join-Path $versionRoot 'files') (([string]$_.relativePath) -replace '/','\')) -PathType Leaf) } | ForEach-Object { [string]$_.relativePath })
+  return [ordered]@{ ok = $true; canRestore = (@($orphans).Count -eq 0 -and @($missing).Count -eq 0); versionId = $versionId; orphanFiles = @($orphans); missingFiles = @($missing); restoredFileCount = @($manifest.files).Count }
+}
 function Save-Episode {
   param([object]$Payload)
   $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
@@ -1225,6 +1308,12 @@ function Save-LayoutPlan {
   $headingHierarchyPolicy = if ($Payload.heading_hierarchy_policy) { [string]$Payload.heading_hierarchy_policy } else { "chapter_only" }
   $widowOrphanControl = if ($Payload.widow_orphan_control) { [string]$Payload.widow_orphan_control } else { "strict" }
   $publisherSubmissionLabel = if ($Payload.publisher_submission_label) { [string]$Payload.publisher_submission_label } else { "publisher_submission_docx" }
+  if ($layoutProfile -notin @("classicNovel", "modernNovel", "publisherA5", "essay", "biography", "poetry", "screenplay", "children", "academic", "article", "selfHelp")) {
+    throw "Unsupported layout_profile: $layoutProfile"
+  }
+  if ($pageSize -notin @("A5 (148 x 210 mm)", "A4 (210 x 297 mm)")) { throw "Unsupported page_size: $pageSize" }
+  if ($printMode -notin @("Tek taraf", "Karşılıklı sayfa")) { throw "Unsupported print_mode: $printMode" }
+  if ($frontMatterSelection -notin @("Künye + İçindekiler", "Yalnız metin")) { throw "Unsupported front_matter: $frontMatterSelection" }
   if ($font -notin @("Garamond", "Times New Roman", "Georgia", "Palatino Linotype", "Courier New")) {
     throw "Unsupported font_family: $font"
   }
@@ -1244,6 +1333,7 @@ function Save-LayoutPlan {
   if ($indent -lt 0 -or $indent -gt 1.5) { throw "paragraph_first_line_indent_cm must be between 0 and 1.5." }
   if ($after -lt 0 -or $after -gt 12) { throw "paragraph_spacing_after_pt must be between 0 and 12." }
   if ($pageNumberPosition -notin @("bottom_center", "bottom_outer", "top_outer", "none")) { throw "Unsupported page_number_position: $pageNumberPosition" }
+  if ($chapterStartPolicy -notin @("new_page", "right_page", "continuous")) { throw "Unsupported chapter_start_policy: $chapterStartPolicy" }
   if ($tocDepth -lt 0 -or $tocDepth -gt 2) { throw "toc_depth must be between 0 and 2." }
   if ($frontMatterNumbering -notin @("roman_or_unnumbered", "none", "arabic")) { throw "Unsupported front_matter_numbering: $frontMatterNumbering" }
   if ($runningHeaderPolicy -notin @("none", "book_title", "chapter_title")) { throw "Unsupported running_header_policy: $runningHeaderPolicy" }
@@ -1542,11 +1632,27 @@ function Invoke-Pipeline {
   }
 }
 
+function Resolve-OutputDirectory {
+  param([object]$Payload, [string]$ProjectRoot)
+  $target = [string]$Payload.outputTarget
+  $requested = [string]$Payload.destinationDirectory
+  if (-not $requested.Trim()) { $requested = [string]$Payload.outputDirectory }
+  if ($target -match '(?i)^Masa') { $requested = [Environment]::GetFolderPath('Desktop') }
+  elseif ($target -match '(?i)^Belge') { $requested = [Environment]::GetFolderPath('MyDocuments') }
+  elseif ($target -match '(?i)^Se') { if (-not $requested.Trim()) { throw 'Selected folder export requires outputDirectory.' } }
+  elseif (-not $requested.Trim()) { $requested = [Environment]::GetFolderPath('Desktop') }
+  if (-not $requested.Trim()) { throw 'Export destination could not be resolved.' }
+  $resolved = [System.IO.Path]::GetFullPath($requested)
+  $projectPrefix = ([System.IO.Path]::GetFullPath($ProjectRoot)).TrimEnd('\') + '\'
+  if ($resolved.StartsWith($projectPrefix, [System.StringComparison]::OrdinalIgnoreCase)) { throw 'Export destination must be outside the project root.' }
+  if (-not (Test-Path -LiteralPath $resolved -PathType Container)) { New-Item -ItemType Directory -Path $resolved -Force | Out-Null }
+  return $resolved
+}
 function Invoke-FinalExport {
   param([object]$Payload)
 
   $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
-  $destinationDirectory = if ($Payload.destinationDirectory) { [string]$Payload.destinationDirectory } else { [Environment]::GetFolderPath("Desktop") }
+  $destinationDirectory = Resolve-OutputDirectory -Payload $Payload -ProjectRoot $projectRoot
   $exportScript = Join-Path $RepoRoot "scripts/export_final.ps1"
   if (-not (Test-Path -LiteralPath $exportScript -PathType Leaf)) {
     throw "export_final.ps1 not found under RepoRoot: $RepoRoot"
@@ -1644,6 +1750,7 @@ function Read-HttpRequest {
   $memory = New-Object System.IO.MemoryStream
   $headerEnd = -1
   $contentLength = 0
+  $headersMap = @{}
   do {
     $read = $Stream.Read($buffer, 0, $buffer.Length)
     if ($read -le 0) { break }
@@ -1658,6 +1765,7 @@ function Read-HttpRequest {
           $contentLength = [int]$Matches[1]
         }
       }
+      foreach ($line in ($headersText -split [Environment]::NewLine)) { if ($line -match "^\s*([^:]+)\s*:\s*(.*)$") { $headersMap[$Matches[1].Trim()] = $Matches[2].Trim() } }
       if ($bytes.Length -ge ($headerEnd + 4 + $contentLength)) { break }
     }
   } while ($true)
@@ -1669,15 +1777,17 @@ function Read-HttpRequest {
   if ($requestLine -notmatch "^(GET|POST|OPTIONS)\s+([^\s]+)\s+HTTP/") {
     throw "Unsupported HTTP request line: $requestLine"
   }
+  $requestMatch = $Matches
   $body = ""
   if ($contentLength -gt 0) {
     $bodyStart = $headerEnd + 4
     $body = [System.Text.Encoding]::UTF8.GetString($allBytes, $bodyStart, $contentLength)
   }
-  $uri = [System.Uri]::new("http://127.0.0.1$($Matches[2])")
+  $uri = [System.Uri]::new("http://127.0.0.1$($requestMatch[2])")
   return [ordered]@{
-    Method = $Matches[1]
+    Method = $requestMatch[1]
     Path = $uri.AbsolutePath
+    Headers = $headersMap
     Body = $body
   }
 }
@@ -1700,17 +1810,24 @@ function Write-HttpResponse {
     "HTTP/1.1 $StatusCode $reason",
     "Content-Type: $ContentType",
     "Content-Length: $($BodyBytes.Length)",
-    "Access-Control-Allow-Origin: *",
     "Access-Control-Allow-Methods: GET,POST,OPTIONS",
     "Access-Control-Allow-Headers: content-type",
     "Connection: close",
     "",
     ""
-  ) -join "`r`n"
+  )
+  if ($script:CurrentOrigin -and @($script:AllowedOrigins) -contains $script:CurrentOrigin) { $headers = @($headers[0], "Access-Control-Allow-Origin: $script:CurrentOrigin", "Vary: Origin") + @($headers[1..($headers.Count - 1)]) }
+  $headers = $headers -join [Environment]::NewLine
   $headerBytes = [System.Text.Encoding]::ASCII.GetBytes($headers)
-  $Stream.Write($headerBytes, 0, $headerBytes.Length)
+  try {
+    $Stream.Write($headerBytes, 0, $headerBytes.Length)
+  }
+  catch { return }
   if ($BodyBytes.Length -gt 0) {
-    $Stream.Write($BodyBytes, 0, $BodyBytes.Length)
+    try {
+      $Stream.Write($BodyBytes, 0, $BodyBytes.Length)
+    }
+    catch { return }
   }
 }
 
@@ -1734,6 +1851,8 @@ function Write-FileHttpResponse {
 }
 
 $prefix = "http://127.0.0.1:$Port/"
+$script:AllowedOrigins = @("http://127.0.0.1:$Port", "http://localhost:$Port")
+$script:CurrentOrigin = ""
 $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse("127.0.0.1"), $Port)
 $listener.Start()
 
@@ -1746,12 +1865,24 @@ try {
     $client = $listener.AcceptTcpClient()
     try {
       $stream = $client.GetStream()
-      $request = Read-HttpRequest -Stream $stream
-      $method = [string]$request.Method
-      $path = ([string]$request.Path).TrimEnd("/")
-      if ($path -eq "") { $path = "/" }
-
       try {
+        $request = Read-HttpRequest -Stream $stream
+      }
+      catch {
+        Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Invalid HTTP request." }) -StatusCode 400
+        continue
+      }
+      $method = [string]$request.Method
+             $path = ([string]$request.Path).TrimEnd("/")
+       if ($path -eq "") { $path = "/" }
+       $script:CurrentOrigin = ([string]$request.Headers["Origin"]).Trim()
+
+       try {
+         if ($script:CurrentOrigin -and -not (@($script:AllowedOrigins) -contains $script:CurrentOrigin)) {
+           Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Origin is not allowed." }) -StatusCode 403
+           continue
+         }
+
         if ($method -eq "OPTIONS") {
           Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true })
           continue
@@ -1772,6 +1903,17 @@ try {
           continue
         }
 
+        if ($method -eq "GET" -and $path -eq "/api/session") {
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true; token = $script:SessionToken })
+          continue
+        }
+        if ($path -like "/api/*" -and $path -notin @("/api/health", "/api/session")) {
+          $providedToken = [string]$request.Headers["X-KitHub-Session"]
+          if (-not $providedToken -or $providedToken -ne $script:SessionToken) {
+            Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Studio session token required." }) -StatusCode 401
+            continue
+          }
+        }
         if ($method -eq "GET" -and $path -eq "/api/provider-settings") {
           Write-JsonHttpResponse -Stream $stream -Value (Get-ProviderSettings)
           continue
@@ -1829,6 +1971,21 @@ try {
           continue
         }
 
+        if ($method -eq "POST" -and $path -eq "/api/diagnostics") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Get-ProjectDiagnostics -Payload $payload)
+          continue
+        }
+        if ($method -eq "POST" -and $path -eq "/api/page-notes") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Save-PageNotes -Payload $payload)
+          continue
+        }
+        if ($method -eq "POST" -and $path -eq "/api/page-notes/read") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Read-PageNotes -Payload $payload)
+          continue
+        }
         if ($method -eq "POST" -and $path -eq "/api/save-episode") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           Write-JsonHttpResponse -Stream $stream -Value (Save-Episode -Payload $payload)
@@ -1874,6 +2031,11 @@ try {
           continue
         }
 
+        if ($method -eq "POST" -and $path -eq "/api/restore-version-preview") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Get-RestorePreview -Payload $payload)
+          continue
+        }
         if ($method -eq "POST" -and $path -eq "/api/restore-version") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           Write-JsonHttpResponse -Stream $stream -Value (Restore-ProjectVersion -Payload $payload)
