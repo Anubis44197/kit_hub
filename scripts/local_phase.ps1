@@ -659,7 +659,7 @@ function Invoke-Intake {
   $publicationPackage = Get-BookRequestField -Text $seed -Labels @("Yayın paketi", "Yayin paketi")
   $characterPolicy = if ($characters) { "Kullanıcı tarafından verilen karakterler kullanılacak: $characters" } else { "" }
   $answersComplete = [bool]($writingType -and $premise -and $targetLength -and $targetReader -and $genre -and $characterPolicy -and $settingPeriod -and $povTense -and $styleTone -and $boundaries -and $publicationPackage)
-  $briefStatus = "QUESTIONS_PENDING"
+  $briefStatus = if ($answersComplete) { "READY_FOR_APPROVAL" } else { "QUESTIONS_PENDING" }
 
   Write-Json -Path (Join-Path $ProjectRoot "runtime/book-brief.json") -Value ([ordered]@{
     schema_version = "1.0.0"

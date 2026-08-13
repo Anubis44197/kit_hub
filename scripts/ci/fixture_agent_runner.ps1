@@ -37,6 +37,8 @@ foreach ($agent in @($registry.agents)) {
     $expected = Get-Content -LiteralPath $expectedPath -Raw
     $input = Get-Content -LiteralPath $inputPath -Raw
     if (-not $input.Trim()) { $errors += "empty fixture input" }
+    if ($input -match '(?i)\bplaceholder input\b') { $errors += "fixture input still contains placeholder text" }
+    if ($input.Trim().Length -lt 80) { $errors += "fixture input is too short for a behavioral scenario" }
     if ($expected.Length -lt 40) { $errors += "expected contract is too short" }
   }
   $results += [ordered]@{

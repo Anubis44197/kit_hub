@@ -75,7 +75,7 @@ The user writes the subject, genre, target page count, characters, setting, styl
 
 The system must plan before writing. It should not start from an old sample, leftover test project, or hard-coded default topic.
 
-If you import an existing TXT/MD/DOCX manuscript, the source is kept as manuscript context and added to the book request. It does not invent missing brief answers. Fill the required wizard fields (`Tür`, `Hedef sayfa`, `Konu`, `Karakterler`, `Dönem ve mekân`, `Anlatıcı`, `Final`, `Sınırlar`) before pressing `İsteği Kaydet`; the Studio focuses the first missing field and blocks writing until the structured brief is complete.
+If you import an existing TXT/MD/DOCX manuscript, the source is kept as manuscript context and added to the book request. It does not invent missing brief answers. Fill the required wizard fields (`Tür`, `Hedef sayfa`, `Hedef okur`, `Konu`, `Karakterler / karakter politikası`, `Dönem ve mekân`, `Anlatıcı`, `Final`, `Sınırlar`) before pressing `İsteği Kaydet`; Studio adds the selected/default `Üslup` and the standard `Yayın paketi`, focuses the first missing field, and blocks writing until the structured brief is complete.
 
 ### 4. Choose IDE Mode or API Mode
 Studio supports two production modes.
@@ -351,8 +351,9 @@ The runner rejects a fake brief approval. The brief must contain structured `req
 | Existing-project config migration | `powershell -ExecutionPolicy Bypass -File scripts/ci/migrate_project.ps1 -ProjectRoot <project-path>` |
 | State consistency validation | `powershell -ExecutionPolicy Bypass -File scripts/ci/validate_state_consistency.ps1 -ProjectRoot <project-path>` |
 | Run integrity validation | `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_run_integrity.ps1 -ProjectRoot <project-path>` |
-| Real local provider fixture execution | `powershell -ExecutionPolicy Bypass -File scripts/ci/provider_agent_runner.ps1 -Provider ollama -Model qwen2.5:0.5b` (local 36-agent execution; external providers require explicit data-transfer approval) |
-| Browser DOM E2E render | `powershell -ExecutionPolicy Bypass -File scripts/ci/browser_e2e_test.ps1` (desktop/mobile PASS; interactive keyboard/focus/zoom remains explicit UNKNOWN until controllable browser session is available) |
+| Real local provider fixture execution | `powershell -ExecutionPolicy Bypass -File scripts/ci/provider_agent_runner.ps1 -Provider ollama -Model qwen2.5:3b` (optional local-only 36-agent test; this does not configure Studio to use Ollama, and external providers require explicit data-transfer approval) |
+| Browser DOM + interaction E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/browser_e2e_test.ps1` (desktop and 390x844 mobile computed audits; skip-link/keyboard/focus/zoom; language, landmarks, live status, heading order, control names, duplicate IDs, 24px targets, contrast, overflow, and reduced-motion checks; manual WCAG testing still required) |
+| Studio security + final export E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/studio_bridge_security_export_test.ps1` (origin allowlist, session-header preflight, endpoint/key fail-closed behavior, selected output directory, and collision-safe DOCX copy) |
 
 ## Local Preview Policy
 - Studio is the local preview and control surface.

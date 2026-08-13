@@ -119,6 +119,24 @@
       outline-offset: 2px;
     }
 
+    .skip-link {
+      position: fixed;
+      z-index: 1000;
+      top: 10px;
+      left: 10px;
+      padding: 10px 14px;
+      border: 1px solid var(--teal);
+      border-radius: 6px;
+      color: var(--ink);
+      background: #0b2023;
+      transform: translateY(-160%);
+      transition: transform 160ms ease;
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
     .app {
       display: grid;
       grid-template-columns: var(--left-w) minmax(620px, 1fr) var(--right-w);
@@ -174,6 +192,14 @@
       color: var(--muted);
       font-size: 12px;
       min-width: 0;
+    }
+
+    .studio-heading {
+      margin: 0;
+      flex: 0 0 auto;
+      color: var(--ink);
+      font: 700 16px/1 var(--book);
+      letter-spacing: 0.2px;
     }
 
     .top-actions {
@@ -1566,6 +1592,15 @@
       40% { opacity: 1; transform: translateY(-3px); }
     }
 
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
     .audit-panel {
       margin-top: 12px;
       border: 1px solid var(--line-soft);
@@ -1892,6 +1927,7 @@
   </style>
 </head>
 <body class="nav-collapsed agents-collapsed type-collapsed">
+  <a class="skip-link" id="skipToWorkspace" href="#workspace">Ana çalışma alanına atla</a>
   <main class="app">
     <header class="topbar">
       <div class="brand">
@@ -1899,6 +1935,7 @@
         <span>Yaz. Denetle. Diz. Yayına hazırla.</span>
       </div>
       <div class="crumbs">
+        <h1 class="studio-heading">KitHub Studio</h1>
         <div class="chrome-controls" aria-label="Panel kontrolleri">
           <button type="button" class="icon-button active" id="toggleNav" title="Kitap haritasını aç/kapat" aria-label="Kitap haritasını aç veya kapat">☰</button>
           <button type="button" class="icon-button active" id="toggleType" title="Dizgi panelini aç/kapat" aria-label="Dizgi panelini aç veya kapat">▣</button>
@@ -1911,7 +1948,7 @@
         <details class="settings-menu" id="settingsMenu">
           <summary title="Ayarlar" aria-label="Ayarlar">⚙</summary>
           <div class="settings-panel">
-            <h3>Ayarlar</h3>
+            <h2>Ayarlar</h2>
             <section class="settings-section">
               <label>Çalışma modu
                 <div class="mode" aria-label="Çalışma modu">
@@ -1982,14 +2019,14 @@
       <section class="book-card">
         <div class="cover"></div>
         <div>
-          <h1 class="book-title">Proje Bekleniyor</h1>
+          <h2 class="book-title">Proje Bekleniyor</h2>
           <div class="book-meta">KitHub projesi<br><span id="bookStats">bölüm ve hedef bekliyor</span></div>
         </div>
       </section>
       <section class="wizard-panel" aria-label="Başlangıç sihirbazı">
         <div class="wizard-head">
           <span>Başlangıç Sihirbazı</span>
-          <span id="wizardCompleteness">0/8</span>
+          <span id="wizardCompleteness">0/9</span>
         </div>
         <div class="wizard-grid">
           <label>Tür
@@ -2022,8 +2059,11 @@
           <label>Hedef Sayfa
             <input id="wizardPages" type="number" min="1" max="10000" step="1" placeholder="örn. 245" aria-label="Hedef sayfa" />
           </label>
-          <label>Karakter
-            <input id="wizardCharacters" type="number" min="1" max="1000" step="1" placeholder="örn. 6" aria-label="Karakter sayısı" />
+          <label class="wide">Hedef Okur
+            <input id="wizardReader" placeholder="örn. yetişkin psikolojik gizem okurları" aria-label="Hedef okur" />
+          </label>
+          <label class="wide">Karakterler / Karakter Politikası
+            <input id="wizardCharacters" placeholder="örn. Defne, Cem ve Nermin; yeni karakterleri sistem önerebilir" aria-label="Karakterler veya karakter politikası" />
           </label>
           <label>Anlatıcı
             <select id="wizardNarrator" aria-label="Anlatıcı">
@@ -2139,7 +2179,7 @@
       </div>
     </aside>
 
-    <section class="workspace">
+    <section class="workspace" id="workspace" tabindex="-1" aria-label="Ana çalışma alanı">
       <nav class="tabs" aria-label="Çalışma sekmeleri">
         <button type="button" class="active" data-tab="manuscript">Metin</button>
         <button type="button" data-tab="preview">Sayfa Ön İzleme</button>
@@ -2245,7 +2285,7 @@
         <span id="charCount">0 karakter</span>
         <span id="chapterAction">Aksiyon yok</span>
         <span>Türkçe (Türkiye)</span>
-        <span class="live">Motor olayı: kullanıcı onayı bekleniyor</span>
+        <span class="live" role="status" aria-live="polite" aria-atomic="true">Motor olayı: kullanıcı onayı bekleniyor</span>
       </footer>
     </section>
 
@@ -2493,6 +2533,7 @@
     let runLogText = "Studio Bridge bekleniyor.";
     const wizardType = document.getElementById("wizardType");
     const wizardPages = document.getElementById("wizardPages");
+    const wizardReader = document.getElementById("wizardReader");
     const wizardCharacters = document.getElementById("wizardCharacters");
     const wizardNarrator = document.getElementById("wizardNarrator");
     const wizardPremise = document.getElementById("wizardPremise");
@@ -4383,6 +4424,7 @@
       return {
         type: wizardType.value.trim(),
         pages: wizardPages.value.trim(),
+        reader: wizardReader.value.trim(),
         characters: wizardCharacters.value.trim(),
         narrator: wizardNarrator.value.trim(),
         premise: wizardPremise.value.trim(),
@@ -4402,19 +4444,20 @@
       const checks = [
         ["Tür", "T.{0,2}r"],
         ["Hedef sayfa", "Hedef sayfa"],
+        ["Hedef okur", "Hedef okur"],
         ["Konu", "Konu"],
         ["Karakterler", "Karakter[^:]*"],
         ["Dönem ve mekân", "D.{0,2}nem[^:]*"],
         ["Anlatıcı", "Anlat[^:]*"],
         ["Final", "Final[^:]*"],
-        ["Sınırlar", "S.{0,2}n.{0,2}r[^:]*"]
+        ["Üslup", "[ÜU]slup"],
+        ["Sınırlar", "S.{0,2}n.{0,2}r[^:]*"],
+        ["Yayın paketi", "Yay.{0,2}n paketi"]
       ];
       const missing = checks.filter(([, pattern]) => !readRequestField(text, pattern)).map(([label]) => label);
       const pages = Number(readRequestField(text, "Hedef sayfa"));
-      const characters = Number(readRequestField(text, "Karakter[^:]*"));
       const invalid = [];
       if (!Number.isInteger(pages) || pages < 1 || pages > 10000) invalid.push("Hedef sayfa 1-10000 arasında tam sayı olmalı");
-      if (!Number.isInteger(characters) || characters < 1 || characters > 1000) invalid.push("Karakterler 1-1000 arasında tam sayı olmalı");
       return { complete: missing.length === 0 && invalid.length === 0, missing, invalid };
     }
 
@@ -4422,11 +4465,13 @@
       const fields = [
         [wizardType, "T.{0,2}r"],
         [wizardPages, "Hedef sayfa"],
+        [wizardReader, "Hedef okur"],
         [wizardCharacters, "Karakter[^:]*"],
         [wizardNarrator, "Anlat[^:]*"],
         [wizardPremise, "Konu"],
         [wizardSetting, "D.{0,2}nem[^:]*"],
         [wizardEnding, "Final[^:]*"],
+        [wizardStyle, "[ÜU]slup"],
         [wizardBoundaries, "S.{0,2}n.{0,2}r[^:]*"]
       ];
       fields.forEach(([field, pattern]) => {
@@ -4440,14 +4485,15 @@
       const fields = {
         "Tür": wizardType,
         "Hedef sayfa": wizardPages,
+        "Hedef okur": wizardReader,
         "Konu": wizardPremise,
         "Karakterler": wizardCharacters,
         "Dönem ve mekân": wizardSetting,
         "Anlatıcı": wizardNarrator,
         "Final": wizardEnding,
+        "Üslup": wizardStyle,
         "Sınırlar": wizardBoundaries,
-        "Hedef sayfa 1-10000 arasında tam sayı olmalı": wizardPages,
-        "Karakterler 1-1000 arasında tam sayı olmalı": wizardCharacters
+        "Hedef sayfa 1-10000 arasında tam sayı olmalı": wizardPages
       };
       const field = fields[missing?.[0]];
       if (field) {
@@ -4460,6 +4506,7 @@
       const checks = [
         ["Tür", values.type],
         ["Hedef sayfa", values.pages],
+        ["Hedef okur", values.reader],
         ["Konu", values.premise],
         ["Karakterler", values.characters],
         ["Dönem ve mekân", values.setting],
@@ -4470,9 +4517,7 @@
       const missing = checks.filter(([, value]) => !String(value || "").trim()).map(([label]) => label);
       const invalid = [];
       const pages = Number(values.pages);
-      const characters = Number(values.characters);
       if (String(values.pages || "").trim() && (!Number.isInteger(pages) || pages < 1 || pages > 10000)) invalid.push("Hedef sayfa 1-10000 arasında tam sayı olmalı");
-      if (String(values.characters || "").trim() && (!Number.isInteger(characters) || characters < 1 || characters > 1000)) invalid.push("Karakterler 1-1000 arasında tam sayı olmalı");
       wizardCompleteness.textContent = `${Math.max(0, checks.length - missing.length - invalid.length)}/${checks.length}`;
       wizardMissing.textContent = missing.length || invalid.length
         ? `Eksik/geçersiz: ${[...missing, ...invalid].join(", ")}`
@@ -4489,6 +4534,7 @@
         "## Zorunlu Cevaplar",
         `- Tür: ${values.type}`,
         `- Hedef sayfa: ${values.pages}`,
+        `- Hedef okur: ${values.reader}`,
         `- Konu: ${values.premise}`,
         `- Karakterler: ${values.characters}`,
         `- Dönem ve mekân: ${values.setting}`,
@@ -5923,6 +5969,7 @@
         event.preventDefault();
         document.body.classList.remove("focus-writing");
         syncPanelButtons();
+        focusModeBtn.focus();
         setStatus("Motor olayı: odak yazım modu kapandı");
         return;
       }
@@ -6238,7 +6285,7 @@
     cleanupProjectBtn.addEventListener("click", cleanupProjectViaBridge);
     buildRequestBtn.addEventListener("click", buildWizardRequestText);
     saveWizardBtn.addEventListener("click", saveWizardRequest);
-    [wizardType, wizardPages, wizardCharacters, wizardNarrator, wizardPremise, wizardSetting, wizardEnding, wizardStyle, wizardBoundaries].forEach(input => {
+    [wizardType, wizardPages, wizardReader, wizardCharacters, wizardNarrator, wizardPremise, wizardSetting, wizardEnding, wizardStyle, wizardBoundaries].forEach(input => {
       input.addEventListener("input", () => validateWizard());
       input.addEventListener("change", () => {
         validateWizard();

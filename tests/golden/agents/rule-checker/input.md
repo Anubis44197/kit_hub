@@ -1,3 +1,3 @@
 ﻿# Golden Input - rule-checker
 
-Placeholder input.
+Metin: “Defne de biliyorduki defter yalnız ona ait değildi. Cem mi gelmişdi?” Türkçe yazım ve noktalama sorunlarını konum, özgün metin, öneri ve önem derecesiyle raporla.

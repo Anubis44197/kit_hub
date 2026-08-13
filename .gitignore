@@ -22,3 +22,8 @@ runtime/current-run.json
 runtime/approvals/*.json
 runtime/agent-compliance/*.json
 !runtime/agent-compliance.schema.json
+runtime/browser-e2e-report.json
+runtime/fixture-reports/
+runtime/provider-fixture-reports/
+studio-stdout.log
+studio-stderr.log

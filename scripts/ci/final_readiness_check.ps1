@@ -454,6 +454,10 @@ Assert-File "scripts/ci/tdk_dict_check.py"
 Assert-File "scripts/ci/tdk_dict_check.ps1"
 Assert-File "scripts/ci/provider_agent_runner.ps1"
 Assert-File "scripts/ci/browser_e2e_test.ps1"
+Assert-File "scripts/ci/browser_interaction_probe.mjs"
+Assert-File "scripts/ci/studio_bridge_book_request_test.ps1"
+Assert-File "scripts/ci/studio_bridge_security_export_test.ps1"
+Assert-File "scripts/ci/local_intake_status_test.ps1"
 if ((Read-Utf8 -Path "scripts/run_pipeline.ps1") -match '(?m)^\s*Invoke-Expression\s+\$cmd') { throw "Direct Invoke-Expression command execution remains in runner." }
 foreach ($contractPath in @(Get-ChildItem "runtime/phase-contracts/*.json" -File)) {
   $contract = Read-Utf8 -Path $contractPath.FullName | ConvertFrom-Json
@@ -465,6 +469,13 @@ foreach ($agent in $agentFiles) {
   $agentName = [System.IO.Path]::GetFileNameWithoutExtension($agent.Name)
   Assert-File "tests/golden/agents/$agentName/input.md"
   Assert-File "tests/golden/agents/$agentName/expected.md"
+  $inputRaw = Read-Utf8 -Path "tests/golden/agents/$agentName/input.md"
+  if ($inputRaw -match "(?i)\bPlaceholder input\b") {
+    throw "Golden input still contains placeholder text: $agentName"
+  }
+  if ($inputRaw.Trim().Length -lt 80) {
+    throw "Golden input is too short for a behavioral scenario: $agentName"
+  }
   Assert-Contains -Path "tests/golden/agents/$agentName/expected.md" -Pattern "Expected contract" -ErrorMessage "Golden expected output is not contract-backed: $agentName"
   $expectedRaw = Read-Utf8 -Path "tests/golden/agents/$agentName/expected.md"
   if ($expectedRaw -match "Placeholder expected output") {

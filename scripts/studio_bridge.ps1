@@ -1,7 +1,8 @@
 ﻿param(
   [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
   [int]$Port = 8765,
-  [string]$SessionToken = ""
+  [string]$SessionToken = "",
+  [string]$ProviderSettingsPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -233,6 +234,9 @@ function Restore-ProjectVersion {
   }
 }
 function Get-ProviderSettingsPath {
+  if ($ProviderSettingsPath.Trim()) {
+    return [System.IO.Path]::GetFullPath($ProviderSettingsPath)
+  }
   $appData = [Environment]::GetFolderPath("ApplicationData")
   if (-not $appData.Trim()) {
     $appData = Join-Path ([Environment]::GetFolderPath("UserProfile")) "AppData\Roaming"
@@ -291,7 +295,7 @@ function Set-ProviderEnvironment {
   if ($ApiKey.Trim()) {
     $env:KITHUB_API_KEY = $ApiKey
   }
-  if (-not $env:KITHUB_PROVIDER_ARGS.Trim()) {
+  if (-not ([string]$env:KITHUB_PROVIDER_ARGS).Trim()) {
     $env:KITHUB_PROVIDER_ARGS = "--project-root `"{project_root}`" --phase {phase} --run-id `"{run_id}`" --prompt-file `"{prompt_file}`""
   }
 }
@@ -643,12 +647,15 @@ function Get-BookRequestChecklist {
   $checks = @(
     [ordered]@{ key = "writing_type"; label = "Tür"; ok = ($Text -match "(?im)^\s*-\s*T.{0,2}r\s*:[ \t]*\S") },
     [ordered]@{ key = "target_pages"; label = "Hedef sayfa"; ok = ($Text -match "(?im)^\s*-\s*Hedef sayfa\s*:[ \t]*\S") },
+    [ordered]@{ key = "target_reader"; label = "Hedef okur"; ok = ($Text -match "(?im)^\s*-\s*Hedef okur\s*:[ \t]*\S") },
     [ordered]@{ key = "premise"; label = "Konu"; ok = ($Text -match "(?im)^\s*-\s*Konu\s*:[ \t]*\S") },
     [ordered]@{ key = "characters"; label = "Karakterler"; ok = ($Text -match "(?im)^\s*-\s*Karakter[^\r\n]*:[ \t]*\S") },
     [ordered]@{ key = "setting"; label = "Dönem ve mekân"; ok = ($Text -match "(?im)^\s*-\s*D.{0,2}nem[^\r\n]*:[ \t]*\S") },
     [ordered]@{ key = "narration"; label = "Anlatıcı"; ok = ($Text -match "(?im)^\s*-\s*Anlat[^\r\n]*:[ \t]*\S") },
     [ordered]@{ key = "ending"; label = "Final"; ok = ($Text -match "(?im)^\s*-\s*Final[^\r\n]*:[ \t]*\S") },
-    [ordered]@{ key = "boundaries"; label = "Sınırlar"; ok = ($Text -match "(?im)^\s*-\s*S.{0,2}n.{0,2}r[^\r\n]*:[ \t]*\S") }
+    [ordered]@{ key = "style_tone"; label = "Üslup"; ok = ($Text -match "(?im)^\s*-\s*[ÜU]slup\s*:[ \t]*\S") },
+    [ordered]@{ key = "boundaries"; label = "Sınırlar"; ok = ($Text -match "(?im)^\s*-\s*S.{0,2}n.{0,2}r[^\r\n]*:[ \t]*\S") },
+    [ordered]@{ key = "publication_package"; label = "Yayın paketi"; ok = ($Text -match "(?im)^\s*-\s*Yay.{0,2}n paketi\s*:[ \t]*\S") }
   )
   $missing = @($checks | Where-Object { $_.ok -ne $true } | ForEach-Object { $_.label })
   return [ordered]@{
@@ -1182,8 +1189,9 @@ function Save-BookRequest {
   if ($checklist.complete -ne $true) { throw "Book request is incomplete: $($checklist.missing -join ", ")" }
   $pagesMatch = [regex]::Match($text, "(?im)^\s*-\s*Hedef sayfa\s*:\s*(\d+)")
   if (-not $pagesMatch.Success -or [int]$pagesMatch.Groups[1].Value -lt 1 -or [int]$pagesMatch.Groups[1].Value -gt 10000) { throw "Target pages must be an integer between 1 and 10000." }
-  $charactersMatch = [regex]::Match($text, "(?im)^\s*-\s*Karakter[^:]*:\s*(\d+)")
-  if (-not $charactersMatch.Success -or [int]$charactersMatch.Groups[1].Value -lt 1 -or [int]$charactersMatch.Groups[1].Value -gt 1000) { throw "Character count must be an integer between 1 and 1000." }
+  $charactersMatch = [regex]::Match($text, "(?im)^\s*-\s*Karakter[^\r\n]*:\s*(.+?)\s*$")
+  if (-not $charactersMatch.Success -or -not $charactersMatch.Groups[1].Value.Trim()) { throw "Characters must include at least one name or a character policy." }
+  if ($charactersMatch.Groups[1].Value.Length -gt 4000) { throw "Characters must be 4000 characters or fewer." }
   [System.IO.File]::WriteAllText((Join-Path $runtimeDir "book-request.md"), $text, [System.Text.UTF8Encoding]::new($true))
   $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Kitap isteği kaydedildi" -Title "Kitap isteği"
   return [ordered]@{ ok = $true; relativePath = "runtime/book-request.md"; characters = $text.Length; words = Get-WordCount -Text $text; checklist = $checklist; version = $snapshot }
@@ -1811,7 +1819,7 @@ function Write-HttpResponse {
     "Content-Type: $ContentType",
     "Content-Length: $($BodyBytes.Length)",
     "Access-Control-Allow-Methods: GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers: content-type",
+    "Access-Control-Allow-Headers: content-type, x-kithub-session",
     "Connection: close",
     "",
     ""

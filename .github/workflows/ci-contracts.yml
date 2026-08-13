@@ -23,3 +23,25 @@ jobs:
 
       - name: Run final readiness check
         run: bash scripts/ci/final_readiness_check.sh
+
+  studio-bridge-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test Studio book request bridge
+        shell: powershell
+        run: .\scripts\ci\studio_bridge_book_request_test.ps1
+
+      - name: Test Studio bridge security and final export
+        shell: powershell
+        run: .\scripts\ci\studio_bridge_security_export_test.ps1
+
+      - name: Test local intake status
+        shell: powershell
+        run: .\scripts\ci\local_intake_status_test.ps1
+
+      - name: Validate agent fixtures
+        shell: powershell
+        run: .\scripts\ci\fixture_agent_runner.ps1

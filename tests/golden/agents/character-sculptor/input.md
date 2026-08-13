@@ -1,3 +1,3 @@
 ﻿# Golden Input - character-sculptor
 
-Placeholder input.
+Defne ilk taslakta yalnızca meraklı ve cesur görünüyor. Aile sadakati ile gerçeği açığa çıkarma isteği arasındaki çatışmayı derinleştir; mevcut olay örgüsünü ve onaylı karakter kimliğini koru.
