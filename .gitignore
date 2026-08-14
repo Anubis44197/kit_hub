@@ -4,6 +4,7 @@ _workspace/
 claudedocs/
 .omx/
 _github_push_*/
+node_modules/
 
 # Generated book/project outputs. Keep source control clean so agents do not
 # mistake stale smoke-test artifacts for the current manuscript.

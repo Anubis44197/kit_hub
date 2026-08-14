@@ -38,6 +38,18 @@ jobs:
         shell: powershell
         run: .\scripts\ci\studio_bridge_security_export_test.ps1
 
+      - name: Test Studio chapter manager and atomic saves
+        shell: powershell
+        run: .\scripts\ci\studio_bridge_chapter_manager_test.ps1
+
+      - name: Protect existing Studio typography and page defaults
+        shell: powershell
+        run: .\scripts\ci\studio_typography_baseline_test.ps1
+
+      - name: Test structured DOCX round trip
+        shell: powershell
+        run: .\scripts\ci\studio_bridge_docx_roundtrip_test.ps1
+
       - name: Test local intake status
         shell: powershell
         run: .\scripts\ci\local_intake_status_test.ps1

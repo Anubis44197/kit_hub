@@ -90,6 +90,9 @@ API keys are stored through Studio provider settings. They must not be committed
 ### 5. Edit, review, and revise
 Studio includes:
 
+- delayed autosave with a visible dirty/saving state, local crash-recovery drafts, atomic episode writes, and an unload guard
+- `Ctrl+S`, `Ctrl+F`, and `Ctrl+H` editor shortcuts with chapter/book search and replace
+- a chapter manager for create, rename, duplicate, keyboard/drag reorder, and recoverable delete
 - page-like manuscript preview
 - DOCX import for existing Word manuscripts
 - live edit panel
@@ -352,8 +355,9 @@ The runner rejects a fake brief approval. The brief must contain structured `req
 | State consistency validation | `powershell -ExecutionPolicy Bypass -File scripts/ci/validate_state_consistency.ps1 -ProjectRoot <project-path>` |
 | Run integrity validation | `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_run_integrity.ps1 -ProjectRoot <project-path>` |
 | Real local provider fixture execution | `powershell -ExecutionPolicy Bypass -File scripts/ci/provider_agent_runner.ps1 -Provider ollama -Model qwen2.5:3b` (optional local-only 36-agent test; this does not configure Studio to use Ollama, and external providers require explicit data-transfer approval) |
-| Browser DOM + interaction E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/browser_e2e_test.ps1` (desktop and 390x844 mobile computed audits; skip-link/keyboard/focus/zoom; language, landmarks, live status, heading order, control names, duplicate IDs, 24px targets, contrast, overflow, and reduced-motion checks; manual WCAG testing still required) |
+| Browser DOM + interaction E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/browser_e2e_test.ps1` (editor dirty/recovery shortcuts, chapter-manager dialog/focus, desktop and 390x844 mobile computed audits, contrast, overflow, and reduced-motion checks; manual WCAG testing still required) |
 | Studio security + final export E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/studio_bridge_security_export_test.ps1` (origin allowlist, session-header preflight, endpoint/key fail-closed behavior, selected output directory, and collision-safe DOCX copy) |
+| Studio chapter manager + atomic save E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/studio_bridge_chapter_manager_test.ps1` (autosave snapshot suppression, atomic cleanup, create, rename, duplicate, persistent order, and recoverable delete) |
 
 ## Local Preview Policy
 - Studio is the local preview and control surface.

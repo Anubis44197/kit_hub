@@ -1,0 +1,25 @@
+{
+  "name": "kithub-studio-shell",
+  "private": true,
+  "scripts": {
+    "build:studio-editor": "esbuild src/studio-editor.js --bundle --format=iife --outfile=assets/studio-editor.js --target=chrome109,edge109 --minify",
+    "build:page-flow": "esbuild src/page-flow.js --bundle --format=iife --global-name=KitHubPageFlow --outfile=assets/page-flow.js --target=chrome109,edge109 --minify",
+    "build:assets": "npm run build:studio-editor && npm run build:page-flow",
+    "test:typography": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ci/studio_typography_baseline_test.ps1"
+  },
+  "dependencies": {
+    "markdown-it": "15.0.0",
+    "prosemirror-commands": "1.7.2",
+    "prosemirror-history": "1.5.0",
+    "prosemirror-keymap": "1.2.3",
+    "prosemirror-markdown": "1.13.5",
+    "prosemirror-model": "1.25.11",
+    "prosemirror-schema-basic": "1.2.4",
+    "prosemirror-schema-list": "1.5.1",
+    "prosemirror-state": "1.4.4",
+    "prosemirror-view": "1.42.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

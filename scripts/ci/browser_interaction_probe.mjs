@@ -48,16 +48,18 @@ const call = (method, params = {}) => new Promise((resolve, reject) => {
 });
 const evaluate = async expression => {
   const result = await call("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
-  if (result.exceptionDetails) throw new Error(result.exceptionDetails.text || "Runtime evaluation failed.");
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text || "Runtime evaluation failed.");
+  }
   return result.result?.value;
 };
-const key = async (keyName, code = keyName) => {
+const key = async (keyName, code = keyName, modifiers = 0) => {
   const virtualKey = keyName === "Enter" ? 13 : keyName === "Escape" ? 27 : keyName === "End" ? 35 : 0;
-  await call("Input.dispatchKeyEvent", { type: "rawKeyDown", key: keyName, code, windowsVirtualKeyCode: virtualKey, nativeVirtualKeyCode: virtualKey });
+  await call("Input.dispatchKeyEvent", { type: "rawKeyDown", key: keyName, code, modifiers, windowsVirtualKeyCode: virtualKey, nativeVirtualKeyCode: virtualKey });
   if (keyName === "Enter") {
     await call("Input.dispatchKeyEvent", { type: "char", key: keyName, code, text: "\r", unmodifiedText: "\r", windowsVirtualKeyCode: virtualKey, nativeVirtualKeyCode: virtualKey });
   }
-  await call("Input.dispatchKeyEvent", { type: "keyUp", key: keyName, code, windowsVirtualKeyCode: virtualKey, nativeVirtualKeyCode: virtualKey });
+  await call("Input.dispatchKeyEvent", { type: "keyUp", key: keyName, code, modifiers, windowsVirtualKeyCode: virtualKey, nativeVirtualKeyCode: virtualKey });
   await delay(120);
 };
 
@@ -171,7 +173,12 @@ const desktopAccessibility = await evaluate(accessibilityExpression);
 const desktopScreenshot = await call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
 fs.writeFileSync(screenshotPath, Buffer.from(desktopScreenshot.data, "base64"));
 
-await evaluate(`document.activeElement?.blur()`);
+await evaluate(`(() => {
+  document.activeElement?.blur();
+  document.body.setAttribute('tabindex', '-1');
+  document.body.focus();
+  document.body.removeAttribute('tabindex');
+})()`);
 await key("Tab");
 const skipLinkFocused = await evaluate(`document.activeElement?.id === 'skipToWorkspace'`);
 await key("Enter");
@@ -180,7 +187,7 @@ const skipTargetFocused = await evaluate(`document.activeElement?.id === 'worksp
 await evaluate(`document.getElementById('focusModeBtn').focus()`);
 const focusButtonBefore = await evaluate(`document.activeElement?.id`);
 await key("Enter");
-const focusModeEntered = await evaluate(`({ active: document.body.classList.contains('focus-writing'), focused: document.activeElement?.id, pressed: document.getElementById('focusModeBtn').getAttribute('aria-pressed') })`);
+const focusModeEntered = await evaluate(`({ active: document.body.classList.contains('focus-writing'), focused: document.activeElement?.id || (document.activeElement?.classList.contains('ProseMirror') ? 'structuredEditor' : ''), pressed: document.getElementById('focusModeBtn').getAttribute('aria-pressed') })`);
 await key("Escape");
 const focusModeExited = await evaluate(`({ active: document.body.classList.contains('focus-writing'), focused: document.activeElement?.id, pressed: document.getElementById('focusModeBtn').getAttribute('aria-pressed') })`);
 
@@ -188,6 +195,204 @@ await evaluate(`document.getElementById('zoomSelect').focus()`);
 const zoomBefore = await evaluate(`({ value: document.getElementById('zoomSelect').value, css: getComputedStyle(document.documentElement).getPropertyValue('--page-zoom').trim() })`);
 await key("End");
 const zoomAfter = await evaluate(`({ value: document.getElementById('zoomSelect').value, css: getComputedStyle(document.documentElement).getPropertyValue('--page-zoom').trim(), focused: document.activeElement?.id })`);
+
+const dirtyState = await evaluate(`(() => {
+  const editor = document.getElementById('manuscriptText');
+  editor.value += '\\nKitHub güvenli editör';
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
+  return {
+    saveState: document.getElementById('saveState').textContent.trim(),
+    recoveryStored: Object.keys(localStorage).some(key => key.startsWith('kithub-editor-recovery:')),
+    spellcheck: editor.spellcheck,
+    richSpellcheck: document.querySelector('.ProseMirror')?.getAttribute('spellcheck') === 'true',
+    mode: structuredEditorMode,
+    sourceHidden: editor.hidden,
+    schemaVersion: window.KitHubStructuredEditor?.schemaVersion
+  };
+})()`);
+await key("f", "KeyF", 2);
+const findShortcut = await evaluate(`(() => {
+  const input = document.getElementById('findInput');
+  input.value = 'KitHub';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  return {
+    open: document.getElementById('findPanel').hidden === false,
+    focused: document.activeElement?.id,
+    count: document.getElementById('findCount').textContent.trim()
+  };
+})()`);
+await key("Enter");
+const findSelection = await evaluate(`(() => {
+  const editor = document.getElementById('manuscriptText');
+  return {
+    selected: structuredEditorMode === 'rich' && structuredEditorApi
+      ? structuredEditorApi.getSelectedText()
+      : editor.value.slice(editor.selectionStart, editor.selectionEnd),
+    focused: document.activeElement?.id || (document.activeElement?.classList.contains('ProseMirror') ? 'structuredEditor' : '')
+  };
+})()`);
+await key("Escape");
+await key("h", "KeyH", 2);
+const replaceShortcut = await evaluate(`({
+  open: document.getElementById('findPanel').hidden === false,
+  replaceVisible: document.getElementById('findReplaceRow').hidden === false,
+  focused: document.activeElement?.id
+})`);
+await key("Escape");
+await key("s", "KeyS", 2);
+const saveShortcut = await evaluate(`({
+  state: document.getElementById('saveState').textContent.trim(),
+  recoveryStored: Object.keys(localStorage).some(key => key.startsWith('kithub-editor-recovery:'))
+})`);
+const editorialRules = await evaluate(`(() => {
+  setEditorText(document.getElementById('manuscriptText').value + '\\n\\nçok çok  ,yanlış.... "Söz"');
+  editorContentChanged();
+  renderEditorialPanel();
+  return {
+    findingCount: editorialFindings.length,
+    settingsPresent: Boolean(document.getElementById('editorialQuoteStyle') && document.getElementById('editorialStyleNotes')),
+    mutatesWithoutApproval: document.getElementById('manuscriptText').value.includes('çok çok  ,yanlış.... "Söz"') === false
+  };
+})()`);
+const publishingCompatibility = await evaluate(`(() => {
+  const font = document.getElementById('typeFont');
+  const pageSize = document.getElementById('pageSize');
+  const design = document.getElementById('pageDesign');
+  const before = { font: font.value, pageSize: pageSize.value, design: design.value };
+  design.value = 'artDeco';
+  design.dispatchEvent(new Event('change', { bubbles: true }));
+  const optInApplied = document.getElementById('bookPage').dataset.pageDesign === 'artDeco';
+  const metricsPreserved = font.value === before.font && pageSize.value === before.pageSize;
+  design.value = 'classicFrame';
+  design.dispatchEvent(new Event('change', { bubbles: true }));
+  return {
+    before,
+    optInApplied,
+    metricsPreserved,
+    classicRestored: document.getElementById('bookPage').dataset.pageDesign === 'classicFrame',
+    outputProfiles: [...document.getElementById('settingsOutputProfile').options].map(option => option.value),
+    defaultOutputProfile: document.getElementById('settingsOutputProfile').value
+  };
+})()`);
+const publicationUx = await evaluate(`(() => {
+  const workflow = [...document.querySelectorAll('[data-workflow-step]')];
+  document.querySelector('[data-workflow-step="publish"]')?.click();
+  const publishStepActive = document.querySelector('[data-workflow-step="publish"]')?.hasAttribute('aria-current') === true;
+  const prompt = document.getElementById('aiPromptInput');
+  const promptMinHeight = Number.parseFloat(getComputedStyle(prompt).minHeight || '0');
+  document.getElementById('openMatterManagerBtn')?.click();
+  const matterDialog = document.getElementById('matterManagerDialog');
+  const matterOpen = matterDialog?.open === true;
+  const matterColumns = matterDialog?.querySelectorAll('.matter-column').length || 0;
+  matterDialog?.close();
+  document.getElementById('openCoverStudioBtn')?.click();
+  const coverDialog = document.getElementById('coverStudioDialog');
+  const coverOpen = coverDialog?.open === true;
+  const pageCount = document.getElementById('coverPageCountInput');
+  pageCount.value = '320';
+  pageCount.dispatchEvent(new Event('input', { bubbles: true }));
+  const coverSizeCalculated = /mm/.test(document.getElementById('coverSizeSummary')?.textContent || '');
+  coverDialog?.close();
+  document.querySelector('[data-workflow-step="write"]')?.click();
+  return {
+    workflowCount: workflow.length,
+    workflowLabels: workflow.map(item => item.textContent.trim()),
+    publishStepActive,
+    promptMinHeight,
+    promptMaxLength: prompt?.maxLength || 0,
+    promptContextCount: document.querySelectorAll('[data-ai-context]').length,
+    matterOpen,
+    matterColumns,
+    coverOpen,
+    coverSizeCalculated,
+    preflightAvailable: Boolean(document.getElementById('runPreflightBtn')),
+    informationalControls: document.querySelectorAll('button[data-control-state="info"]').length,
+    blockedControls: document.querySelectorAll('button[data-control-state="blocked"]').length
+  };
+})()`);
+const paginationFlow = await evaluate(`(() => {
+  const original = document.getElementById('manuscriptText').value;
+  const sentence = 'KitHub ölçümlü sayfa akışı gerçek satır yüksekliğini ve kullanılabilir sayfa alanını izler.';
+  const longParagraph = Array.from({ length: 520 }, (_, index) => sentence + ' ' + (index + 1)).join(' ');
+  const tail = Array.from({ length: 70 }, (_, index) => 'Sonraki sahne paragrafı ' + (index + 1) + '.').join(' ');
+  previewShowAll = false;
+  setEditorText('# Ölçümlü Sayfalama\\n\\n' + longParagraph + '\\n\\n<!-- page-break -->\\n\\n## Yeni Sahne\\n\\n' + tail);
+  renderPreview();
+  const stage = document.querySelector('.page-stage');
+  const initialPages = [...stage.querySelectorAll(':scope > .page')];
+  const pageBodies = initialPages.map(page => page.id === 'bookPage' ? page.querySelector('#pageBody') : page.children[1]);
+  const lineCount = element => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    return new Set([...range.getClientRects()].filter(rect => rect.height > 1).map(rect => Math.round(rect.top * 2) / 2)).size;
+  };
+  const fragmentLineCounts = pageBodies.flatMap(body => [...(body?.querySelectorAll('p.continued') || [])].map(lineCount));
+  const totalPages = Number(stage.dataset.pageCount || 0);
+  const showAllButton = stage.querySelector('[data-preview-show-all]');
+  const limitedPages = initialPages.length;
+  if (showAllButton) showAllButton.click();
+  const allPages = [...stage.querySelectorAll(':scope > .page')];
+  const result = {
+    mode: stage.dataset.paginationMode,
+    totalPages,
+    limitedPages,
+    allRenderedPages: allPages.length,
+    paragraphSplits: Number(stage.dataset.paragraphSplits || 0),
+    hasShowAll: Boolean(showAllButton),
+    repeatedChapterTitles: allPages.filter(page => page.querySelector('h2')).length,
+    runningHeaders: allPages.filter(page => page.querySelector('.running-head')).length,
+    overflowPages: allPages.filter(page => page.scrollHeight > page.clientHeight + 1).length,
+    strandedHeadings: allPages.filter(page => {
+      const body = page.id === 'bookPage' ? page.querySelector('#pageBody') : page.children[1];
+      return body?.lastElementChild?.matches('.preview-subhead');
+    }).length,
+    minimumContinuationLines: fragmentLineCounts.length ? Math.min(...fragmentLineCounts) : 0
+  };
+  previewShowAll = false;
+  setEditorText(original);
+  renderPreview();
+  return result;
+})()`);
+const chapterSwitchGuard = await evaluate(`(async () => {
+  const editor = document.getElementById('manuscriptText');
+  const unsavedText = editor.value;
+  chapters = [
+    { id: 'Bölüm 1', title: 'Güvenli Taslak', text: unsavedText },
+    { id: 'Bölüm 2', title: 'Sonraki Bölüm', text: 'İkinci bölüm' }
+  ];
+  currentChapterIndex = 0;
+  lastSavedContent = 'önceki kayıt';
+  editorDirty = true;
+  const switched = await selectChapter(1);
+  return {
+    switched,
+    currentChapterIndex,
+    textPreserved: editor.value === unsavedText,
+    state: document.getElementById('saveState').textContent.trim()
+  };
+})()`);
+const chapterManagerDialog = await evaluate(`(() => {
+  bridgeOnline = true;
+  bridgeProjectActive = true;
+  currentProjectPathHint = 'C:/kithub-test-project';
+  chapters = [
+    { id: 'Bölüm 1', title: 'Birinci', filename: 'ep001.md', text: '# Birinci' },
+    { id: 'Bölüm 2', title: 'İkinci', filename: 'ep002.md', text: '# İkinci' }
+  ];
+  currentChapterIndex = 0;
+  editorDirty = false;
+  renderChapters();
+  document.getElementById('addChapterBtn').click();
+  return {
+    open: document.getElementById('chapterDialog').open,
+    title: document.getElementById('chapterDialogTitle').textContent.trim(),
+    addEnabled: document.getElementById('addChapterBtn').disabled === false,
+    draggableRows: document.querySelectorAll('#chapterList li[draggable="true"]').length
+  };
+})()`);
+await delay(80);
+chapterManagerDialog.focused = await evaluate(`document.activeElement?.id`);
+await evaluate(`closeChapterDialog()`);
 
 await call("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
 await evaluate(`(() => {
@@ -198,6 +403,20 @@ await evaluate(`(() => {
 })()`);
 await delay(350);
 const mobileAccessibility = await evaluate(accessibilityExpression);
+const mobileEditorLayout = await evaluate(`(() => {
+  const toolbar = document.querySelector('.toolbar');
+  const settings = document.querySelector('.top-actions');
+  const settingsSummary = document.querySelector('#settingsMenu summary');
+  const visible = element => {
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+  };
+  return {
+    toolbarOverflow: toolbar.scrollWidth > toolbar.clientWidth + 1,
+    settingsVisible: visible(settings) && visible(settingsSummary)
+  };
+})()`);
 const mobileIdentity = await evaluate(`({
   url: location.href,
   title: document.title,
@@ -221,7 +440,7 @@ const result = {
     skipLinkFocused,
     skipTargetFocused,
     buttonFocusedBeforeActivation: focusButtonBefore === "focusModeBtn",
-    entered: focusModeEntered.active === true && focusModeEntered.focused === "manuscriptText" && focusModeEntered.pressed === "true",
+    entered: focusModeEntered.active === true && ["manuscriptText", "structuredEditor"].includes(focusModeEntered.focused) && focusModeEntered.pressed === "true",
     escaped: focusModeExited.active === false && focusModeExited.focused === "focusModeBtn" && focusModeExited.pressed === "false",
     enteredState: focusModeEntered,
     escapedState: focusModeExited
@@ -230,6 +449,20 @@ const result = {
     changedByKeyboard: zoomAfter.value !== zoomBefore.value && zoomAfter.css === zoomAfter.value && zoomAfter.focused === "zoomSelect",
     before: zoomBefore,
     after: zoomAfter
+  },
+  editorCore: {
+    dirtyState,
+    findShortcut,
+    findSelection,
+    replaceShortcut,
+    saveShortcut,
+    editorialRules,
+    publishingCompatibility,
+    publicationUx,
+    paginationFlow,
+    chapterSwitchGuard,
+    chapterManagerDialog,
+    mobileLayout: mobileEditorLayout
   },
   screenshots: {
     desktop: screenshotPath,
