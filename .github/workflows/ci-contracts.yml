@@ -38,6 +38,9 @@ jobs:
         shell: powershell
         run: |
           choco install poppler --yes --no-progress
+          $pdfInfo = Get-ChildItem -LiteralPath 'C:\ProgramData\chocolatey\lib\poppler\tools' -Filter 'pdfinfo.exe' -File -Recurse | Select-Object -First 1
+          if (-not $pdfInfo) { throw 'Poppler pdfinfo.exe was not found after installation.' }
+          Split-Path -Parent $pdfInfo.FullName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           .\scripts\install_epubcheck.ps1
 
       - name: Test Studio book request bridge
