@@ -34,6 +34,12 @@ jobs:
         shell: powershell
         run: choco install pandoc --version=3.7.0.2 --yes --no-progress
 
+      - name: Install publication validators
+        shell: powershell
+        run: |
+          choco install poppler --yes --no-progress
+          .\scripts\install_epubcheck.ps1
+
       - name: Test Studio book request bridge
         shell: powershell
         run: .\scripts\ci\studio_bridge_book_request_test.ps1
@@ -45,6 +51,10 @@ jobs:
       - name: Test Studio chapter manager and atomic saves
         shell: powershell
         run: .\scripts\ci\studio_bridge_chapter_manager_test.ps1
+
+      - name: Test print PDF, EPUB, EAN-13, and EPUBCheck
+        shell: powershell
+        run: .\scripts\ci\publication_typesetting_test.ps1
 
       - name: Protect existing Studio typography and page defaults
         shell: powershell

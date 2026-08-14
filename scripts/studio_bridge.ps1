@@ -83,6 +83,34 @@ function Write-Utf8TextAtomic {
   }
 }
 
+function Write-BytesAtomic {
+  param([string]$Path, [byte[]]$Bytes)
+  $directory = Split-Path -Parent $Path
+  if (-not (Test-Path -LiteralPath $directory -PathType Container)) {
+    New-Item -ItemType Directory -Path $directory | Out-Null
+  }
+  $leaf = Split-Path -Leaf $Path
+  $temporaryPath = Join-Path $directory (".{0}.{1}.tmp" -f $leaf, [guid]::NewGuid().ToString("N"))
+  $backupPath = Join-Path $directory (".{0}.{1}.bak" -f $leaf, [guid]::NewGuid().ToString("N"))
+  try {
+    [IO.File]::WriteAllBytes($temporaryPath, $Bytes)
+    if (Test-Path -LiteralPath $Path -PathType Leaf) {
+      [IO.File]::Replace($temporaryPath, $Path, $backupPath, $true)
+      Remove-Item -LiteralPath $backupPath -Force -ErrorAction SilentlyContinue
+    }
+    else {
+      Move-Item -LiteralPath $temporaryPath -Destination $Path
+    }
+  }
+  finally {
+    foreach ($cleanupPath in @($temporaryPath, $backupPath)) {
+      if (Test-Path -LiteralPath $cleanupPath -PathType Leaf) {
+        Remove-Item -LiteralPath $cleanupPath -Force -ErrorAction SilentlyContinue
+      }
+    }
+  }
+}
+
 function Get-RelativeProjectPath {
   param([string]$ProjectRoot, [string]$Path)
   return ($Path.Substring($ProjectRoot.Length).TrimStart("\") -replace "\\", "/")
@@ -1322,6 +1350,293 @@ function Get-AgentFlowSummary {
   }
 }
 
+function Get-ProfessionalStatePath {
+  param([string]$ProjectRoot)
+  return Join-Path $ProjectRoot "revision/_state/studio-professional.json"
+}
+
+function New-ProfessionalState {
+  return [ordered]@{
+    schema_version = "1.0.0"
+    updated_at = (Get-Date).ToString("o")
+    comments = [object[]]@()
+    changes = [object[]]@()
+    collaboration = [ordered]@{
+      current_role = "author"
+      current_name = "Yazar"
+      members = [object[]]@()
+    }
+    writing = [ordered]@{
+      daily_goal_words = 1000
+      project_goal_words = 80000
+      deadline = ""
+      sessions = [object[]]@()
+    }
+    publication = [ordered]@{
+      profile = "kdp"
+      isbn = ""
+      imprint = ""
+      language = "tr-TR"
+      cover_asset = $null
+    }
+  }
+}
+
+function Get-ProfessionalState {
+  param([string]$ProjectRoot)
+  $state = Read-Utf8JsonIfExists -Path (Get-ProfessionalStatePath -ProjectRoot $ProjectRoot)
+  if (-not $state) { return New-ProfessionalState }
+  if (-not $state.comments) { $state | Add-Member -NotePropertyName comments -NotePropertyValue @() -Force }
+  if (-not $state.changes) { $state | Add-Member -NotePropertyName changes -NotePropertyValue @() -Force }
+  if (-not $state.collaboration) { $state | Add-Member -NotePropertyName collaboration -NotePropertyValue ([pscustomobject]@{ current_role = "author"; current_name = "Yazar"; members = @() }) -Force }
+  if (-not $state.writing) { $state | Add-Member -NotePropertyName writing -NotePropertyValue ([pscustomobject]@{ daily_goal_words = 1000; project_goal_words = 80000; deadline = ""; sessions = @() }) -Force }
+  if (-not $state.publication) { $state | Add-Member -NotePropertyName publication -NotePropertyValue ([pscustomobject]@{ profile = "kdp"; isbn = ""; imprint = ""; language = "tr-TR"; cover_asset = $null }) -Force }
+  return $state
+}
+
+function Get-SafeRecordId {
+  param([string]$Value, [string]$Prefix = "item")
+  $safe = [regex]::Replace($Value.ToLowerInvariant(), '[^a-z0-9._-]+', '-').Trim('-')
+  if (-not $safe) { $safe = "$Prefix-$([guid]::NewGuid().ToString('N').Substring(0,8))" }
+  if ($safe.Length -gt 80) { $safe = $safe.Substring(0,80) }
+  return $safe
+}
+
+function Save-ProfessionalState {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $incoming = $Payload.state
+  if (-not $incoming) { throw "Professional state is required." }
+
+  $comments = @()
+  foreach ($item in @($incoming.comments | Select-Object -First 500)) {
+    $text = ([string]$item.text).Trim()
+    if (-not $text -or $text.Length -gt 4000) { throw "Comment text must be 1-4000 characters." }
+    $quote = [string]$item.quote
+    if ($quote.Length -gt 2000) { throw "Comment quote is too long." }
+    $comments += [ordered]@{
+      id = Get-SafeRecordId -Value ([string]$item.id) -Prefix "comment"
+      chapter = ([string]$item.chapter).Trim()
+      quote = $quote
+      text = $text
+      author = ([string]$item.author).Trim()
+      role = if ([string]$item.role -in @("author","editor","reviewer","admin")) { [string]$item.role } else { "author" }
+      status = if ([string]$item.status -eq "resolved") { "resolved" } else { "open" }
+      created_at = if ([string]$item.created_at) { [string]$item.created_at } else { (Get-Date).ToString("o") }
+      replies = [object[]]@(@($item.replies | Select-Object -First 100 | ForEach-Object {
+        $replyText = ([string]$_.text).Trim()
+        if ($replyText.Length -gt 2000) { throw "Comment reply is too long." }
+        [ordered]@{ id = Get-SafeRecordId -Value ([string]$_.id) -Prefix "reply"; text = $replyText; author = ([string]$_.author).Trim(); role = ([string]$_.role).Trim(); created_at = if ([string]$_.created_at) { [string]$_.created_at } else { (Get-Date).ToString("o") } }
+      }))
+    }
+  }
+
+  $changes = @()
+  foreach ($item in @($incoming.changes | Select-Object -First 500)) {
+    $original = [string]$item.original
+    $replacement = [string]$item.replacement
+    if (-not $original.Trim() -or $original.Length -gt 12000 -or $replacement.Length -gt 12000) { throw "Tracked change text is invalid." }
+    $changes += [ordered]@{
+      id = Get-SafeRecordId -Value ([string]$item.id) -Prefix "change"
+      chapter = ([string]$item.chapter).Trim()
+      original = $original
+      replacement = $replacement
+      author = ([string]$item.author).Trim()
+      role = if ([string]$item.role -in @("author","editor","reviewer","admin")) { [string]$item.role } else { "editor" }
+      status = if ([string]$item.status -in @("accepted","rejected")) { [string]$item.status } else { "pending" }
+      created_at = if ([string]$item.created_at) { [string]$item.created_at } else { (Get-Date).ToString("o") }
+    }
+  }
+
+  $members = @()
+  foreach ($member in @($incoming.collaboration.members | Select-Object -First 50)) {
+    $name = ([string]$member.name).Trim()
+    if (-not $name -or $name.Length -gt 120) { throw "Collaborator name must be 1-120 characters." }
+    $members += [ordered]@{
+      id = Get-SafeRecordId -Value ([string]$member.id) -Prefix "member"
+      name = $name
+      role = if ([string]$member.role -in @("author","editor","reviewer","admin")) { [string]$member.role } else { "reviewer" }
+    }
+  }
+
+  $sessions = @()
+  foreach ($session in @($incoming.writing.sessions | Select-Object -Last 500)) {
+    $sessions += [ordered]@{
+      id = Get-SafeRecordId -Value ([string]$session.id) -Prefix "session"
+      started_at = [string]$session.started_at
+      ended_at = [string]$session.ended_at
+      start_words = [Math]::Max(0, [int]$session.start_words)
+      end_words = [Math]::Max(0, [int]$session.end_words)
+      chapter = ([string]$session.chapter).Trim()
+    }
+  }
+
+  $profile = [string]$incoming.publication.profile
+  if ($profile -notin @("kdp","ingram","custom")) { $profile = "kdp" }
+  $isbn = ([string]$incoming.publication.isbn -replace '[^0-9]', '')
+  if ($isbn -and $isbn.Length -ne 13) { throw "ISBN must contain 13 digits." }
+  $coverAsset = $incoming.publication.cover_asset
+  $state = [ordered]@{
+    schema_version = "1.0.0"
+    updated_at = (Get-Date).ToString("o")
+    comments = [object[]]$comments
+    changes = [object[]]$changes
+    collaboration = [ordered]@{
+      current_role = if ([string]$incoming.collaboration.current_role -in @("author","editor","reviewer","admin")) { [string]$incoming.collaboration.current_role } else { "author" }
+      current_name = ([string]$incoming.collaboration.current_name).Trim().Substring(0, [Math]::Min(120, ([string]$incoming.collaboration.current_name).Trim().Length))
+      members = [object[]]$members
+    }
+    writing = [ordered]@{
+      daily_goal_words = [Math]::Min(100000, [Math]::Max(0, [int]$incoming.writing.daily_goal_words))
+      project_goal_words = [Math]::Min(10000000, [Math]::Max(0, [int]$incoming.writing.project_goal_words))
+      deadline = ([string]$incoming.writing.deadline).Trim()
+      sessions = [object[]]$sessions
+    }
+    publication = [ordered]@{
+      profile = $profile
+      isbn = $isbn
+      imprint = ([string]$incoming.publication.imprint).Trim()
+      language = if ([string]$incoming.publication.language) { ([string]$incoming.publication.language).Trim() } else { "tr-TR" }
+      cover_asset = $coverAsset
+    }
+  }
+  Write-Utf8TextAtomic -Path (Get-ProfessionalStatePath -ProjectRoot $projectRoot) -Text ($state | ConvertTo-Json -Depth 20)
+  return [ordered]@{ ok = $true; state = $state; relativePath = "revision/_state/studio-professional.json" }
+}
+
+function Merge-EntityRecord {
+  param([object]$Existing, [hashtable]$Fields)
+  $record = [ordered]@{}
+  if ($Existing) {
+    foreach ($property in $Existing.PSObject.Properties) { $record[$property.Name] = $property.Value }
+  }
+  foreach ($key in $Fields.Keys) { $record[$key] = $Fields[$key] }
+  return $record
+}
+
+function Manage-ProjectEntity {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $kind = ([string]$Payload.kind).Trim().ToLowerInvariant()
+  $action = ([string]$Payload.action).Trim().ToLowerInvariant()
+  if ($kind -notin @("characters","locations","plot","research")) { throw "Unsupported entity kind." }
+  if ($action -notin @("create","update","delete")) { throw "Unsupported entity action." }
+  $rawId = [string]$Payload.id
+  if ($kind -eq "research" -and $rawId.Replace("\","/").StartsWith("design/", [StringComparison]::OrdinalIgnoreCase) -and $action -ne "create") {
+    throw "Design documents are read-only in the research registry."
+  }
+  $id = Get-SafeRecordId -Value $rawId -Prefix $kind.TrimEnd("s")
+  $label = ([string]$Payload.label).Trim()
+  if ($action -ne "delete" -and (-not $label -or $label.Length -gt 180)) { throw "Entity label must be 1-180 characters." }
+  $detail = ([string]$Payload.detail).Trim()
+  if ($detail.Length -gt 4000) { throw "Entity detail is too long." }
+  $stateDir = Join-Path $projectRoot "revision/_state"
+
+  if ($kind -eq "characters") {
+    $path = Join-Path $stateDir "character-state.json"
+    $stored = Read-Utf8JsonIfExists -Path $path
+    $items = @($stored.characters)
+    $existing = @($items | Where-Object { [string]$_.id -eq $id } | Select-Object -First 1)
+    if ($action -eq "delete") { $items = @($items | Where-Object { [string]$_.id -ne $id }) }
+    else {
+      $record = Merge-EntityRecord -Existing ($existing | Select-Object -First 1) -Fields @{ id = $id; name = $label; role = ([string]$Payload.role).Trim(); goal = ([string]$Payload.goal).Trim(); conflict = ([string]$Payload.conflict).Trim(); arc_position = $detail; notes = ([string]$Payload.notes).Trim() }
+      $items = @($items | Where-Object { [string]$_.id -ne $id }) + @($record)
+    }
+    $next = [ordered]@{ schema_version = "1.0.0"; updated_at = (Get-Date).ToString("o"); characters = [object[]]$items }
+    Write-Utf8TextAtomic -Path $path -Text ($next | ConvertTo-Json -Depth 20)
+  }
+  elseif ($kind -eq "locations") {
+    $path = Join-Path $stateDir "world-state.json"
+    $stored = Read-Utf8JsonIfExists -Path $path
+    $items = @($stored.locations)
+    $existing = @($items | Where-Object { [string]$_.id -eq $id } | Select-Object -First 1)
+    if ($action -eq "delete") { $items = @($items | Where-Object { [string]$_.id -ne $id }) }
+    else {
+      $record = Merge-EntityRecord -Existing ($existing | Select-Object -First 1) -Fields @{ id = $id; name = $label; introduced_in = $detail; description = ([string]$Payload.notes).Trim() }
+      $items = @($items | Where-Object { [string]$_.id -ne $id }) + @($record)
+    }
+    $next = [ordered]@{ schema_version = "1.0.0"; updated_at = (Get-Date).ToString("o"); locations = [object[]]$items }
+    Write-Utf8TextAtomic -Path $path -Text ($next | ConvertTo-Json -Depth 20)
+  }
+  elseif ($kind -eq "plot") {
+    $path = Join-Path $stateDir "plot-ledger.json"
+    $stored = Read-Utf8JsonIfExists -Path $path
+    $open = @($stored.open_threads | ForEach-Object { [string]$_ })
+    $closed = @($stored.closed_threads | ForEach-Object { [string]$_ })
+    $original = ([string]$Payload.originalLabel).Trim()
+    if ($original) { $open = @($open | Where-Object { $_ -ne $original }); $closed = @($closed | Where-Object { $_ -ne $original }) }
+    if ($action -ne "delete") {
+      if ([string]$Payload.status -eq "closed") { $closed += $label } else { $open += $label }
+    }
+    $next = [ordered]@{ schema_version = "1.0.0"; updated_at = (Get-Date).ToString("o"); open_threads = [string[]]@($open | Select-Object -Unique); closed_threads = [string[]]@($closed | Select-Object -Unique); cause_effect_chain = [object[]]@($stored.cause_effect_chain) }
+    Write-Utf8TextAtomic -Path $path -Text ($next | ConvertTo-Json -Depth 20)
+  }
+  else {
+    $path = Join-Path $stateDir "research-state.json"
+    $stored = Read-Utf8JsonIfExists -Path $path
+    $items = @($stored.items)
+    if ($action -eq "delete") { $items = @($items | Where-Object { [string]$_.id -ne $id }) }
+    else {
+      $record = [ordered]@{ id = $id; title = $label; source = $detail; notes = ([string]$Payload.notes).Trim(); status = if ([string]$Payload.status -eq "verified") { "verified" } else { "draft" } }
+      $items = @($items | Where-Object { [string]$_.id -ne $id }) + @($record)
+    }
+    $next = [ordered]@{ schema_version = "1.0.0"; updated_at = (Get-Date).ToString("o"); items = [object[]]$items }
+    Write-Utf8TextAtomic -Path $path -Text ($next | ConvertTo-Json -Depth 20)
+  }
+  $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Varlık yönetimi: $kind/$action" -Title $label
+  return [ordered]@{ ok = $true; kind = $kind; action = $action; id = $id; version = $snapshot }
+}
+
+function Save-CoverAsset {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $filename = [IO.Path]::GetFileName([string]$Payload.filename)
+  $extension = [IO.Path]::GetExtension($filename).ToLowerInvariant()
+  if ($extension -notin @(".png",".jpg",".jpeg")) { throw "Cover image must be PNG or JPEG." }
+  $bytes = [Convert]::FromBase64String([string]$Payload.contentBase64)
+  if ($bytes.Length -lt 100 -or $bytes.Length -gt 15728640) { throw "Cover image must be between 100 bytes and 15 MB." }
+  try {
+    Add-Type -AssemblyName System.Drawing
+    $memory = [IO.MemoryStream]::new($bytes, $false)
+    try {
+      $image = [Drawing.Image]::FromStream($memory, $true, $true)
+      try { $widthPx = $image.Width; $heightPx = $image.Height }
+      finally { $image.Dispose() }
+    }
+    finally { $memory.Dispose() }
+  }
+  catch { throw "Cover image bytes are not a valid PNG or JPEG." }
+  if ($widthPx -lt 1 -or $heightPx -lt 1) { throw "Cover image dimensions are invalid." }
+  $designDir = Join-Path $projectRoot "design"
+  if (-not (Test-Path -LiteralPath $designDir -PathType Container)) { New-Item -ItemType Directory -Path $designDir -Force | Out-Null }
+  $target = Join-Path $designDir ("cover-source" + $extension)
+  Write-BytesAtomic -Path $target -Bytes $bytes
+  $state = Get-ProfessionalState -ProjectRoot $projectRoot
+  $asset = [ordered]@{
+    relative_path = Get-RelativeProjectPath -ProjectRoot $projectRoot -Path $target
+    filename = $filename
+    mime = if ($extension -eq ".png") { "image/png" } else { "image/jpeg" }
+    bytes = $bytes.Length
+    width_px = $widthPx
+    height_px = $heightPx
+    uploaded_at = (Get-Date).ToString("o")
+  }
+  $state.publication.cover_asset = $asset
+  Save-ProfessionalState -Payload ([pscustomobject]@{ projectRoot = $projectRoot; state = $state }) | Out-Null
+  return [ordered]@{ ok = $true; asset = $asset }
+}
+
+function Read-CoverAsset {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $state = Get-ProfessionalState -ProjectRoot $projectRoot
+  $asset = $state.publication.cover_asset
+  if (-not $asset -or -not [string]$asset.relative_path) { return [ordered]@{ ok = $true; asset = $null; contentBase64 = "" } }
+  $path = Resolve-ProjectChildPath -ProjectRoot $projectRoot -RelativePath ([string]$asset.relative_path)
+  if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return [ordered]@{ ok = $true; asset = $asset; contentBase64 = "" } }
+  return [ordered]@{ ok = $true; asset = $asset; contentBase64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($path)) }
+}
+
 function Get-ProjectSummary {
   param([object]$Payload)
 
@@ -1418,11 +1733,12 @@ function Get-ProjectSummary {
   $characterState = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "character-state.json")
   $worldState = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "world-state.json")
   $plotLedger = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "plot-ledger.json")
+  $researchState = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "research-state.json")
   $characterEntities = @($characterState.characters | ForEach-Object {
-    [ordered]@{ id = [string]$_.id; label = [string]$_.name; detail = [string]$_.arc_position; status = "character" }
+    [ordered]@{ id = [string]$_.id; label = [string]$_.name; detail = [string]$_.arc_position; status = "character"; role = [string]$_.role; goal = [string]$_.goal; conflict = [string]$_.conflict; notes = [string]$_.notes }
   })
   $locationEntities = @($worldState.locations | ForEach-Object {
-    [ordered]@{ id = [string]$_.id; label = [string]$_.name; detail = [string]$_.introduced_in; status = "location" }
+    [ordered]@{ id = [string]$_.id; label = [string]$_.name; detail = [string]$_.introduced_in; status = "location"; notes = [string]$_.description }
   })
   $plotEntities = @()
   foreach ($thread in @($plotLedger.open_threads)) {
@@ -1432,7 +1748,10 @@ function Get-ProjectSummary {
     $plotEntities += [ordered]@{ id = "closed-$($plotEntities.Count + 1)"; label = [string]$thread; detail = "Kapanmış olay örgüsü"; status = "closed" }
   }
   $researchEntities = @($designDocs | ForEach-Object {
-    [ordered]@{ id = [string]$_.relativePath; label = [string]$_.name; detail = [string]$_.relativePath; status = "document" }
+    [ordered]@{ id = [string]$_.relativePath; label = [string]$_.name; detail = [string]$_.relativePath; status = "document"; readonly = $true }
+  })
+  $researchEntities += @($researchState.items | Where-Object { ([string]$_.id).Trim() -or ([string]$_.title).Trim() } | ForEach-Object {
+    [ordered]@{ id = [string]$_.id; label = [string]$_.title; detail = [string]$_.source; status = if ([string]$_.status) { [string]$_.status } else { "draft" }; notes = [string]$_.notes }
   })
 
   $runnerConfigPath = Join-Path $ProjectRoot "runtime/runner-config.json"
@@ -1459,6 +1778,7 @@ function Get-ProjectSummary {
     bookPlan = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "book-plan.json")
     longformPlan = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "longform-plan.json")
     layoutPlan = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "layout-plan.json")
+    professional = Get-ProfessionalState -ProjectRoot $projectRoot
     chapters = [object[]]@($chapters)
     exports = [object[]]@($exports)
     approvals = $approvals
@@ -1895,7 +2215,7 @@ function Save-LayoutPlan {
     if ($paperType -notin @("cream", "white", "color")) { throw "Unsupported cover paper_type." }
     if ($pageCount -lt 24 -or $pageCount -gt 1200) { throw "cover page_count must be between 24 and 1200." }
     if ($bleedMm -lt 0 -or $bleedMm -gt 10) { throw "cover bleed_mm must be between 0 and 10." }
-    if ($barcodeMode -notin @("placeholder", "none")) { throw "Unsupported barcode_mode." }
+    if ($barcodeMode -notin @("placeholder", "ean13", "none")) { throw "Unsupported barcode_mode." }
     $spineFactor = if ($paperType -eq "white") { 0.0572 } elseif ($paperType -eq "color") { 0.0596 } else { 0.0635 }
     $coverSpec = [ordered]@{
       title = $coverTitle.Trim()
@@ -2551,6 +2871,20 @@ try {
           continue
         }
 
+        if ($method -eq "GET" -and $path -eq "/assets/studio-professional.js") {
+          $assetPath = Join-Path $RepoRoot "assets/studio-professional.js"
+          if (Test-Path -LiteralPath $assetPath -PathType Leaf) { Write-FileHttpResponse -Stream $stream -Path $assetPath -ContentType "text/javascript; charset=utf-8" }
+          else { Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Professional Studio bundle is missing." }) -StatusCode 404 }
+          continue
+        }
+
+        if ($method -eq "GET" -and $path -eq "/assets/studio-professional.css") {
+          $assetPath = Join-Path $RepoRoot "assets/studio-professional.css"
+          if (Test-Path -LiteralPath $assetPath -PathType Leaf) { Write-FileHttpResponse -Stream $stream -Path $assetPath -ContentType "text/css; charset=utf-8" }
+          else { Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Professional Studio stylesheet is missing." }) -StatusCode 404 }
+          continue
+        }
+
         if ($method -eq "GET" -and $path -eq "/api/health") {
           Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{
             ok = $true
@@ -2612,6 +2946,37 @@ try {
         if ($method -eq "POST" -and $path -eq "/api/project-summary") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           Write-JsonHttpResponse -Stream $stream -Value (Get-ProjectSummary -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/professional-state/read") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true; state = Get-ProfessionalState -ProjectRoot $projectRoot })
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/professional-state/save") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Save-ProfessionalState -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/manage-entity") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Manage-ProjectEntity -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/cover-asset/upload") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Save-CoverAsset -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/cover-asset/read") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Read-CoverAsset -Payload $payload)
           continue
         }
 

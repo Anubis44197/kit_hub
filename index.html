@@ -1,9 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="tr">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KitHub Studio</title>
+  <link rel="stylesheet" href="assets/studio-professional.css" />
   <style>
     :root {
       --bg: #071012;
@@ -3247,7 +3248,7 @@
         <label>Kâğıt Türü<select id="coverPaperType"><option value="cream">Krem</option><option value="white">Beyaz</option><option value="color">Renkli</option></select></label>
         <label>Tahmini Sayfa<input id="coverPageCountInput" type="number" min="24" max="1200" step="2" value="240" /></label>
         <label>Taşma (mm)<input id="coverBleedInput" type="number" min="0" max="10" step="0.1" value="3.2" /></label>
-        <label>Barkod Alanı<select id="coverBarcodeMode"><option value="placeholder">Yer tutucu ayır</option><option value="none">Ayırma</option></select></label>
+        <label>Barkod<select id="coverBarcodeMode"><option value="placeholder">ISBN varsa gerçek EAN-13 üret</option><option value="ean13">EAN-13 zorunlu</option><option value="none">Barkod kullanma</option></select></label>
         <label class="wide">Arka Kapak Yazısı<textarea id="coverBackCopyInput" maxlength="3000" placeholder="Kitabın kısa tanıtımı, okur vaadi ve gerekiyorsa yazar bilgisi..."></textarea></label>
         <div class="cover-preview" aria-label="Kapak yerleşim önizlemesi">
           <div class="back" id="coverPreviewBack">Arka kapak yazısı</div>
@@ -3281,6 +3282,7 @@
 
   <script src="assets/page-flow.js"></script>
   <script src="assets/studio-editor.js"></script>
+  <script src="assets/studio-professional.js"></script>
   <script>
     let chapters = [];
 
@@ -3506,6 +3508,79 @@
       const headers = new Headers(options.headers || {});
       if (bridgeSessionToken) headers.set("X-KitHub-Session", bridgeSessionToken);
       return rawFetch(input, { ...options, headers });
+    }
+
+    async function professionalApi(path, payload) {
+      const response = await bridgeFetch(bridgeUrl + path, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload || {})
+      });
+      const result = await response.json();
+      if (!response.ok && !result.error) result.error = "Studio Bridge isteği başarısız.";
+      return result;
+    }
+
+    async function applyTrackedChangeFromStudio(item) {
+      const chapter = chapters[currentChapterIndex];
+      if (!chapter || (item.chapter && item.chapter !== chapter.filename)) {
+        setStatus("Motor olayı: değişiklik önerisinin bağlı olduğu bölümü önce açın.");
+        return false;
+      }
+      const source = manuscriptText.value;
+      const position = source.indexOf(item.original);
+      if (position < 0) {
+        setStatus("Motor olayı: önerinin kaynak metni bu bölümde artık bulunmuyor.");
+        return false;
+      }
+      const next = source.slice(0, position) + item.replacement + source.slice(position + item.original.length);
+      setEditorText(next);
+      markEditorDirty({ autosave: false });
+      renderPreview();
+      return await saveCurrentEpisode();
+    }
+
+    async function applyMatterTemplatesFromStudio(metadata) {
+      const title = (bookTitle.textContent || currentBridgeSummary?.name || "Kitap").trim();
+      const author = (metadata.author || coverSpec.author || "Yazar").trim();
+      const isbn = String(metadata.isbn || "").replace(/D/g, "");
+      const imprint = (metadata.imprint || "").trim();
+      const year = new Date().getFullYear();
+      const ensureItem = (side, id, itemTitle, content) => {
+        let item = matterPlan[side].find(entry => entry.id === id);
+        if (!item) {
+          item = { id, title: itemTitle, content: "", print: true, epub: true };
+          matterPlan[side].push(item);
+        }
+        item.title = itemTitle;
+        item.content = content;
+        item.print = true;
+        item.epub = true;
+      };
+      ensureItem("front", "title-page", "Başlık Sayfası", title + "\n\n" + author);
+      ensureItem("front", "copyright", "Künye / Telif", "© " + year + " " + author + "\nTüm hakları saklıdır." + (imprint ? "\nYayınevi: " + imprint : "") + (isbn ? "\nISBN: " + isbn : ""));
+      ensureItem("back", "acknowledgements", "Teşekkür", "Bu kitabın hazırlanmasına katkı sunan editörlere, okurlara ve destek veren herkese teşekkür ederim.");
+      ensureItem("back", "author-bio", "Yazar Hakkında", author + ", bu eserin yazarıdır.");
+      renderMatterPlan();
+      const saved = await savePublicationStudioState();
+      if (saved) setStatus("Motor olayı: ön ve arka sayfa şablonları yayın kimliğiyle dolduruldu.");
+      return saved;
+    }
+
+    function initializeProfessionalStudio() {
+      if (!window.KitHubProfessional || professionalStudio) return;
+      professionalStudio = window.KitHubProfessional.createProfessionalStudio({
+        api: professionalApi,
+        getProjectRoot: () => bridgeOnline && bridgeProjectActive ? (projectPathInput.value.trim() || currentProjectPathHint) : "",
+        getSelection: getEditorSelectedText,
+        getChapter: () => chapters[currentChapterIndex] || null,
+        getWordCount: () => chapters.reduce((sum, chapter, index) => sum + (index === currentChapterIndex ? countWords(manuscriptText.value) : Number(chapter.words || 0)), 0),
+        applyTrackedChange: applyTrackedChangeFromStudio,
+        applyMatterTemplates: applyMatterTemplatesFromStudio,
+        refresh: refreshProject,
+        setStatus
+      });
+      professionalStudio.mount();
     }
 
     function setSaveState(state, label = "") {
@@ -3839,6 +3914,7 @@
     };
     let approvals = {};
     let currentBridgeSummary = null;
+    let professionalStudio = null;
     let currentTab = "manuscript";
     let currentDesignDocs = [];
     let currentReports = [];
@@ -6216,11 +6292,11 @@
       const totalWidth = (width * 2) + spine + (coverSpec.bleed_mm * 2);
       const totalHeight = height + (coverSpec.bleed_mm * 2);
       coverPreviewBack.textContent = coverSpec.back_cover_copy || "Arka kapak yazısı";
-      const spineTextAllowed = coverSpec.page_count >= 80;
+      const spineTextAllowed = coverSpec.page_count >= 79;
       coverPreviewSpine.textContent = spineTextAllowed ? `${coverSpec.title || "Kitap"} · ${coverSpec.author || "Yazar"}` : "";
-      coverPreviewSpine.title = spineTextAllowed ? "Sırt yazısı" : "80 sayfanın altında sırt yazısı baskı güvenliği için kapalı";
+      coverPreviewSpine.title = spineTextAllowed ? "Sırt yazısı" : "79 sayfanın altında sırt yazısı baskı güvenliği için kapalı";
       coverPreviewFront.innerHTML = `<strong>${escapeHtml(coverSpec.title || "Kitap Başlığı")}</strong><span>${escapeHtml(coverSpec.author || "Yazar")}</span>`;
-      coverSizeSummary.textContent = `İç blok: ${width.toFixed(1)} × ${height.toFixed(1)} mm · Sırt: ${spine.toFixed(2)} mm · Tam kapak: ${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} mm${spineTextAllowed ? "" : " · 80 sayfanın altında sırt yazısı kapalı"}`;
+      coverSizeSummary.textContent = `İç blok: ${width.toFixed(1)} × ${height.toFixed(1)} mm · Sırt: ${spine.toFixed(2)} mm · Tam kapak: ${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} mm${spineTextAllowed ? "" : " · 79 sayfanın altında sırt yazısı kapalı"}`;
     }
 
     function openCoverStudio() {
@@ -7231,6 +7307,7 @@
       currentRevision = summary.revision || null;
       currentVersions = summary.versions || [];
       renderEntities(summary.entities || {});
+      professionalStudio?.hydrate(summary.professional || null, summary.entities || {});
       renderSupportTab(currentTab);
       renderQuality(summary.quality);
       renderLifecycle(summary.lifecycle);
@@ -8301,6 +8378,10 @@
     document.querySelectorAll("[data-info]").forEach(button => {
       button.addEventListener("click", () => {
         const entityKey = button.dataset.entity;
+        if (entityKey && professionalStudio) {
+          professionalStudio.openEntity(entityKey);
+          return;
+        }
         const entityItems = entityKey ? (currentBridgeSummary?.entities?.[entityKey] || []) : [];
         if (entityKey && entityItems.length) {
           const title = button.querySelector("span:nth-of-type(2)")?.textContent?.trim() || "Kitap Varlıkları";
@@ -8712,6 +8793,7 @@
     renderAiHistory();
     renderMatterPlan();
     updateCoverPreview();
+    initializeProfessionalStudio();
     auditControlContracts();
     detectBridge();
     window.addEventListener("beforeunload", event => {

@@ -59,12 +59,21 @@ try {
       paper_type = "cream"
       page_count = 320
       bleed_mm = 3.2
-      barcode_mode = "placeholder"
+      barcode_mode = "ean13"
       back_cover_copy = "A complete cover fixture for print package verification."
       spine_width_mm = 20.32
     }
   }
   Write-Utf8 (Join-Path $stateDir "layout-plan.json") ($layout | ConvertTo-Json -Depth 8)
+  $professional = [ordered]@{
+    schema_version = "1.0.0"
+    comments = @()
+    changes = @()
+    collaboration = [ordered]@{ current_role = "author"; current_name = "KitHub Test Author"; members = @() }
+    writing = [ordered]@{ daily_goal_words = 1000; project_goal_words = 80000; deadline = ""; sessions = @() }
+    publication = [ordered]@{ profile = "kdp"; isbn = "9780306406157"; imprint = "KitHub Test"; language = "tr-TR"; cover_asset = $null }
+  }
+  Write-Utf8 (Join-Path $stateDir "studio-professional.json") ($professional | ConvertTo-Json -Depth 8)
   $fixturePath = Join-Path $PSScriptRoot "fixtures/publication-typesetting.md"
   $source = [IO.File]::ReadAllText($fixturePath, [Text.Encoding]::UTF8)
   $longText = ((1..420) | ForEach-Object { "Measured page flow keeps paragraph line groups together and prevents accidental overflow number $_." }) -join " "
@@ -78,7 +87,7 @@ try {
   Assert-True ($report.flow.running_header_policy -eq "book_title") "Running header policy was not reported."
   Assert-True ($report.flow.running_header_strategy -eq "paged_media_margin_box") "Running header strategy was not reported."
   Assert-True ($report.flow.page_number_position -eq "bottom_center") "Page number policy was not reported."
-  Assert-True ($report.preflight_status -eq "REVIEW_REQUIRED") "Complete package should require only external review."
+  Assert-True ($report.preflight_status -in @("READY","REVIEW_REQUIRED")) "Complete package should be ready or require only an unavailable external validator."
   Assert-True ([int]$report.matter.front_count -eq 1 -and [int]$report.matter.back_count -eq 1) "Front/back matter counts were not reported."
   Assert-True ([int]$report.matter.empty_enabled_count -eq 0) "Complete matter was incorrectly reported empty."
   $pdfOutput = @($report.outputs | Where-Object { $_.format -eq "PDF" }) | Select-Object -First 1
@@ -118,7 +127,12 @@ try {
   Assert-True ([Math]::Abs([double]$coverOutput.spine_width_mm - 20.32) -lt 0.01) "Cover spine width was not preserved."
   $preflight = Get-Content -LiteralPath (Join-Path $runtimeDir "publication-preflight-report.json") -Raw -Encoding UTF8 | ConvertFrom-Json
   Assert-True (@($preflight.blockers).Count -eq 0) "Complete fixture has unexpected publication blockers."
-  Assert-True (@($preflight.external_reviews).Count -ge 1) "External print/retailer reviews were not retained."
+  $epubCheck = @($preflight.checks | Where-Object { $_.key -eq "epubcheck" }) | Select-Object -First 1
+  if ($epubCheck.detail -eq "unavailable") {
+    Assert-True ($preflight.status -eq "REVIEW_REQUIRED" -and @($preflight.external_reviews) -contains "epubcheck") "Unavailable EPUBCheck did not retain external review state."
+  } else {
+    Assert-True ($epubCheck.ok -eq $true -and $epubCheck.detail -eq "pass") "Installed EPUBCheck did not validate the generated EPUB."
+  }
   if (Get-Command pdffonts -ErrorAction SilentlyContinue) {
     Assert-True ($report.font_embedding -eq "pass") "Embedded PDF fonts were not reported as passing."
     Assert-True (@($preflight.checks | Where-Object { $_.key -eq "font_embedding" -and $_.ok -eq $true }).Count -eq 1) "Font embedding preflight did not pass."
@@ -130,9 +144,10 @@ try {
   $null = & (Join-Path $RepoRoot "scripts/build_publication_outputs.ps1") -ProjectRoot $projectRoot -Formats "pdf"
   Assert-True ($LASTEXITCODE -eq 0) "Low-page-count cover verification build failed."
   $coverHtml = [IO.File]::ReadAllText((Join-Path $projectRoot "revision/_workspace/publication/cover.html"), [Text.Encoding]::UTF8)
-  Assert-True ($coverHtml.Contains('<section class="spine"></section>')) "Spine text was not suppressed below 80 pages."
+  Assert-True ($coverHtml.Contains('<section class="spine"></section>')) "Spine text was not suppressed below 79 pages."
+  Assert-True ($coverHtml.Contains("EAN-13 9780306406157")) "Valid ISBN-13 was not rendered as a real EAN-13 barcode."
 
-  Write-Host "[publication-typesetting] PASS A5 PDF+EPUB; front/back matter; full-wrap cover; under-80 spine policy; measured flow; PDF pages=$pageCount; external review retained"
+  Write-Host "[publication-typesetting] PASS A5 PDF+EPUB; front/back matter; full-wrap cover; 79-page spine policy; EAN-13; measured flow; EPUBCheck=$($epubCheck.detail); PDF pages=$pageCount"
   if ($KeepFixture) {
     Write-Host "[publication-typesetting] fixture=$fixtureRoot"
     Write-Host "[publication-typesetting] pdf=$pdfPath"

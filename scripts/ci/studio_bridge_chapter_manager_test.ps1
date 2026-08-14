@@ -33,6 +33,11 @@ function Invoke-ChapterAction {
   return (Invoke-StudioRequest -Path "/api/manage-chapter" -Method "POST" -SessionToken $SessionToken -Body $Body).Content | ConvertFrom-Json
 }
 
+function Invoke-EntityAction {
+  param([object]$Body,[string]$SessionToken)
+  return (Invoke-StudioRequest -Path /api/manage-entity -Method POST -SessionToken $SessionToken -Body $Body).Content | ConvertFrom-Json
+}
+
 try {
   $episodeDir = Join-Path $projectRoot "episode"
   $stateDir = Join-Path $projectRoot "revision/_state"
@@ -85,8 +90,33 @@ try {
   }
   $layoutSave = (Invoke-StudioRequest -Path "/api/save-layout-plan" -Method "POST" -SessionToken $session.token -Body $layoutPayload).Content | ConvertFrom-Json
   if (-not $layoutSave.ok) { throw "Publication matter and cover settings were not saved." }
+  $professionalState = @{
+    comments = @(@{ id="comment-fixture"; chapter="ep001.md"; quote="Birinci"; text="Netlestir."; author="Test Editor"; created_at="2026-08-14T10:00:00Z"; resolved=$false; replies=@() })
+    changes = @(@{ id="change-fixture"; chapter="ep001.md"; original="Birinci"; replacement="Ilk"; reason="Tutarlilik"; author="Test Editor"; status="pending"; created_at="2026-08-14T10:00:00Z" })
+    collaboration = @{ current_role="editor"; current_name="Test Editor"; members=@(@{ id="member-author"; name="Test Author"; role="author" }) }
+    writing = @{ daily_goal_words=1000; project_goal_words=80000; deadline=""; sessions=@() }
+    publication = @{ profile="kdp"; isbn="9780306406157"; imprint="KitHub Test"; language="tr-TR"; cover_asset=$null }
+  }
+  $professionalPayload = @{ projectRoot = $projectRoot; state = $professionalState }
+  $professionalSave = (Invoke-StudioRequest -Path "/api/professional-state/save" -Method "POST" -SessionToken $session.token -Body $professionalPayload).Content | ConvertFrom-Json
+  if (-not $professionalSave.ok) { throw "Professional Studio state was not saved." }
+  Add-Type -AssemblyName System.Drawing
+  $coverBitmap = [Drawing.Bitmap]::new(1800,2700)
+  $coverStream = [IO.MemoryStream]::new()
+  try {
+    $coverBitmap.Save($coverStream, [Drawing.Imaging.ImageFormat]::Png)
+    $coverBase64 = [Convert]::ToBase64String($coverStream.ToArray())
+  }
+  finally {
+    $coverBitmap.Dispose()
+    $coverStream.Dispose()
+  }
+  $coverUpload = (Invoke-StudioRequest -Path "/api/cover-asset/upload" -Method "POST" -SessionToken $session.token -Body @{projectRoot=$projectRoot;filename="fixture-cover.png";contentBase64=$coverBase64}).Content | ConvertFrom-Json
+  $coverReplace = (Invoke-StudioRequest -Path "/api/cover-asset/upload" -Method "POST" -SessionToken $session.token -Body @{projectRoot=$projectRoot;filename="fixture-cover-v2.png";contentBase64=$coverBase64}).Content | ConvertFrom-Json
+  $coverRead = (Invoke-StudioRequest -Path "/api/cover-asset/read" -Method "POST" -SessionToken $session.token -Body @{projectRoot=$projectRoot}).Content | ConvertFrom-Json
+  if (-not $coverUpload.ok -or -not $coverReplace.ok -or -not $coverRead.ok -or $coverReplace.asset.width_px -ne 1800 -or $coverReplace.asset.height_px -ne 2700 -or -not $coverRead.contentBase64) { throw "Atomic cover upload/replace/read validation failed." }
   $preflight = (Invoke-StudioRequest -Path "/api/build-publication" -Method "POST" -SessionToken $session.token -Body @{projectRoot=$projectRoot;formats=@();preflightOnly=$true}).Content | ConvertFrom-Json
-  if (-not $preflight.ok -or $preflight.preflight.status -ne "REVIEW_REQUIRED") { throw "Publication preflight did not retain external review state." }
+  if (-not $preflight.ok -or $preflight.preflight.status -ne "PREFLIGHT_PASS") { throw "KDP preflight-only validation did not pass." }
   if (@($preflight.preflight.blockers).Count -ne 0) { throw "Complete publication fixture has unexpected blockers." }
 
   $autosave = (Invoke-StudioRequest -Path "/api/save-episode" -Method "POST" -SessionToken $session.token -Body @{projectRoot=$projectRoot;filename="ep001.md";text="# Birinci bölüm güncel";createSnapshot=$false}).Content | ConvertFrom-Json
@@ -102,8 +132,18 @@ try {
   $deleted = Invoke-ChapterAction -SessionToken $session.token -Body @{projectRoot=$projectRoot;action="delete";filename="ep002.md"}
   if (-not ($created.ok -and $renamed.ok -and $duplicated.ok -and $reordered.ok -and $deleted.ok)) { throw "One or more chapter operations failed." }
 
+  $character = Invoke-EntityAction -SessionToken $session.token -Body @{projectRoot=$projectRoot;action="create";kind="characters";label="Editor";detail="Manuscript editor";role="editor";notes="Continuity owner"}
+  $location = Invoke-EntityAction -SessionToken $session.token -Body @{projectRoot=$projectRoot;action="create";kind="locations";label="Library";detail="Primary setting";notes="Quiet room"}
+  $plot = Invoke-EntityAction -SessionToken $session.token -Body @{projectRoot=$projectRoot;action="create";kind="plot";label="Resolve the mystery";detail="Final reveal";status="open";notes="Chapter three"}
+  $research = Invoke-EntityAction -SessionToken $session.token -Body @{projectRoot=$projectRoot;action="create";kind="research";label="Archive source";detail="Primary source";status="verified";notes="Checked"}
+  $researchUpdate = Invoke-EntityAction -SessionToken $session.token -Body @{projectRoot=$projectRoot;action="update";kind="research";id=$research.id;label="Archive source";detail="Primary source updated";status="verified";notes="Checked twice"}
+  $researchDelete = Invoke-EntityAction -SessionToken $session.token -Body @{projectRoot=$projectRoot;action="delete";kind="research";id=$research.id;label="Archive source"}
+  if (-not ($character.ok -and $location.ok -and $plot.ok -and $research.ok -and $researchUpdate.ok -and $researchDelete.ok)) { throw "One or more professional entity operations failed." }
+
   $summary = (Invoke-StudioRequest -Path "/api/project-summary" -Method "POST" -SessionToken $session.token -Body @{projectRoot=$projectRoot}).Content | ConvertFrom-Json
-  if (@($summary.entities.characters).Count -ne 1 -or @($summary.entities.locations).Count -ne 1 -or @($summary.entities.plot).Count -ne 2) { throw "Project entity counts were not derived from state files." }
+  $entityCounts = "characters=$(@($summary.entities.characters).Count) locations=$(@($summary.entities.locations).Count) plot=$(@($summary.entities.plot).Count) research=$(@($summary.entities.research).Count) researchItems=$($summary.entities.research | ConvertTo-Json -Compress)"
+  if (@($summary.entities.characters).Count -ne 2 -or @($summary.entities.locations).Count -ne 2 -or @($summary.entities.plot).Count -ne 3 -or @($summary.entities.research).Count -ne 0) { throw "Project entity CRUD counts were not derived from canonical state files: $entityCounts" }
+  if ($summary.professional.publication.isbn -ne "9780306406157" -or @($summary.professional.comments).Count -ne 1 -or @($summary.professional.changes).Count -ne 1) { throw "Professional Studio state was not returned in the project summary." }
   $actualOrder = @($summary.chapters | ForEach-Object { $_.filename })
   $expectedOrder = @($duplicated.filename,"ep001.md",$created.filename)
   if (($actualOrder -join ",") -ne ($expectedOrder -join ",")) { throw "Chapter order was not persisted." }
@@ -112,7 +152,7 @@ try {
   $trashPath = Join-Path $projectRoot $trashRelative
   if (-not $deleted.trashRelativePath -or -not (Test-Path -LiteralPath $trashPath -PathType Leaf)) { throw "Deleted chapter was not moved to recoverable trash." }
 
-  Write-Host "[studio-bridge-chapter-manager] PASS publication-save/preflight; atomic-save; create; rename; duplicate; reorder; recoverable-delete"
+  Write-Host "[studio-bridge-chapter-manager] PASS publication/preflight; professional-state; cover upload/read; entity CRUD; atomic-save; chapter CRUD/reorder/recoverable-delete"
 }
 finally {
   if ($bridgeProcess -and -not $bridgeProcess.HasExited) { Stop-Process -Id $bridgeProcess.Id -Force -ErrorAction SilentlyContinue; $bridgeProcess.WaitForExit(5000) | Out-Null }

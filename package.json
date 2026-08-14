@@ -4,7 +4,8 @@
   "scripts": {
     "build:studio-editor": "esbuild src/studio-editor.js --bundle --format=iife --outfile=assets/studio-editor.js --target=chrome109,edge109 --minify",
     "build:page-flow": "esbuild src/page-flow.js --bundle --format=iife --global-name=KitHubPageFlow --outfile=assets/page-flow.js --target=chrome109,edge109 --minify",
-    "build:assets": "npm run build:studio-editor && npm run build:page-flow",
+    "build:professional": "esbuild src/studio-professional.js --bundle --format=iife --global-name=KitHubProfessionalBundle --outdir=assets --target=chrome109,edge109 --minify",
+    "build:assets": "npm run build:studio-editor && npm run build:page-flow && npm run build:professional",
     "test:typography": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ci/studio_typography_baseline_test.ps1"
   },
   "dependencies": {

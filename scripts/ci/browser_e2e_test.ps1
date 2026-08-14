@@ -8,6 +8,7 @@ if (-not $edge) { throw "Microsoft Edge executable not found." }
 $node = Get-Command node -ErrorAction SilentlyContinue
 if (-not $node) { throw "Node.js is required for the Edge interaction probe." }
 if (-not $ReportPath.Trim()) { $ReportPath = Join-Path (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path "runtime/browser-e2e-report.json" }
+$visualProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../tests/fixtures/sample-project")).Path
 $cases = @(@{name="desktop-dom";size="1440,1200"},@{name="mobile-dom";size="390,844"})
 $results = @()
 foreach ($case in $cases) {
@@ -27,7 +28,8 @@ foreach ($case in $cases) {
     [ordered]@{name="ai-writing-assistant";pass=($html -match 'id="aiPromptInput"')},
     [ordered]@{name="publication-matter";pass=($html -match 'id="matterManagerDialog"')},
     [ordered]@{name="cover-studio";pass=($html -match 'id="coverStudioDialog"')},
-    [ordered]@{name="publication-preflight";pass=($html -match 'id="runPreflightBtn"')}
+    [ordered]@{name="publication-preflight";pass=($html -match 'id="runPreflightBtn"')},
+    [ordered]@{name="professional-studio";pass=($html -match 'id="openProfessionalStudioBtn"')}
   )
   $failed = @($checks | Where-Object { -not $_.pass })
   $results += [ordered]@{name=$case.name;size=$case.size;status=if($failed.Count -eq 0){"PASS"}else{"FAIL"};checks=$checks;failed=@($failed | ForEach-Object { $_.name })}
@@ -46,7 +48,7 @@ try {
     "--user-data-dir=$profileRoot", "--window-size=1440,1200", "about:blank"
   ) -WindowStyle Hidden -PassThru
   $probeScript = Join-Path $PSScriptRoot "browser_interaction_probe.mjs"
-  $probeRaw = & $node.Source $probeScript "http://127.0.0.1:$debugPort" $Url $screenshotPath
+  $probeRaw = & $node.Source $probeScript "http://127.0.0.1:$debugPort" $Url $screenshotPath $visualProjectRoot
   if ($LASTEXITCODE -ne 0) { throw "Browser interaction probe failed with exit code $LASTEXITCODE." }
   $interaction = $probeRaw | ConvertFrom-Json
 }
@@ -100,6 +102,11 @@ $interactionPass = (
   $interaction.editorCore.publicationUx.coverOpen -eq $true -and
   $interaction.editorCore.publicationUx.coverSizeCalculated -eq $true -and
   $interaction.editorCore.publicationUx.preflightAvailable -eq $true -and
+  $interaction.editorCore.professionalUx.open -eq $true -and
+  [int]$interaction.editorCore.professionalUx.tabs -eq 4 -and
+  [int]$interaction.editorCore.professionalUx.entityKinds -eq 4 -and
+  $interaction.editorCore.professionalUx.reviewTools -eq $true -and
+  $interaction.editorCore.professionalUx.publicationTools -eq $true -and
   [int]$interaction.editorCore.controlContracts.visibleButtons -gt 20 -and
   @($interaction.editorCore.controlContracts.unhandled).Count -eq 0 -and
   $interaction.editorCore.paginationFlow.mode -eq "measured-dom" -and
@@ -122,7 +129,11 @@ $interactionPass = (
   [int]$interaction.editorCore.chapterManagerDialog.draggableRows -eq 2 -and
   $interaction.editorCore.chapterManagerDialog.focused -eq "chapterTitleInput" -and
   $interaction.editorCore.mobileLayout.toolbarOverflow -ne $true -and
-  $interaction.editorCore.mobileLayout.settingsVisible -eq $true
+  $interaction.editorCore.mobileLayout.settingsVisible -eq $true -and
+  $interaction.editorCore.mobileProfessionalLayout.open -eq $true -and
+  $interaction.editorCore.mobileProfessionalLayout.fitsViewport -eq $true -and
+  $interaction.editorCore.mobileProfessionalLayout.horizontalOverflow -ne $true -and
+  $interaction.editorCore.mobileProfessionalLayout.railVisible -eq $true
 )
 function Test-AccessibilityAudit([object]$Audit) {
   return (
@@ -175,4 +186,6 @@ Write-Host "[browser-e2e] report=$ReportPath"
 Write-Host "[browser-e2e] desktop-screenshot=$($interaction.screenshots.desktop)"
 Write-Host "[browser-e2e] matter-screenshot=$($interaction.screenshots.matter)"
 Write-Host "[browser-e2e] cover-screenshot=$($interaction.screenshots.cover)"
+Write-Host "[browser-e2e] professional-screenshot=$($interaction.screenshots.professional)"
 Write-Host "[browser-e2e] mobile-screenshot=$($interaction.screenshots.mobile)"
+Write-Host "[browser-e2e] professional-mobile-screenshot=$($interaction.screenshots.professionalMobile)"

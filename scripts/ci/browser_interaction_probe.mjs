@@ -1,8 +1,8 @@
 import fs from "node:fs";
 
-const [debugUrl, targetUrl, screenshotPath] = process.argv.slice(2);
-if (!debugUrl || !targetUrl || !screenshotPath) {
-  throw new Error("Usage: node browser_interaction_probe.mjs <debug-url> <target-url> <screenshot-path>");
+const [debugUrl, targetUrl, screenshotPath, visualProjectRoot] = process.argv.slice(2);
+if (!debugUrl || !targetUrl || !screenshotPath || !visualProjectRoot) {
+  throw new Error("Usage: node browser_interaction_probe.mjs <debug-url> <target-url> <screenshot-path> <project-root>");
 }
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -332,6 +332,25 @@ await delay(120);
 const auditCoverScreenshot = await call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
 fs.writeFileSync(auditCoverScreenshotPath, Buffer.from(auditCoverScreenshot.data, "base64"));
 await evaluate(`document.getElementById('coverStudioDialog')?.close()`);
+const professionalUx = await evaluate(`(async () => {
+  const pathInput = document.getElementById('projectPathInput');
+  pathInput.value = ${JSON.stringify(visualProjectRoot)};
+  await loadProjectViaBridge();
+  document.getElementById('openProfessionalStudioBtn')?.click();
+  const dialog = document.querySelector('.professional-dialog');
+  const tabs = dialog?.querySelectorAll('[data-prof-tab]').length || 0;
+  const entityKinds = dialog?.querySelectorAll('[data-entity-kind]').length || 0;
+  dialog?.querySelector('[data-prof-tab="review"]')?.click();
+  const reviewTools = Boolean(dialog?.querySelector('[data-comment-form]') && dialog?.querySelector('[data-change-form]') && dialog?.querySelector('[data-member-form]'));
+  dialog?.querySelector('[data-prof-tab="publication"]')?.click();
+  const publicationTools = Boolean(dialog?.querySelector('[data-publication-form]') && dialog?.querySelector('[data-cover-file]') && dialog?.querySelector('[data-apply-matter-templates]'));
+  return { open: dialog?.open === true, tabs, entityKinds, reviewTools, publicationTools };
+})()`);
+const auditProfessionalScreenshotPath = screenshotPath.replace(/(\.[^.]+)$/, "-professional$1");
+await delay(180);
+const auditProfessionalScreenshot = await call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+fs.writeFileSync(auditProfessionalScreenshotPath, Buffer.from(auditProfessionalScreenshot.data, "base64"));
+await evaluate(`document.querySelector('.professional-dialog')?.close()`);
 const controlContracts = await evaluate(`(() => {
   const visible = element => {
     const style = getComputedStyle(element);
@@ -473,6 +492,26 @@ const mobileIdentity = await evaluate(`({
 const mobileScreenshotPath = screenshotPath.replace(/(\.[^.]+)$/, "-mobile$1");
 const mobileScreenshot = await call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
 fs.writeFileSync(mobileScreenshotPath, Buffer.from(mobileScreenshot.data, "base64"));
+const mobileProfessionalLayout = await evaluate(`(async () => {
+  const pathInput = document.getElementById('projectPathInput');
+  pathInput.value = ${JSON.stringify(visualProjectRoot)};
+  await loadProjectViaBridge();
+  document.getElementById('openProfessionalStudioBtn')?.click();
+  const dialog = document.querySelector('.professional-dialog');
+  const shell = dialog?.querySelector('.professional-shell');
+  const rect = dialog?.getBoundingClientRect();
+  return {
+    open: dialog?.open === true,
+    fitsViewport: Boolean(rect && rect.left >= 0 && rect.right <= innerWidth + 1),
+    horizontalOverflow: Boolean(shell && shell.scrollWidth > shell.clientWidth + 1),
+    railVisible: Boolean(dialog?.querySelector('.professional-rail')?.getBoundingClientRect().height)
+  };
+})()`);
+const mobileProfessionalScreenshotPath = screenshotPath.replace(/(\.[^.]+)$/, "-professional-mobile$1");
+await delay(180);
+const mobileProfessionalScreenshot = await call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+fs.writeFileSync(mobileProfessionalScreenshotPath, Buffer.from(mobileProfessionalScreenshot.data, "base64"));
+await evaluate(`document.querySelector('.professional-dialog')?.close()`);
 socket.close();
 
 const result = {
@@ -506,17 +545,21 @@ const result = {
     editorialRules,
     publishingCompatibility,
     publicationUx,
+    professionalUx,
     controlContracts,
     paginationFlow,
     chapterSwitchGuard,
     chapterManagerDialog,
-    mobileLayout: mobileEditorLayout
+    mobileLayout: mobileEditorLayout,
+    mobileProfessionalLayout
   },
   screenshots: {
     desktop: screenshotPath,
     matter: auditMatterScreenshotPath,
     cover: auditCoverScreenshotPath,
-    mobile: mobileScreenshotPath
+    professional: auditProfessionalScreenshotPath,
+    mobile: mobileScreenshotPath,
+    professionalMobile: mobileProfessionalScreenshotPath
   }
 };
 process.stdout.write(JSON.stringify(result));

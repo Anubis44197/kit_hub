@@ -44,6 +44,7 @@ KitHub Studio is the recommended interface for normal use. The backend still run
 git clone https://github.com/Anubis44197/kit_hub.git
 cd kit_hub
 powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+powershell -ExecutionPolicy Bypass -File scripts/install_epubcheck.ps1
 powershell -ExecutionPolicy Bypass -File scripts/start_studio.ps1
 ```
 
@@ -102,6 +103,16 @@ Studio includes:
 - long-text chapter splitting for large manuscripts
 - advanced layout controls
 
+After connecting a project, open `Profesyonel Araçlar` in the publication controls. Its four sections provide:
+
+- real character, location, plot-thread, and research CRUD backed by project state files
+- chapter-linked comment threads and tracked-change proposals with accept/reject actions
+- author/editor/reviewer/admin role records and a project team list
+- daily/project word goals, deadlines, and timed focus sessions
+- publication profile, ISBN-13, imprint, language, and PNG/JPEG cover-source management
+
+Design Markdown files shown under research are intentionally read-only; editable research records are stored separately. Professional state is saved atomically in `revision/_state/studio-professional.json`.
+
 Live edit suggestions are not applied automatically. The user must approve or save changes.
 
 ### 6. Layout and print preparation
@@ -112,16 +123,21 @@ The layout panel writes the selected book package to:
 
 Supported layout controls include page size, print mode, front matter, font, point size, line spacing, margins, paragraph indentation, chapter start policy, heading hierarchy, running headers, page number position, table-of-contents depth, and widow/orphan control.
 
+Use `Ön/Arka Sayfaları Otomatik Doldur` in `Profesyonel Araçlar > Yayın Kimliği` to seed copyright and author pages, then review the generated text. KDP, IngramSpark, and custom-print profiles apply profile-specific bleed and validation rules. A valid ISBN-13 can be rendered as an EAN-13 barcode. Uploaded cover art is checked from its real pixel dimensions and blocks readiness below 300 effective DPI; spine text is suppressed below 79 pages.
+
 ### 7. Export
-When the manuscript and approvals are ready, use Studio export controls. The two actions have separate responsibilities: `Export Fazını Çalıştır` builds and validates the project export package; `Final DOCX'i Masaüstüne Kopyala` copies the approved final DOCX to the selected destination. Export must pass:
+When the manuscript and approvals are ready, use Studio export controls. `Export Fazını Çalıştır` builds and validates the approved DOCX package; the publication controls can additionally build print PDF, full-wrap cover PDF, and EPUB. `Final DOCX'i Masaüstüne Kopyala` copies the approved final DOCX to the selected destination. Export must pass:
 
 - export approval
 - reader-facing cleanliness checks
 - DOCX integrity validation
 - DOCX layout/profile validation
 - DOCX content match validation
+- embedded-font and publication-profile checks for print PDF
+- official EPUBCheck validation when EPUB is requested
+- ISBN/EAN-13, bleed, cover completeness, and cover-DPI checks
 
-The final output can be copied to the Desktop or another selected output folder.
+The final output can be copied to the Desktop or another selected output folder. `READY` means file-level checks passed; a physical proof and the distributor upload preview are still required. IngramSpark keeps `PDF/X + CMYK` as an explicit external review until a compliant conversion tool is configured.
 
 ### 8. Normal local files
 Studio may create runtime log files while it is open:
@@ -355,9 +371,10 @@ The runner rejects a fake brief approval. The brief must contain structured `req
 | State consistency validation | `powershell -ExecutionPolicy Bypass -File scripts/ci/validate_state_consistency.ps1 -ProjectRoot <project-path>` |
 | Run integrity validation | `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_run_integrity.ps1 -ProjectRoot <project-path>` |
 | Real local provider fixture execution | `powershell -ExecutionPolicy Bypass -File scripts/ci/provider_agent_runner.ps1 -Provider ollama -Model qwen2.5:3b` (optional local-only 36-agent test; this does not configure Studio to use Ollama, and external providers require explicit data-transfer approval) |
-| Browser DOM + interaction E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/browser_e2e_test.ps1` (editor dirty/recovery shortcuts, chapter-manager dialog/focus, desktop and 390x844 mobile computed audits, contrast, overflow, and reduced-motion checks; manual WCAG testing still required) |
+| Browser DOM + interaction E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/browser_e2e_test.ps1` (editor dirty/recovery shortcuts, chapter-manager and professional-tool dialogs, desktop and 390x844 mobile computed audits, contrast, overflow, and reduced-motion checks; manual WCAG testing still required) |
 | Studio security + final export E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/studio_bridge_security_export_test.ps1` (origin allowlist, session-header preflight, endpoint/key fail-closed behavior, selected output directory, and collision-safe DOCX copy) |
-| Studio chapter manager + atomic save E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/studio_bridge_chapter_manager_test.ps1` (autosave snapshot suppression, atomic cleanup, create, rename, duplicate, persistent order, and recoverable delete) |
+| Studio chapter manager + atomic save E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/studio_bridge_chapter_manager_test.ps1` (professional state, atomic cover upload/replace, entity CRUD, autosave cleanup, chapter create/rename/duplicate/order, and recoverable delete) |
+| Print/EPUB publication E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/publication_typesetting_test.ps1` (A5 pagination, front/back matter, full-wrap cover, 79-page spine rule, EAN-13, embedded fonts, and official EPUBCheck) |
 
 ## Local Preview Policy
 - Studio is the local preview and control surface.
