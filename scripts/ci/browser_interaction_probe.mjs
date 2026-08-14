@@ -65,6 +65,16 @@ const key = async (keyName, code = keyName, modifiers = 0) => {
 
 await call("Page.enable");
 await call("Runtime.enable");
+await call("Page.addScriptToEvaluateOnNewDocument", { source: `(() => {
+  const listeners = new WeakMap();
+  const original = EventTarget.prototype.addEventListener;
+  EventTarget.prototype.addEventListener = function(type, handler, options) {
+    if (!listeners.has(this)) listeners.set(this, new Set());
+    listeners.get(this).add(type);
+    return original.call(this, type, handler, options);
+  };
+  Object.defineProperty(window, '__kithubListenerTypes', { value: target => [...(listeners.get(target) || [])] });
+})()` });
 await call("Page.navigate", { url: targetUrl });
 await delay(1800);
 
@@ -310,6 +320,43 @@ const publicationUx = await evaluate(`(() => {
     blockedControls: document.querySelectorAll('button[data-control-state="blocked"]').length
   };
 })()`);
+const auditMatterScreenshotPath = screenshotPath.replace(/(\.[^.]+)$/, "-matter$1");
+await evaluate(`document.getElementById('openMatterManagerBtn')?.click()`);
+await delay(120);
+const auditMatterScreenshot = await call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+fs.writeFileSync(auditMatterScreenshotPath, Buffer.from(auditMatterScreenshot.data, "base64"));
+await evaluate(`document.getElementById('matterManagerDialog')?.close()`);
+const auditCoverScreenshotPath = screenshotPath.replace(/(\.[^.]+)$/, "-cover$1");
+await evaluate(`document.getElementById('openCoverStudioBtn')?.click()`);
+await delay(120);
+const auditCoverScreenshot = await call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+fs.writeFileSync(auditCoverScreenshotPath, Buffer.from(auditCoverScreenshot.data, "base64"));
+await evaluate(`document.getElementById('coverStudioDialog')?.close()`);
+const controlContracts = await evaluate(`(() => {
+  const visible = element => {
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+  };
+  const listenerTypes = target => window.__kithubListenerTypes?.(target) || [];
+  const handled = button => {
+    if (button.matches('[data-control-state="info"], [data-control-state="blocked"]')) return true;
+    if (button.closest('form[method="dialog"]') && (button.type || 'submit') === 'submit') return true;
+    for (let target = button; target; target = target.parentNode) {
+      const types = listenerTypes(target);
+      if (types.includes('click')) return true;
+      if ((button.type || 'submit') === 'submit' && types.includes('submit')) return true;
+    }
+    return listenerTypes(document).includes('click') || listenerTypes(window).includes('click');
+  };
+  const buttons = [...document.querySelectorAll('button')].filter(visible);
+  return {
+    visibleButtons: buttons.length,
+    informational: buttons.filter(button => button.dataset.controlState === 'info').length,
+    blocked: buttons.filter(button => button.dataset.controlState === 'blocked').length,
+    unhandled: buttons.filter(button => !button.disabled && !handled(button)).map(button => ({ id: button.id, text: button.textContent.trim().slice(0, 80) }))
+  };
+})()`);
 const paginationFlow = await evaluate(`(() => {
   const original = document.getElementById('manuscriptText').value;
   const sentence = 'KitHub ölçümlü sayfa akışı gerçek satır yüksekliğini ve kullanılabilir sayfa alanını izler.';
@@ -459,6 +506,7 @@ const result = {
     editorialRules,
     publishingCompatibility,
     publicationUx,
+    controlContracts,
     paginationFlow,
     chapterSwitchGuard,
     chapterManagerDialog,
@@ -466,6 +514,8 @@ const result = {
   },
   screenshots: {
     desktop: screenshotPath,
+    matter: auditMatterScreenshotPath,
+    cover: auditCoverScreenshotPath,
     mobile: mobileScreenshotPath
   }
 };

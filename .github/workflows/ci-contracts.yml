@@ -30,6 +30,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Pandoc for DOCX round-trip tests
+        shell: powershell
+        run: choco install pandoc --version=3.7.0.2 --yes --no-progress
+
       - name: Test Studio book request bridge
         shell: powershell
         run: .\scripts\ci\studio_bridge_book_request_test.ps1

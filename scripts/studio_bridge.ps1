@@ -1415,6 +1415,25 @@ function Get-ProjectSummary {
   $revisionProposals = Read-Utf8JsonIfExists -Path (Join-Path $workspaceDir "revision-proposals.json")
   $revisionDraftLock = Read-Utf8JsonIfExists -Path (Join-Path $workspaceDir "draft-v1-lock.json")
   $revisionApproval = Read-Utf8JsonIfExists -Path (Join-Path $approvalDir "revision-proposals-approval.json")
+  $characterState = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "character-state.json")
+  $worldState = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "world-state.json")
+  $plotLedger = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "plot-ledger.json")
+  $characterEntities = @($characterState.characters | ForEach-Object {
+    [ordered]@{ id = [string]$_.id; label = [string]$_.name; detail = [string]$_.arc_position; status = "character" }
+  })
+  $locationEntities = @($worldState.locations | ForEach-Object {
+    [ordered]@{ id = [string]$_.id; label = [string]$_.name; detail = [string]$_.introduced_in; status = "location" }
+  })
+  $plotEntities = @()
+  foreach ($thread in @($plotLedger.open_threads)) {
+    $plotEntities += [ordered]@{ id = "open-$($plotEntities.Count + 1)"; label = [string]$thread; detail = "Açık olay örgüsü"; status = "open" }
+  }
+  foreach ($thread in @($plotLedger.closed_threads)) {
+    $plotEntities += [ordered]@{ id = "closed-$($plotEntities.Count + 1)"; label = [string]$thread; detail = "Kapanmış olay örgüsü"; status = "closed" }
+  }
+  $researchEntities = @($designDocs | ForEach-Object {
+    [ordered]@{ id = [string]$_.relativePath; label = [string]$_.name; detail = [string]$_.relativePath; status = "document" }
+  })
 
   $runnerConfigPath = Join-Path $ProjectRoot "runtime/runner-config.json"
   $runnerConfig = Read-Utf8JsonIfExists -Path $runnerConfigPath
@@ -1446,6 +1465,12 @@ function Get-ProjectSummary {
     evidence = [object[]]@($evidence)
     designDocs = [object[]]@($designDocs)
     reports = [object[]]@($reports)
+    entities = [ordered]@{
+      characters = [object[]]@($characterEntities)
+      locations = [object[]]@($locationEntities)
+      plot = [object[]]@($plotEntities)
+      research = [object[]]@($researchEntities)
+    }
     versions = Get-ProjectVersionHistory -ProjectRoot $projectRoot
     revision = [ordered]@{
       draftLock = $revisionDraftLock

@@ -35,10 +35,14 @@ function Invoke-ChapterAction {
 
 try {
   $episodeDir = Join-Path $projectRoot "episode"
-  New-Item -ItemType Directory -Path $episodeDir -Force | Out-Null
+  $stateDir = Join-Path $projectRoot "revision/_state"
+  New-Item -ItemType Directory -Path $episodeDir,$stateDir -Force | Out-Null
   [IO.File]::WriteAllText((Join-Path $projectRoot ".kithub-project.json"), '{"schema_version":"1.0.0"}', [Text.UTF8Encoding]::new($true))
   [IO.File]::WriteAllText((Join-Path $episodeDir "ep001.md"), "# Birinci bölüm", [Text.UTF8Encoding]::new($true))
   [IO.File]::WriteAllText((Join-Path $episodeDir "ep002.md"), "# İkinci bölüm", [Text.UTF8Encoding]::new($true))
+  [IO.File]::WriteAllText((Join-Path $stateDir "character-state.json"), '{"characters":[{"id":"author","name":"Test Author","arc_position":"draft"}]}', [Text.UTF8Encoding]::new($true))
+  [IO.File]::WriteAllText((Join-Path $stateDir "world-state.json"), '{"locations":[{"id":"desk","name":"Writing Desk","introduced_in":"EP001"}]}', [Text.UTF8Encoding]::new($true))
+  [IO.File]::WriteAllText((Join-Path $stateDir "plot-ledger.json"), '{"open_threads":["Finish the manuscript"],"closed_threads":["Create the project"]}', [Text.UTF8Encoding]::new($true))
 
   $bridgeProcess = Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile","-ExecutionPolicy","Bypass","-File",$bridgeScript,"-RepoRoot",$RepoRoot,"-Port",$port) -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -WindowStyle Hidden -PassThru
   $ready = $false
@@ -99,6 +103,7 @@ try {
   if (-not ($created.ok -and $renamed.ok -and $duplicated.ok -and $reordered.ok -and $deleted.ok)) { throw "One or more chapter operations failed." }
 
   $summary = (Invoke-StudioRequest -Path "/api/project-summary" -Method "POST" -SessionToken $session.token -Body @{projectRoot=$projectRoot}).Content | ConvertFrom-Json
+  if (@($summary.entities.characters).Count -ne 1 -or @($summary.entities.locations).Count -ne 1 -or @($summary.entities.plot).Count -ne 2) { throw "Project entity counts were not derived from state files." }
   $actualOrder = @($summary.chapters | ForEach-Object { $_.filename })
   $expectedOrder = @($duplicated.filename,"ep001.md",$created.filename)
   if (($actualOrder -join ",") -ne ($expectedOrder -join ",")) { throw "Chapter order was not persisted." }

@@ -2825,11 +2825,11 @@
       </section>
       <section class="nav-section">
         <div class="nav-title"><span>Varlıklar</span><span>Durum</span></div>
-        <ul class="chapter-list">
-          <li><button type="button" data-info="Karakter varlıkları: proje planından okunur."><span>◎</span><span>Karakterler</span><small>6</small><i class="dot done"></i></button></li>
-          <li><button type="button" data-info="Mekan varlıkları: dönem ve sahne planına bağlıdır."><span>⌖</span><span>Mekanlar</span><small>8</small><i class="dot done"></i></button></li>
-          <li><button type="button" data-info="Olay örgüsü: bölüm planı ve süreklilik defteriyle izlenir."><span>□</span><span>Olay Örgüsü</span><small>12</small><i class="dot wait"></i></button></li>
-          <li><button type="button" data-info="Araştırma: tarihsel ve tür referansları raporlanır."><span>≡</span><span>Araştırma</span><small>4</small><i class="dot wait"></i></button></li>
+        <ul class="chapter-list" id="entityList">
+          <li><button type="button" data-entity="characters" data-info="Karakter state dosyası proje bağlanınca okunur."><span>◎</span><span>Karakterler</span><small data-entity-count>0</small><i class="dot wait"></i></button></li>
+          <li><button type="button" data-entity="locations" data-info="Mekanlar world-state dosyasından okunur."><span>⌖</span><span>Mekanlar</span><small data-entity-count>0</small><i class="dot wait"></i></button></li>
+          <li><button type="button" data-entity="plot" data-info="Açık ve kapanmış olay örgüsü kayıtları plot-ledger dosyasından okunur."><span>□</span><span>Olay Örgüsü</span><small data-entity-count>0</small><i class="dot wait"></i></button></li>
+          <li><button type="button" data-entity="research" data-info="Araştırma belgeleri design klasöründen okunur."><span>≡</span><span>Araştırma</span><small data-entity-count>0</small><i class="dot wait"></i></button></li>
         </ul>
       </section>
       <section class="nav-section">
@@ -6216,9 +6216,11 @@
       const totalWidth = (width * 2) + spine + (coverSpec.bleed_mm * 2);
       const totalHeight = height + (coverSpec.bleed_mm * 2);
       coverPreviewBack.textContent = coverSpec.back_cover_copy || "Arka kapak yazısı";
-      coverPreviewSpine.textContent = `${coverSpec.title || "Kitap"} · ${coverSpec.author || "Yazar"}`;
+      const spineTextAllowed = coverSpec.page_count >= 80;
+      coverPreviewSpine.textContent = spineTextAllowed ? `${coverSpec.title || "Kitap"} · ${coverSpec.author || "Yazar"}` : "";
+      coverPreviewSpine.title = spineTextAllowed ? "Sırt yazısı" : "80 sayfanın altında sırt yazısı baskı güvenliği için kapalı";
       coverPreviewFront.innerHTML = `<strong>${escapeHtml(coverSpec.title || "Kitap Başlığı")}</strong><span>${escapeHtml(coverSpec.author || "Yazar")}</span>`;
-      coverSizeSummary.textContent = `İç blok: ${width.toFixed(1)} × ${height.toFixed(1)} mm · Sırt: ${spine.toFixed(2)} mm · Tam kapak: ${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} mm`;
+      coverSizeSummary.textContent = `İç blok: ${width.toFixed(1)} × ${height.toFixed(1)} mm · Sırt: ${spine.toFixed(2)} mm · Tam kapak: ${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} mm${spineTextAllowed ? "" : " · 80 sayfanın altında sırt yazısı kapalı"}`;
     }
 
     function openCoverStudio() {
@@ -7228,6 +7230,7 @@
       currentReports = summary.reports || [];
       currentRevision = summary.revision || null;
       currentVersions = summary.versions || [];
+      renderEntities(summary.entities || {});
       renderSupportTab(currentTab);
       renderQuality(summary.quality);
       renderLifecycle(summary.lifecycle);
@@ -7591,6 +7594,24 @@
         saveEpisodeBtn.disabled = false;
         saveEpisodeBtn.setAttribute("aria-busy", "false");
       }
+    }
+
+    function renderEntities(entities = {}) {
+      const labels = { characters: "Karakterler", locations: "Mekanlar", plot: "Olay Örgüsü", research: "Araştırma" };
+      document.querySelectorAll("[data-entity]").forEach(button => {
+        const key = button.dataset.entity;
+        const items = Array.isArray(entities[key]) ? entities[key] : [];
+        const count = button.querySelector("[data-entity-count]");
+        const dot = button.querySelector(".dot");
+        if (count) count.textContent = String(items.length);
+        if (dot) {
+          dot.classList.toggle("done", items.length > 0);
+          dot.classList.toggle("wait", items.length === 0);
+        }
+        button.dataset.info = items.length
+          ? `${labels[key]}: ${items.length} gerçek kayıt`
+          : `${labels[key]}: proje state dosyasında kayıt bulunamadı`;
+      });
     }
 
     async function copyPipelineCommand() {
@@ -8279,6 +8300,15 @@
 
     document.querySelectorAll("[data-info]").forEach(button => {
       button.addEventListener("click", () => {
+        const entityKey = button.dataset.entity;
+        const entityItems = entityKey ? (currentBridgeSummary?.entities?.[entityKey] || []) : [];
+        if (entityKey && entityItems.length) {
+          const title = button.querySelector("span:nth-of-type(2)")?.textContent?.trim() || "Kitap Varlıkları";
+          const rows = entityItems.map((item, index) => `${index + 1}. ${item.label || item.id}${item.detail ? ` — ${item.detail}` : ""}`);
+          setRunLog([title, `${entityItems.length} gerçek kayıt`, "", ...rows].join("\n"));
+          setStatus(`Motor olayı: ${title.toLocaleLowerCase("tr-TR")} gerçek proje state dosyasından gösteriliyor`);
+          return;
+        }
         setRunLog(button.dataset.info || button.textContent.trim());
         setStatus("Motor olayı: kitap haritası bilgisi gösteriliyor");
       });

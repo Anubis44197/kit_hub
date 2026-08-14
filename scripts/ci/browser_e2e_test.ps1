@@ -100,6 +100,8 @@ $interactionPass = (
   $interaction.editorCore.publicationUx.coverOpen -eq $true -and
   $interaction.editorCore.publicationUx.coverSizeCalculated -eq $true -and
   $interaction.editorCore.publicationUx.preflightAvailable -eq $true -and
+  [int]$interaction.editorCore.controlContracts.visibleButtons -gt 20 -and
+  @($interaction.editorCore.controlContracts.unhandled).Count -eq 0 -and
   $interaction.editorCore.paginationFlow.mode -eq "measured-dom" -and
   [int]$interaction.editorCore.paginationFlow.totalPages -gt 12 -and
   [int]$interaction.editorCore.paginationFlow.limitedPages -eq 12 -and
@@ -171,4 +173,6 @@ if (-not $accessibilityPass) { throw "Automated accessibility subset probe faile
 Write-Host "[browser-e2e] PASS workflow, AI writing, publication tools, structured editor, measured pagination, editor-core and chapter-manager UI; desktop/mobile DOM and accessibility subset=PASS"
 Write-Host "[browser-e2e] report=$ReportPath"
 Write-Host "[browser-e2e] desktop-screenshot=$($interaction.screenshots.desktop)"
+Write-Host "[browser-e2e] matter-screenshot=$($interaction.screenshots.matter)"
+Write-Host "[browser-e2e] cover-screenshot=$($interaction.screenshots.cover)"
 Write-Host "[browser-e2e] mobile-screenshot=$($interaction.screenshots.mobile)"

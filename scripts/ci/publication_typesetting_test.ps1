@@ -119,8 +119,20 @@ try {
   $preflight = Get-Content -LiteralPath (Join-Path $runtimeDir "publication-preflight-report.json") -Raw -Encoding UTF8 | ConvertFrom-Json
   Assert-True (@($preflight.blockers).Count -eq 0) "Complete fixture has unexpected publication blockers."
   Assert-True (@($preflight.external_reviews).Count -ge 1) "External print/retailer reviews were not retained."
+  if (Get-Command pdffonts -ErrorAction SilentlyContinue) {
+    Assert-True ($report.font_embedding -eq "pass") "Embedded PDF fonts were not reported as passing."
+    Assert-True (@($preflight.checks | Where-Object { $_.key -eq "font_embedding" -and $_.ok -eq $true }).Count -eq 1) "Font embedding preflight did not pass."
+  }
 
-  Write-Host "[publication-typesetting] PASS A5 PDF+EPUB; front/back matter; full-wrap cover; measured flow; PDF pages=$pageCount; external review retained"
+  $layout.cover_spec.page_count = 78
+  $layout.cover_spec.spine_width_mm = 4.953
+  Write-Utf8 (Join-Path $stateDir "layout-plan.json") ($layout | ConvertTo-Json -Depth 8)
+  $null = & (Join-Path $RepoRoot "scripts/build_publication_outputs.ps1") -ProjectRoot $projectRoot -Formats "pdf"
+  Assert-True ($LASTEXITCODE -eq 0) "Low-page-count cover verification build failed."
+  $coverHtml = [IO.File]::ReadAllText((Join-Path $projectRoot "revision/_workspace/publication/cover.html"), [Text.Encoding]::UTF8)
+  Assert-True ($coverHtml.Contains('<section class="spine"></section>')) "Spine text was not suppressed below 80 pages."
+
+  Write-Host "[publication-typesetting] PASS A5 PDF+EPUB; front/back matter; full-wrap cover; under-80 spine policy; measured flow; PDF pages=$pageCount; external review retained"
   if ($KeepFixture) {
     Write-Host "[publication-typesetting] fixture=$fixtureRoot"
     Write-Host "[publication-typesetting] pdf=$pdfPath"

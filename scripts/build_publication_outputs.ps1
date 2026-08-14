@@ -152,6 +152,8 @@ $epubInputs = @(@($frontEpubPath) + $chapterInputs + @($backEpubPath) | Where-Ob
 $results = @()
 $epubCheckStatus = "not_run"
 $epubCheckOutput = ""
+$pdfFontStatus = "not_run"
+$pdfFontOutput = ""
 if ($formatList -contains "epub") {
   $epubPath = Join-Path $exportDir "$safeName-dijital.epub"
   $args = @($common + @("--css=$cssPath","--output=$epubPath") + $epubInputs)
@@ -175,6 +177,15 @@ if ($formatList -contains "pdf") {
   $htmlUri = ([Uri]$htmlPath).AbsoluteUri
   $process = Start-Process -FilePath $edge -ArgumentList @("--headless=new","--disable-gpu","--no-pdf-header-footer","--print-to-pdf=$pdfPath",$htmlUri) -WindowStyle Hidden -Wait -PassThru
   if ($process.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $pdfPath -PathType Leaf)) { throw "Edge print PDF generation failed." }
+  $pdfFonts = Get-Command pdffonts -ErrorAction SilentlyContinue
+  if ($pdfFonts) {
+    $pdfFontOutput = ((& $pdfFonts.Source $pdfPath 2>&1) | Out-String).Trim()
+    $fontRows = @($pdfFontOutput -split [Environment]::NewLine | Where-Object { $_ -match '\s+(yes|no)\s+(yes|no)\s+(yes|no)\s+\d+\s+\d+\s*$' })
+    $unembeddedFonts = @($fontRows | Where-Object { $_ -notmatch '\s+yes\s+(yes|no)\s+(yes|no)\s+\d+\s+\d+\s*$' })
+    $pdfFontStatus = if ($fontRows.Count -gt 0 -and $unembeddedFonts.Count -eq 0) { "pass" } else { "fail" }
+  } else {
+    $pdfFontStatus = "unavailable"
+  }
   $results += [ordered]@{ format = "PDF"; path = $pdfPath; bytes = (Get-Item -LiteralPath $pdfPath).Length }
 
   if ($layout.cover_spec) {
@@ -193,6 +204,7 @@ if ($formatList -contains "pdf") {
     $coverTitle = Escape-Html ([string]$coverSpec.title)
     $coverAuthor = Escape-Html ([string]$coverSpec.author)
     $coverBack = (Escape-Html ([string]$coverSpec.back_cover_copy)).Replace([Environment]::NewLine, "<br>")
+    $coverSpineText = if ([int]$coverSpec.page_count -ge 80) { "$coverTitle · $coverAuthor" } else { "" }
     $barcode = if ($coverSpec.barcode_mode -eq "placeholder") { '<div class="barcode">BARKOD / ISBN ALANI</div>' } else { "" }
     $coverHtml = @"
 <!doctype html><html lang="tr"><head><meta charset="utf-8"><style>
@@ -208,7 +220,7 @@ body { font-family: "$font", Garamond, serif; color: #1f1a14; background: #e8dfc
 .back { font: 11pt/1.55 "$font", Garamond, serif; border-right: .2mm solid rgba(0,0,0,.16); }
 .spine { display: grid; place-content: center; padding: 4mm 1mm; color: #f5ead7; background: #29241e; writing-mode: vertical-rl; text-orientation: mixed; letter-spacing: .04em; text-align: center; }
 .barcode { position: absolute; right: 12mm; bottom: 12mm; width: 36mm; height: 25mm; display: grid; place-content: center; border: .25mm dashed #655d52; background: #fff; color: #655d52; font: 7pt/1 Arial; }
-</style></head><body><main class="wrap"><section class="back">$coverBack$barcode</section><section class="spine">$coverTitle · $coverAuthor</section><section class="front"><h1>$coverTitle</h1><p>$coverAuthor</p></section></main></body></html>
+</style></head><body><main class="wrap"><section class="back">$coverBack$barcode</section><section class="spine">$coverSpineText</section><section class="front"><h1>$coverTitle</h1><p>$coverAuthor</p></section></main></body></html>
 "@
     [IO.File]::WriteAllText($coverHtmlPath, $coverHtml, [Text.UTF8Encoding]::new($false))
     $coverUri = ([Uri]$coverHtmlPath).AbsoluteUri
@@ -232,6 +244,7 @@ $checks = @(
   [ordered]@{ key = "cover_spec"; ok = [bool]$coverConfigured; severity = "blocker"; detail = if ($coverConfigured) { "başlık, yazar ve arka kapak yazısı var" } else { "kapak başlığı, yazar veya arka kapak yazısı eksik" } },
   [ordered]@{ key = "interior_pdf"; ok = [bool]$interiorGenerated; severity = "output"; detail = if ($PreflightOnly) { "preflight-only çalışmada üretilmedi" } else { "baskı iç bloğu" } },
   [ordered]@{ key = "cover_pdf"; ok = [bool]$coverGenerated; severity = "output"; detail = if ($PreflightOnly) { "preflight-only çalışmada üretilmedi" } else { "tam sargı kapak" } },
+  [ordered]@{ key = "font_embedding"; ok = ($pdfFontStatus -eq "pass"); severity = if ($pdfFontStatus -eq "fail") { "blocker" } elseif ($pdfFontStatus -eq "pass") { "output" } else { "external" }; detail = $pdfFontStatus },
   [ordered]@{ key = "pdf_x"; ok = $false; severity = "external"; detail = "Edge PDF normal PDF üretir; PDF/X dönüştürme ve matbaa profili gerekir" },
   [ordered]@{ key = "epub"; ok = [bool]$epubGenerated; severity = "output"; detail = if ($PreflightOnly) { "preflight-only çalışmada üretilmedi" } else { "EPUB paketi" } },
   [ordered]@{ key = "epubcheck"; ok = ($epubCheckStatus -eq "pass"); severity = "external"; detail = $epubCheckStatus }
@@ -250,6 +263,7 @@ $preflight = [ordered]@{
   blockers = [object[]]$blockers
   external_reviews = [object[]]$externalReviews
   epubcheck_output = $epubCheckOutput
+  pdf_font_output = $pdfFontOutput
   note = "KitHub dosyaları üretir; PDF/X, ISBN/barkod/bandrol ve son matbaa provası tamamlanmadan baskıya hazır iddiası kurulmaz."
 }
 $preflightPath = Join-Path $ProjectRoot "runtime/publication-preflight-report.json"
@@ -266,6 +280,7 @@ $report = [ordered]@{
   cover = $layout.cover_spec
   page_design = $pageDesign
   typography = [ordered]@{ font_family = $font; font_size_pt = $fontSize; line_spacing = $lineSpacing }
+  font_embedding = $pdfFontStatus
   page = [ordered]@{ width_mm = $width; height_mm = $height; margin_top_mm = $top; margin_inside_mm = $inside; margin_outside_mm = $outside }
   flow = [ordered]@{
     widow_orphan_control = $widowOrphanPolicy
