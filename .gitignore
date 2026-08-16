@@ -31,3 +31,4 @@ studio-stderr.log
 
 # Portable package build output
 dist/
+runtime/browser-performance-report.json

@@ -1,0 +1,46 @@
+name: Release KitHub Studio
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build portable package
+        shell: powershell
+        run: .\scripts\build_portable_package.ps1 -RepoRoot (Resolve-Path '.').Path
+
+      - name: Verify package contents
+        shell: powershell
+        run: |
+          $zip = 'dist\kit-hub-studio-portable.zip'
+          if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) { throw "Portable zip missing: $zip" }
+          $size = (Get-Item -LiteralPath $zip).Length
+          if ($size -lt 100KB) { throw "Portable zip looks too small: $size bytes" }
+          Write-Host "[release] portable zip verified: $size bytes"
+
+      - name: Create GitHub release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $zip = 'dist\kit-hub-studio-portable.zip'
+          $notes = @(
+            "KitHub Studio portable package for $tag",
+            "",
+            "- Single-page editor + PowerShell Studio Bridge",
+            "- Requires only Windows PowerShell; binds to 127.0.0.1 only",
+            "- DOCX/PDF/EPUB export may require external CLI tools (pandoc, poppler, epubcheck)",
+            "",
+            "See PR and CHANGELOG for full details."
+          ) -join "`n"
+          gh release create $tag $zip --title "KitHub Studio $tag" --notes $notes

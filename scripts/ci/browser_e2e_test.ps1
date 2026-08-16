@@ -63,6 +63,50 @@ finally {
   if ($edgeProcess -and -not $edgeProcess.HasExited) { Stop-Process -Id $edgeProcess.Id -Force -ErrorAction SilentlyContinue }
   if (Test-Path -LiteralPath $profileRoot -PathType Container) { Remove-Item -LiteralPath $profileRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }
+
+$perfPortProbe = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+$perfPortProbe.Start()
+$perfPort = ([System.Net.IPEndPoint]$perfPortProbe.LocalEndpoint).Port
+$perfPortProbe.Stop()
+$perfProfileRoot = Join-Path ([IO.Path]::GetTempPath()) ("kithub-edge-perf-" + [guid]::NewGuid().ToString("N"))
+$perfReportPath = Join-Path (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path "runtime/browser-performance-report.json"
+$perfEdgeProcess = $null
+try {
+  $perfEdgeProcess = Start-Process -FilePath $edge.FullName -ArgumentList @(
+    "--headless=new", "--disable-gpu", "--no-first-run", "--remote-debugging-port=$perfPort",
+    "--user-data-dir=$perfProfileRoot", "--window-size=1440,1200", "about:blank"
+  ) -WindowStyle Hidden -PassThru
+  $perfReady = $false
+  for ($attempt = 0; $attempt -lt 40; $attempt++) {
+    Start-Sleep -Milliseconds 250
+    try {
+      $perfTargets = Invoke-RestMethod -Uri "http://127.0.0.1:$perfPort/json/list" -TimeoutSec 2 -ErrorAction Stop
+      if (@($perfTargets | Where-Object { $_.type -eq "page" }).Count -gt 0) { $perfReady = $true; break }
+    } catch {}
+  }
+  if (-not $perfReady) { throw "Edge debug target did not become ready on port $perfPort." }
+  $perfScript = Join-Path $PSScriptRoot "browser_performance_probe.mjs"
+  $perfRaw = & $node.Source $perfScript $perfPort $Url $perfReportPath
+  if ($LASTEXITCODE -ne 0) { throw "Browser performance probe failed with exit code $LASTEXITCODE." }
+  $performance = $perfRaw | ConvertFrom-Json
+}
+finally {
+  if ($perfEdgeProcess -and -not $perfEdgeProcess.HasExited) { Stop-Process -Id $perfEdgeProcess.Id -Force -ErrorAction SilentlyContinue }
+  if (Test-Path -LiteralPath $perfProfileRoot -PathType Container) { Remove-Item -LiteralPath $perfProfileRoot -Recurse -Force -ErrorAction SilentlyContinue }
+}
+$performancePass = (
+  [string]$performance.overall -eq "PASS" -and
+  [string]$performance.scores.fcp -in @("PASS","NO_DATA") -and
+  [string]$performance.scores.lcp -in @("PASS","NO_DATA") -and
+  [string]$performance.scores.domNodes -eq "PASS" -and
+  [string]$performance.scores.layoutDuration -eq "PASS" -and
+  [string]$performance.scores.reflowDuration -eq "PASS" -and
+  [string]$performance.scores.scriptDuration -eq "PASS" -and
+  [string]$performance.scores.longTasks -eq "PASS" -and
+  [string]$performance.scores.consoleErrors -eq "PASS" -and
+  [string]$performance.scores.reducedMotion -eq "PASS" -and
+  [string]$performance.scores.mainLandmark -eq "PASS"
+)
 $interactionPass = (
   $interaction.identity.url -like "$($Url.TrimEnd('/'))*" -and
   $interaction.identity.title -eq "KitHub Studio" -and
@@ -249,19 +293,22 @@ $report = [ordered]@{
   desktop_mobile_dom_pass=(@($results|Where-Object status -eq "FAIL").Count -eq 0)
   interactive_automation_proven=$interactionPass
   keyboard_focus_zoom=if($interactionPass){"PASS"}else{"FAIL"}
-  accessibility_probe=if($accessibilityPass){"PASS"}else{"FAIL"}
+accessibility_probe=if($accessibilityPass){"PASS"}else{"FAIL"}
+  performance_probe=if($performancePass){"PASS"}else{"FAIL"}
   desktop_accessibility=if($desktopAccessibilityPass){"PASS"}else{"FAIL"}
   mobile_accessibility=if($mobileAccessibilityPass){"PASS"}else{"FAIL"}
   wcag_conformance="AUTOMATED_AA_SUBSET_ONLY"
-  notes=@("Headless Edge DOM render and computed accessibility audits were executed at desktop and 390x844 mobile viewport sizes.","Edge DevTools interaction automation verified the structured editor, workflow rail, expanded AI prompt, front/back matter manager, cover studio, preflight access, Turkish editorial rules and spelling engine, find search options, quick chapter jump, measured pagination, dirty-state recovery, Ctrl+S/F/H/K, version diff rendering, scene management, mobile toolbar fit, settings access, focus restoration, Escape handling, and preview zoom state.","The automated subset checks language, landmarks, live status semantics, heading order, control names, duplicate IDs, 24px targets, computed text contrast, horizontal overflow, and reduced-motion support.","Manual screen-reader, cognitive, and complete WCAG conformance testing remains required.")
+  notes=@("Headless Edge DOM render and computed accessibility audits were executed at desktop and 390x844 mobile viewport sizes.","Edge DevTools interaction automation verified the structured editor, workflow rail, expanded AI prompt, front/back matter manager, cover studio, preflight access, Turkish editorial rules and spelling engine, find search options, quick chapter jump, measured pagination, dirty-state recovery, Ctrl+S/F/H/K, version diff rendering, scene management, mobile toolbar fit, settings access, focus restoration, Escape handling, and preview zoom state.","The automated subset checks language, landmarks, live status semantics, heading order, control names, duplicate IDs, 24px targets, computed text contrast, horizontal overflow, and reduced-motion support.","The performance subset measures FCP/LCP, DOM node budget, layout/reflow/script duration, long-task count and console errors under 4x CPU throttling; reduced-motion and main landmark are also enforced.","Manual screen-reader, cognitive, and complete WCAG conformance testing remains required.")
   interaction=$interaction
+  performance=$performance
   cases=$results
 }
 [IO.File]::WriteAllText($ReportPath,($report|ConvertTo-Json -Depth 20),[Text.UTF8Encoding]::new($true))
 if (-not $report.desktop_mobile_dom_pass) { throw "Browser DOM render failed." }
 if (-not $report.interactive_automation_proven) { throw "Browser keyboard/focus/zoom interaction probe failed." }
 if (-not $accessibilityPass) { throw "Automated accessibility subset probe failed." }
-Write-Host "[browser-e2e] PASS workflow, AI writing, publication tools, structured editor, measured pagination, editor-core and chapter-manager UI; desktop/mobile DOM and accessibility subset=PASS"
+if (-not $performancePass) { throw "Automated performance subset probe failed." }
+Write-Host "[browser-e2e] PASS workflow, AI writing, publication tools, structured editor, measured pagination, editor-core and chapter-manager UI; desktop/mobile DOM, accessibility subset and performance subset=PASS"
 Write-Host "[browser-e2e] report=$ReportPath"
 Write-Host "[browser-e2e] desktop-screenshot=$($interaction.screenshots.desktop)"
 Write-Host "[browser-e2e] matter-screenshot=$($interaction.screenshots.matter)"
