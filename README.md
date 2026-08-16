@@ -355,6 +355,57 @@ The runner rejects a fake brief approval. The brief must contain structured `req
 | DOCX layout/profile check | Must pass style and page setup verification (`verify_docx_layout_profile.ps1`) |
 | DOCX content match check | Exported DOCX text must contain snippets from current `episode/ep*.md` files; stale copied DOCX files are blocked |
 
+## Installation & Packaging
+
+### Version
+- The version is a single source of truth in the `VERSION` file (semantic `X.Y.Z`).
+- The topbar shows the current version as a badge (`v1.3.0`); the e2e test asserts it.
+- Releases publish both a portable zip and a Windows installer.
+
+### Portable package
+Builds `dist/kit-hub-studio-portable.zip` (single page + PowerShell Studio Bridge):
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build_portable_package.ps1
+```
+
+Run it without installing:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File dist/kit-hub-studio-portable/start_studio.ps1
+```
+
+### Windows installer
+Builds `dist/installer/KitHubStudio-Setup-<version>.ps1` (self-extracting payload):
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build_installer.ps1
+```
+
+Install to the default location (`%LOCALAPPDATA%\Kit Hub Studio`) and create a desktop shortcut:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File .\KitHubStudio-Setup-1.3.0.ps1
+```
+
+Options:
+- `-InstallDir <path>` — custom install directory.
+- `-NoDesktopShortcut` — skip the desktop shortcut.
+- `-Launch` — start the installed app without reinstalling.
+- `-Uninstall` — remove the installation.
+- `-Quiet` — no interactive prompts.
+
+### Update mechanism
+- Portable: download the new zip and copy over the existing folder (data lives in project folders, not the package).
+- Installer: run the new `KitHubStudio-Setup-<version>.ps1`; it overwrites the app folder in place.
+
+### Backup / restore
+- From the UI: **Projeyi Yedekle** exports the connected project as a timestamped zip via `/api/backup-project`.
+- Data is stored in project folders, so package updates never touch your books.
+
+### CI verification
+`scripts/ci/package_test.ps1` builds both artifacts, verifies zip contents and embedded `VERSION`, then performs a real install/uninstall round trip. It runs in the `studio-bridge-windows` job.
+
 ## Local Validation
 | Task | Command |
 |---|---|

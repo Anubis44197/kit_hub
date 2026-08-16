@@ -8,6 +8,13 @@ $distRoot = Join-Path $RepoRoot "dist"
 $packageRoot = Join-Path $distRoot "kit-hub-studio-portable"
 $zipPath = Join-Path $distRoot "kit-hub-studio-portable.zip"
 
+$versionPath = Join-Path $RepoRoot "VERSION"
+if (-not (Test-Path -LiteralPath $versionPath -PathType Leaf)) { throw "VERSION file not found: $versionPath" }
+$version = ([System.IO.File]::ReadAllText($versionPath, [System.Text.Encoding]::UTF8)).Trim()
+if (-not $version) { throw "VERSION is empty" }
+$versionPattern = '^\d+\.\d+\.\d+$'
+if ($version -notmatch $versionPattern) { throw "VERSION must be semantic (X.Y.Z), got: $version" }
+
 if (-not (Test-Path -LiteralPath $RepoRoot -PathType Container)) { throw "RepoRoot not found: $RepoRoot" }
 $required = @(
   "index.html",
@@ -27,9 +34,16 @@ foreach ($item in @("index.html", "assets", "scripts")) {
   Copy-Item -LiteralPath (Join-Path $RepoRoot $item) -Destination $packageRoot -Recurse -Force
 }
 Copy-Item -LiteralPath (Join-Path $RepoRoot "scripts/start_studio.ps1") -Destination (Join-Path $packageRoot "start_studio.ps1") -Force
+Copy-Item -LiteralPath $versionPath -Destination (Join-Path $packageRoot "VERSION") -Force
+$changelogSource = Join-Path $RepoRoot "CHANGELOG.md"
+if (Test-Path -LiteralPath $changelogSource -PathType Leaf) {
+  Copy-Item -LiteralPath $changelogSource -Destination (Join-Path $packageRoot "CHANGELOG.md") -Force
+}
 
 $readmeText = @(
   "# KitHub Studio - Tasinabilir Paket",
+  "",
+  "Surum: $version",
   "",
   "## Calistirma",
   "1. Bu klasoru kopyalayip acin.",
@@ -41,6 +55,11 @@ $readmeText = @(
   "3. Tarayici otomatik olarak http://127.0.0.1:8765/ adresini acar.",
   "4. Studio Bridge basladiktan sonra proje ekranindan bir kitap projesi secin",
   "   veya 'Yeni Proje' ile baslayin.",
+  "",
+  "## Guncelleme",
+  "- Yeni surumler GitHub Releases sayfasindan indirilir; paket tasinabilir oldugu",
+  "  icin eski klasorun uzerine kopyalanarak guncellenir.",
+  "- Verileriniz proje klasorlerinde saklanir; paket guncellemesi verileri etkilemez.",
   "",
   "## Notlar",
   "- Paket tek sayfa (index.html) + PowerShell motorundan olusur; ek kurulum gerekmez.",
@@ -72,10 +91,17 @@ try {
   $hasBridge = $names -contains "scripts/studio_bridge.ps1"
   $hasLauncher = $names -contains "start_studio.ps1"
   $hasReadme = $names -contains "PORTABLE-README.md"
-  if (-not ($hasIndex -and $hasBridge -and $hasLauncher -and $hasReadme)) {
-    throw "Package contents incomplete: index=$hasIndex bridge=$hasBridge launcher=$hasLauncher readme=$hasReadme"
+  $hasVersion = $names -contains "VERSION"
+  $hasChangelog = $names -contains "CHANGELOG.md"
+  if (-not ($hasIndex -and $hasBridge -and $hasLauncher -and $hasReadme -and $hasVersion -and $hasChangelog)) {
+    throw "Package contents incomplete: index=$hasIndex bridge=$hasBridge launcher=$hasLauncher readme=$hasReadme version=$hasVersion changelog=$hasChangelog"
   }
-  Write-Host "[build-portable] contents verified: index=$hasIndex bridge=$hasBridge launcher=$hasLauncher readme=$hasReadme"
+  $versionEntry = $zip.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq "VERSION" } | Select-Object -First 1
+  $reader = New-Object System.IO.StreamReader($versionEntry.Open(), [System.Text.Encoding]::UTF8)
+  try { $embeddedVersion = $reader.ReadToEnd().Trim() } finally { $reader.Dispose() }
+  if ($embeddedVersion -ne $version) { throw "Embedded VERSION mismatch: got=$embeddedVersion expected=$version" }
+  Write-Host "[build-portable] version=$version"
+  Write-Host "[build-portable] contents verified: index=$hasIndex bridge=$hasBridge launcher=$hasLauncher readme=$hasReadme version=$hasVersion changelog=$hasChangelog"
 }
 finally {
   $zip.Dispose()

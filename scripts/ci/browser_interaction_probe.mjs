@@ -82,6 +82,7 @@ const identity = await evaluate(`({
   url: location.href,
   title: document.title,
   textLength: document.body.innerText.trim().length,
+  versionBadge: document.getElementById('appVersion')?.textContent || '',
   overlay: Boolean(document.querySelector('[data-nextjs-dialog-overlay], vite-error-overlay, #webpack-dev-server-client-overlay'))
 })`);
 

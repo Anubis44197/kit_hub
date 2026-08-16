@@ -123,3 +123,7 @@ jobs:
           .\scripts\ci\browser_e2e_test.ps1
         env:
           GITHUB_WORKSPACE: ${{ github.workspace }}
+
+      - name: Build and verify portable package + installer
+        shell: powershell
+        run: .\scripts\ci\package_test.ps1 -RepoRoot (Resolve-Path '.').Path

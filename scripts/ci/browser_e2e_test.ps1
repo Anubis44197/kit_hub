@@ -116,6 +116,7 @@ $interactionPass = (
   $interaction.identity.url -like "$($Url.TrimEnd('/'))*" -and
   $interaction.identity.title -eq "KitHub Studio" -and
   [int]$interaction.identity.textLength -gt 500 -and
+  $interaction.identity.versionBadge -match "^v\d+\.\d+\.\d+$" -and
   $interaction.identity.overlay -ne $true -and
   @($interaction.consoleIssues).Count -eq 0 -and
   $interaction.focus.skipLinkFocused -eq $true -and

@@ -18,14 +18,23 @@ jobs:
         shell: powershell
         run: .\scripts\build_portable_package.ps1 -RepoRoot (Resolve-Path '.').Path
 
+      - name: Build installer
+        shell: powershell
+        run: .\scripts\build_installer.ps1 -RepoRoot (Resolve-Path '.').Path
+
       - name: Verify package contents
         shell: powershell
         run: |
+          $version = ([System.IO.File]::ReadAllText('VERSION', [System.Text.Encoding]::UTF8)).Trim()
           $zip = 'dist\kit-hub-studio-portable.zip'
+          $installer = "dist\installer\KitHubStudio-Setup-$version.ps1"
           if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) { throw "Portable zip missing: $zip" }
-          $size = (Get-Item -LiteralPath $zip).Length
-          if ($size -lt 100KB) { throw "Portable zip looks too small: $size bytes" }
-          Write-Host "[release] portable zip verified: $size bytes"
+          if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) { throw "Installer missing: $installer" }
+          $zipSize = (Get-Item -LiteralPath $zip).Length
+          $installerSize = (Get-Item -LiteralPath $installer).Length
+          if ($zipSize -lt 100KB) { throw "Portable zip looks too small: $zipSize bytes" }
+          if ($installerSize -lt 150KB) { throw "Installer looks too small: $installerSize bytes" }
+          Write-Host "[release] zip=$zipSize bytes installer=$installerSize bytes version=$version"
 
       - name: Create GitHub release
         shell: powershell
@@ -33,14 +42,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "${{ github.ref_name }}"
+          $version = ([System.IO.File]::ReadAllText('VERSION', [System.Text.Encoding]::UTF8)).Trim()
           $zip = 'dist\kit-hub-studio-portable.zip'
+          $installer = "dist\installer\KitHubStudio-Setup-$version.ps1"
           $notes = @(
-            "KitHub Studio portable package for $tag",
+            "KitHub Studio portable package and installer for $tag",
             "",
             "- Single-page editor + PowerShell Studio Bridge",
             "- Requires only Windows PowerShell; binds to 127.0.0.1 only",
             "- DOCX/PDF/EPUB export may require external CLI tools (pandoc, poppler, epubcheck)",
             "",
+            "Attachments:",
+            "- KitHub Studio portable zip",
+            "- KitHub Studio Windows installer (PS1)",
+            "",
             "See PR and CHANGELOG for full details."
           ) -join "`n"
-          gh release create $tag $zip --title "KitHub Studio $tag" --notes $notes
+          gh release create $tag $zip $installer --title "KitHub Studio $tag" --notes $notes
