@@ -742,6 +742,37 @@ const chapterArchiveUi = await evaluate(`(() => {
 await delay(120);
 await evaluate(`window.bridgeFetch = window.__kithubRealBridgeFetch || null; window.showChoiceDialog = window.__kithubShowChoiceOriginal || null;`);
 
+const chapterTreeUi = await evaluate(`(() => {
+  chapters = [
+    { id: 'Bölüm 1', title: 'Birinci', filename: 'ep001.md', text: '# Birinci\\n\\n<!-- scene: Kapıda -->\\n\\nMetin', plan: { status: 'editing', date: '1989-01-15', setting: 'Eski ev', target_words: 1800 } },
+    { id: 'Bölüm 2', title: 'İkinci', filename: 'ep002.md', text: '# İkinci\\n\\nMetin', plan: { status: 'idea', date: '1989-06-01', setting: 'Kasaba' } }
+  ];
+  currentChapterIndex = 0;
+  renderChapterTree();
+  const rowButtons = notesContent.querySelectorAll('[data-tree-chapter]');
+  const chapterRows = notesContent.querySelectorAll('.tree-chapter');
+  const sceneButtons = notesContent.querySelectorAll('.tree-scene');
+  const timelineEntries = notesContent.querySelectorAll('.timeline-entry');
+  const firstRow = chapterRows[0];
+  const firstRowTitle = firstRow ? firstRow.querySelector('.tree-chapter-title')?.textContent.trim() : null;
+  const firstRowChip = firstRow ? firstRow.querySelector('.chapter-plan-status-chip')?.dataset.status : null;
+  const sceneLabel = sceneButtons[0] ? sceneButtons[0].textContent.trim() : null;
+  const timelineFirst = timelineEntries[0] ? timelineEntries[0].querySelector('.timeline-title')?.textContent.trim() : null;
+  const timelineDates = [...timelineEntries].map(entry => entry.querySelector('.timeline-date')?.textContent.trim());
+  const currentMarked = chapterRows[0] ? chapterRows[0].classList.contains('is-current') : false;
+  return {
+    treeRendered: chapterRows.length === 2,
+    firstRowTitle,
+    firstRowChip,
+    sceneLabel,
+    timelineEntries: timelineEntries.length,
+    timelineFirst,
+    timelineDates,
+    currentMarked
+  };
+})()`);
+await delay(100);
+
 await call("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
 await evaluate(`(() => {
   document.documentElement.style.setProperty('--page-zoom', '1');
@@ -841,6 +872,7 @@ const result = {
     chapterManagerDialog,
     chapterPlanUi,
     chapterArchiveUi,
+    chapterTreeUi,
     mobileLayout: mobileEditorLayout,
     mobileProfessionalLayout
   },

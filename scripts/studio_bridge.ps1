@@ -2265,7 +2265,7 @@ function Get-ChapterPlans {
   return [ordered]@{
     ok = $true
     chapters = [object[]]@($byFilename.Values)
-    byFilename = [ordered]@{}
+    byFilename = [ordered]@{} + $byFilename
   }
 }
 
@@ -2432,7 +2432,36 @@ function Save-LayoutPlan {
   if ($layoutProfile -notin @("classicNovel", "modernNovel", "publisherA5", "essay", "biography", "poetry", "screenplay", "children", "academic", "article", "selfHelp")) {
     throw "Unsupported layout_profile: $layoutProfile"
   }
-  if ($pageSize -notin @("A5 (148 x 210 mm)", "A4 (210 x 297 mm)")) { throw "Unsupported page_size: $pageSize" }
+$knownPageSizes = @(
+    "A5 (148 x 210 mm)",
+    "A4 (210 x 297 mm)",
+    "5 x 8 in (127 x 203 mm)",
+    "5.25 x 8 in (133 x 203 mm)",
+    "5.5 x 8.5 in (140 x 216 mm)",
+    "6 x 9 in (152 x 229 mm)"
+  )
+  if ($pageSize -eq "Özel ölçü..." -or $pageSize -like "Özel*") {
+    $customSize = $Payload.custom_size_mm
+    if ($null -eq $customSize -or -not ($customSize.PSObject.Properties.Name -contains "width_mm") -or -not ($customSize.PSObject.Properties.Name -contains "height_mm")) { throw "Custom page size requires custom_size_mm { width_mm, height_mm }." }
+    $customWidth = [double]$customSize.width_mm
+    $customHeight = [double]$customSize.height_mm
+    if ($customWidth -lt 80 -or $customWidth -gt 220) { throw "Custom page width must be between 80 and 220 mm." }
+    if ($customHeight -lt 100 -or $customHeight -gt 320) { throw "Custom page height must be between 100 and 320 mm." }
+    $widthMm = $customWidth
+    $heightMm = $customHeight
+    $trimSize = "Custom"
+  }
+  else {
+    if ($pageSize -notin $knownPageSizes) { throw "Unsupported page_size: $pageSize" }
+    if ($pageSize -eq "A4 (210 x 297 mm)") { $widthMm = 210; $heightMm = 297; $trimSize = "A4" }
+    elseif ($pageSize -eq "5 x 8 in (127 x 203 mm)") { $widthMm = 127; $heightMm = 203; $trimSize = "5x8" }
+    elseif ($pageSize -eq "5.25 x 8 in (133 x 203 mm)") { $widthMm = 133; $heightMm = 203; $trimSize = "5.25x8" }
+    elseif ($pageSize -eq "5.5 x 8.5 in (140 x 216 mm)") { $widthMm = 140; $heightMm = 216; $trimSize = "5.5x8.5" }
+    elseif ($pageSize -eq "6 x 9 in (152 x 229 mm)") { $widthMm = 152; $heightMm = 229; $trimSize = "6x9" }
+    else { $widthMm = 148; $heightMm = 210; $trimSize = "A5" }
+  }
+$printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_sided" }
+
   if ($pageDesign -notin @("classicFrame", "minimalEditorial", "artDeco", "botanical")) { throw "Unsupported page_design: $pageDesign" }
   if ($printMode -notin @("Tek taraf", "Karşılıklı sayfa")) { throw "Unsupported print_mode: $printMode" }
   if ($frontMatterSelection -notin @("Künye + İçindekiler", "Yalnız metin")) { throw "Unsupported front_matter: $frontMatterSelection" }
@@ -2461,12 +2490,6 @@ function Save-LayoutPlan {
   if ($runningHeaderPolicy -notin @("none", "book_title", "chapter_title")) { throw "Unsupported running_header_policy: $runningHeaderPolicy" }
   if ($headingHierarchyPolicy -notin @("chapter_only", "chapter_subhead", "academic")) { throw "Unsupported heading_hierarchy_policy: $headingHierarchyPolicy" }
   if ($widowOrphanControl -notin @("strict", "standard", "off")) { throw "Unsupported widow_orphan_control: $widowOrphanControl" }
-
-  $isA4 = $pageSize -match "A4"
-  $widthMm = if ($isA4) { 210 } else { 148 }
-  $heightMm = if ($isA4) { 297 } else { 210 }
-  $trimSize = if ($isA4) { "A4" } else { "A5" }
-  $printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_sided" }
 
   if (-not $layout.Contains("schema_version")) { $layout["schema_version"] = "1.0.0" }
   if (-not $layout.Contains("run_id")) { $layout["run_id"] = "studio-layout" }

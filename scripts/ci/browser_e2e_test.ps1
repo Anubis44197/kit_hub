@@ -199,6 +199,15 @@ $interaction.editorCore.chapterManagerDialog.open -eq $true -and
   $interaction.editorCore.chapterArchiveUi.archivePayload.filename -eq "ep001.md" -and
   $interaction.editorCore.chapterArchiveUi.archivePayload.action -eq "archive" -and
   $interaction.editorCore.chapterArchiveUi.archiveRemoved -eq $true -and
+  $interaction.editorCore.chapterTreeUi.treeRendered -eq $true -and
+  $interaction.editorCore.chapterTreeUi.firstRowTitle -eq "Birinci" -and
+  $interaction.editorCore.chapterTreeUi.firstRowChip -eq "editing" -and
+  $interaction.editorCore.chapterTreeUi.sceneLabel -eq "▸ Kapıda" -and
+  [int]$interaction.editorCore.chapterTreeUi.timelineEntries -eq 2 -and
+  $interaction.editorCore.chapterTreeUi.timelineFirst -eq "Birinci" -and
+  @($interaction.editorCore.chapterTreeUi.timelineDates) -contains "1989-01-15" -and
+  @($interaction.editorCore.chapterTreeUi.timelineDates) -contains "1989-06-01" -and
+  $interaction.editorCore.chapterTreeUi.currentMarked -eq $true -and
   $interaction.editorCore.mobileLayout.toolbarOverflow -ne $true -and
   $interaction.editorCore.mobileLayout.settingsVisible -eq $true -and
   $interaction.editorCore.mobileProfessionalLayout.open -eq $true -and

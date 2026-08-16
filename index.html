@@ -1131,6 +1131,147 @@
       font-size: 11px;
     }
 
+    .chapter-tree {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+      white-space: normal;
+    }
+
+    .tree-chapter {
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .tree-chapter.is-current {
+      border-color: rgba(52, 198, 193, 0.5);
+    }
+
+    .tree-chapter-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 12px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .tree-chapter-row:hover {
+      background: rgba(52, 198, 193, 0.05);
+    }
+
+    .tree-chevron {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .tree-chapter-title {
+      font: 700 13px/1.3 var(--book);
+    }
+
+    .tree-chapter-row small {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .tree-scenes {
+      display: grid;
+      gap: 2px;
+      padding: 0 8px 8px;
+    }
+
+    .tree-scene {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      text-align: left;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .tree-scene:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .timeline-wrap {
+      margin-top: 18px;
+      white-space: normal;
+    }
+
+    .timeline-wrap > b {
+      display: block;
+      color: var(--gold);
+      font: 700 12px/1.2 var(--display);
+      margin-bottom: 8px;
+    }
+
+    .story-timeline {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0 0 0 16px;
+      list-style: none;
+      border-left: 1px solid var(--line);
+    }
+
+    .story-timeline li {
+      position: relative;
+      padding-left: 12px;
+    }
+
+    .story-timeline li::before {
+      content: "";
+      position: absolute;
+      left: -21px;
+      top: 12px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--gold);
+    }
+
+    .timeline-entry {
+      display: grid;
+      gap: 2px;
+      width: 100%;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+
+    .timeline-entry:hover .timeline-title {
+      color: #34c6c1;
+    }
+
+    .timeline-date {
+      color: var(--gold);
+      font: 700 11px/1.3 var(--book);
+    }
+
+    .timeline-title {
+      color: var(--text);
+      font: 600 13px/1.3 var(--book);
+    }
+
+    .timeline-entry small {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
     .writing-card {
       position: relative;
       padding: 14px;
@@ -2434,6 +2575,27 @@
     .chapter-plan-status-chip[data-status="completed"] .plan-dot { background: #6f9b4f; }
     .chapter-plan-status-chip[data-status="ready"] .plan-dot { background: #3f8cff; }
 
+    .custom-size-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 12px;
+    }
+
+    .custom-size-fields .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .custom-size-fields input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #0c171a;
+      color: var(--text);
+      padding: 0 10px;
+    }
+
     .quick-jump-results {
       max-height: 240px;
       overflow-y: auto;
@@ -3399,6 +3561,7 @@
             <button type="button" data-support-tab="diagnostics">Tanı Paketi</button>
             <button type="button" data-support-tab="liveEdit">Canlı Edit</button>
             <button type="button" data-support-tab="cards">Bölüm Panosu</button>
+            <button type="button" data-support-tab="outline">Bölüm Ağacı</button>
             <button type="button" data-support-tab="context">Bağlam Defteri</button>
             <button type="button" data-support-tab="analysis">Tekrar Analizi</button>
             <button type="button" data-support-tab="plan">Plan</button>
@@ -3522,8 +3685,24 @@
             </select>
           </label>
           <label class="field">Sayfa Boyutu
-            <select id="pageSize"><option>A5 (148 x 210 mm)</option><option>A4 (210 x 297 mm)</option></select>
+            <select id="pageSize">
+              <option>A5 (148 x 210 mm)</option>
+              <option>A4 (210 x 297 mm)</option>
+              <option>5 x 8 in (127 x 203 mm)</option>
+              <option>5.25 x 8 in (133 x 203 mm)</option>
+              <option>5.5 x 8.5 in (140 x 216 mm)</option>
+              <option>6 x 9 in (152 x 229 mm)</option>
+              <option>Özel ölçü...</option>
+            </select>
           </label>
+          <div class="custom-size-fields" id="customSizeFields" hidden>
+            <label class="field">Özel Genişlik (mm)
+              <input id="customSizeWidth" type="number" min="80" max="220" step="1" value="152" placeholder="örn. 152">
+            </label>
+            <label class="field">Özel Yükseklik (mm)
+              <input id="customSizeHeight" type="number" min="100" max="320" step="1" value="229" placeholder="örn. 229">
+            </label>
+          </div>
           <label class="field">Baskı Türü
             <select id="printMode"><option>Tek taraf</option><option>Karşılıklı sayfa</option></select>
           </label>
@@ -5325,6 +5504,58 @@ function closeChapterDialog() {
         { title: "Dönem ve Mekan", body: values.setting || "Dönem ve mekan girildiğinde atmosfer kartı oluşur.", meta: values.pages ? `${values.pages} sayfa hedefi` : "Sayfa hedefi bekleniyor" },
         { title: "Final Vaadi", body: values.ending || "Final tipi seçildiğinde olay akışı ona göre kapanır.", meta: values.boundaries ? "Sınırlar var" : "Sınır bekleniyor" }
       ];
+    }
+
+    function renderChapterTree() {
+      const items = chapters.map((chapter, index) => {
+        const scenes = parseScenes(chapter.text || "").map(scene => scene.title).filter(Boolean);
+        return { chapter, index, scenes };
+      });
+      const dated = items
+        .filter(item => item.chapter.plan?.date)
+        .slice()
+        .sort((a, b) => String(a.chapter.plan.date).localeCompare(String(b.chapter.plan.date)));
+      notesTitle.textContent = "Bölüm Ağacı";
+      notesContent.innerHTML = `
+        <div class="writing-brief">
+          <b>Outline + Zaman Çizelgesi</b>
+          <p>Bölüm ağacı, sahne başlıklarını ve plan durumunu bir arada gösterir. Satıra tıklamak o bölümü editörde açar. Tarih alanı dolu planlar aşağıda kronolojik çizelge olarak dizilir.</p>
+        </div>
+        <div class="chapter-tree" role="tree" aria-label="Bölüm ağacı">
+          ${items.map(({ chapter, index, scenes }) => `
+            <div class="tree-chapter ${index === currentChapterIndex ? "is-current" : ""}" role="treeitem" aria-expanded="true">
+              <button type="button" class="tree-chapter-row" data-tree-chapter="${index}" title="Editörde aç">
+                <span class="tree-chevron">▾</span>
+                <span class="tree-chapter-title">${escapeHtml(chapter.title || chapter.id)}</span>
+                ${chapter.plan?.status ? `<span class="chapter-plan-status-chip" data-status="${escapeHtml(chapter.plan.status)}"><i class="plan-dot"></i>${escapeHtml(planStatusLabel(chapter.plan.status))}</span>` : ""}
+                <small>${chapter.words ? chapter.words.toLocaleString("tr-TR") : "Plan"}${chapter.plan?.target_words ? ` / ${Number(chapter.plan.target_words).toLocaleString("tr-TR")} hedef` : ""}</small>
+              </button>
+              ${scenes.length ? `<div class="tree-scenes">${scenes.map(scene => `<button type="button" class="tree-scene" data-tree-chapter="${index}" title="Sahne: ${escapeHtml(scene)}">▸ ${escapeHtml(scene)}</button>`).join("")}</div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+        ${dated.length ? `
+          <div class="timeline-wrap">
+            <b>Zaman Çizelgesi</b>
+            <ol class="story-timeline">
+              ${dated.map(({ chapter, index }) => `
+                <li>
+                  <button type="button" data-tree-chapter="${index}" class="timeline-entry">
+                    <span class="timeline-date">${escapeHtml(chapter.plan.date)}</span>
+                    <span class="timeline-title">${escapeHtml(chapter.title || chapter.id)}</span>
+                    <small>${chapter.plan.setting ? escapeHtml(chapter.plan.setting) : ""}</small>
+                  </button>
+                </li>
+              `).join("")}
+            </ol>
+          </div>` : ""}
+      `;
+      notesPanel.classList.add("open");
+      notesPanel.setAttribute("aria-hidden", "false");
+      notesContent.querySelectorAll("[data-tree-chapter]").forEach(button => {
+        button.addEventListener("click", () => selectChapter(Number(button.dataset.treeChapter)));
+      });
+      setStatus("Motor olayı: bölüm ağacı ve zaman çizelgesi açıldı");
     }
 
     function renderCardBoard() {
@@ -8419,6 +8650,10 @@ setEditorText(chapter.text || "");
         renderCardBoard();
         return;
       }
+      if (tab === "outline") {
+        renderChapterTree();
+        return;
+      }
       if (tab === "context") {
         renderContextLedger();
         return;
@@ -9453,6 +9688,21 @@ const recovered = await restoreRecoveryDraft(chapters[0]);
       }
     }
 
+function getPageDimensions(pageSizeValue) {
+      const known = {
+        "A5 (148 x 210 mm)": { w: 148, h: 210, label: "A5 · 148 x 210 mm" },
+        "A4 (210 x 297 mm)": { w: 210, h: 297, label: "A4 · 210 x 297 mm" },
+        "5 x 8 in (127 x 203 mm)": { w: 127, h: 203, label: "5x8 · 127 x 203 mm" },
+        "5.25 x 8 in (133 x 203 mm)": { w: 133, h: 203, label: "5.25x8 · 133 x 203 mm" },
+        "5.5 x 8.5 in (140 x 216 mm)": { w: 140, h: 216, label: "5.5x8.5 · 140 x 216 mm" },
+        "6 x 9 in (152 x 229 mm)": { w: 152, h: 229, label: "6x9 · 152 x 229 mm" }
+      };
+      if (known[pageSizeValue]) return known[pageSizeValue];
+      const customW = Math.max(80, Math.min(220, Number(document.getElementById("customSizeWidth")?.value || 152)));
+      const customH = Math.max(100, Math.min(320, Number(document.getElementById("customSizeHeight")?.value || 229)));
+      return { w: customW, h: customH, label: `Özel · ${customW} x ${customH} mm` };
+    }
+
     function applyTypography() {
       const font = document.getElementById("typeFont").value;
       const size = Number(document.getElementById("typeSize").value || 11.5);
@@ -9460,15 +9710,15 @@ const recovered = await restoreRecoveryDraft(chapters[0]);
       const top = Number(document.getElementById("marginTop").value || 18);
       const inside = Number(document.getElementById("marginInside").value || 20);
       const outside = Number(document.getElementById("marginOutside").value || 16);
-      const pageSize = document.getElementById("pageSize").value;
+      const pageSizeValue = document.getElementById("pageSize").value;
       const pageNumberPosition = document.getElementById("pageNumberPosition")?.value || "bottom_center";
       const pageDesign = document.getElementById("pageDesign")?.value || "classicFrame";
-      const isA4 = pageSize.includes("A4");
+      const dimensions = getPageDimensions(pageSizeValue);
 
       document.documentElement.style.setProperty("--book", `${font}, Garamond, "Times New Roman", serif`);
       document.documentElement.style.setProperty("--preview-font-size", `${Math.round(size * 1.45)}px`);
       document.documentElement.style.setProperty("--preview-line-height", `${Math.max(1.25, line + 0.34)}`);
-      bookPage.style.aspectRatio = isA4 ? "210 / 297" : "148 / 210";
+      bookPage.style.aspectRatio = `${dimensions.w} / ${dimensions.h}`;
       bookPage.style.paddingTop = `${Math.max(38, top * 2.7)}px`;
       bookPage.style.paddingLeft = `${Math.max(42, inside * 2.55)}px`;
       bookPage.style.paddingRight = `${Math.max(38, outside * 2.55)}px`;
@@ -9479,7 +9729,7 @@ const recovered = await restoreRecoveryDraft(chapters[0]);
       pageNo.style.top = pageNumberPosition.includes("top") ? "28px" : "";
       pageNo.style.bottom = pageNumberPosition.includes("bottom") ? "22px" : "";
       pageNo.style.transform = pageNumberPosition.includes("center") ? "translateX(-50%)" : "";
-      previewMeta.textContent = `${isA4 ? "A4 · 210 x 297 mm" : "A5 · 148 x 210 mm"} · ${font} ${size} pt`;
+      previewMeta.textContent = `${dimensions.label} · ${font} ${size} pt`;
       renderPreview();
     }
 
@@ -9517,14 +9767,15 @@ const recovered = await restoreRecoveryDraft(chapters[0]);
       setStatus(`Motor olayı: ${profile.label} kitap şablonu uygulandı`);
     }
 
-    function collectLayoutPlanFromUi() {
+function collectLayoutPlanFromUi() {
       const profileId = document.getElementById("layoutProfile").value;
       const profile = layoutProfiles[profileId] || layoutProfiles.classicNovel;
-      return {
+      const pageSizeValue = document.getElementById("pageSize").value;
+      const layout = {
         layout_profile: profileId,
         book_template: profileId,
         book_template_label: profile.label,
-        page_size: document.getElementById("pageSize").value,
+        page_size: pageSizeValue,
         print_mode: document.getElementById("printMode").value,
         front_matter: document.getElementById("frontMatter").value,
         page_design: document.getElementById("pageDesign")?.value || "classicFrame",
@@ -9553,6 +9804,13 @@ const recovered = await restoreRecoveryDraft(chapters[0]);
         matter_plan: matterPlan,
         cover_spec: coverSpec
       };
+      if (pageSizeValue === "Özel ölçü...") {
+        layout.custom_size_mm = {
+          width_mm: Math.max(80, Math.min(220, Number(document.getElementById("customSizeWidth")?.value || 152))),
+          height_mm: Math.max(100, Math.min(320, Number(document.getElementById("customSizeHeight")?.value || 229)))
+        };
+      }
+      return layout;
     }
 
     async function applyAndSaveTypography() {
@@ -10205,6 +10463,23 @@ closeNotesBtn.addEventListener("click", () => renderSupportTab("manuscript"));
     });
     document.getElementById("layoutProfile").addEventListener("change", event => {
       applyLayoutProfile(event.target.value);
+    });
+    const pageSizeControl = document.getElementById("pageSize");
+    const customSizeFields = document.getElementById("customSizeFields");
+    function syncCustomSizeFields() {
+      const isCustom = pageSizeControl.value === "Özel ölçü...";
+      customSizeFields.hidden = !isCustom;
+    }
+    syncCustomSizeFields();
+    pageSizeControl.addEventListener("change", () => {
+      syncCustomSizeFields();
+      applyTypography();
+    });
+    ["customSizeWidth", "customSizeHeight"].forEach(id => {
+      const control = document.getElementById(id);
+      if (!control) return;
+      control.addEventListener("input", applyTypography);
+      control.addEventListener("change", applyTypography);
     });
     ["pageSize", "pageDesign", "printMode", "frontMatter", "typeFont", "typeSize", "lineHeight", "marginTop", "marginInside", "marginOutside", "indent", "after", "chapterStartPolicy", "headingHierarchyPolicy", "runningHeaderPolicy", "pageNumberPosition", "tocDepth", "frontMatterNumbering", "widowOrphanControl"].forEach(id => {
       const control = document.getElementById(id);

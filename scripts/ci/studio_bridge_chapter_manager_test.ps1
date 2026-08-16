@@ -90,6 +90,18 @@ try {
   }
   $layoutSave = (Invoke-StudioRequest -Path "/api/save-layout-plan" -Method "POST" -SessionToken $session.token -Body $layoutPayload).Content | ConvertFrom-Json
   if (-not $layoutSave.ok) { throw "Publication matter and cover settings were not saved." }
+  foreach ($size in @("5 x 8 in (127 x 203 mm)","5.25 x 8 in (133 x 203 mm)","5.5 x 8.5 in (140 x 216 mm)","6 x 9 in (152 x 229 mm)")) {
+    $sizePayload = @{} + $layoutPayload
+    $sizePayload.page_size = $size
+    $sizeResult = (Invoke-StudioRequest -Path "/api/save-layout-plan" -Method "POST" -SessionToken $session.token -Body $sizePayload).Content | ConvertFrom-Json
+    if (-not $sizeResult.ok) { throw "Alternative page size was rejected: $size" }
+  }
+  $customPayload = @{} + $layoutPayload
+  $customLabel = "$([char]0x00D6)zel $([char]0x00F6)l$([char]0x00E7)$([char]0x00FC)..."
+  $customPayload.page_size = $customLabel
+  $customPayload.custom_size_mm = @{width_mm=155;height_mm=233}
+  $customResult = (Invoke-StudioRequest -Path "/api/save-layout-plan" -Method "POST" -SessionToken $session.token -Body $customPayload).Content | ConvertFrom-Json
+  if (-not $customResult.ok -or $customResult.layoutPlan.trim_size -ne "Custom" -or $customResult.layoutPlan.width_mm -ne 155 -or $customResult.layoutPlan.height_mm -ne 233) { throw "Custom page size was not honored as Custom 155x233." }
   $professionalState = @{
     comments = @(@{ id="comment-fixture"; chapter="ep001.md"; quote="Birinci"; text="Netlestir."; author="Test Editor"; created_at="2026-08-14T10:00:00Z"; resolved=$false; replies=@() })
     changes = @(@{ id="change-fixture"; chapter="ep001.md"; original="Birinci"; replacement="Ilk"; reason="Tutarlilik"; author="Test Editor"; status="pending"; created_at="2026-08-14T10:00:00Z" })
