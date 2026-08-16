@@ -63,6 +63,10 @@ jobs:
         shell: powershell
         run: .\scripts\ci\publication_typesetting_test.ps1
 
+      - name: Test bridge publication build end to end
+        shell: powershell
+        run: .\scripts\ci\studio_bridge_publication_build_test.ps1
+
       - name: Protect existing Studio typography and page defaults
         shell: powershell
         run: .\scripts\ci\studio_typography_baseline_test.ps1
