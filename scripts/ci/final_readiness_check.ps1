@@ -467,6 +467,7 @@ Assert-File "scripts/ci/studio_bridge_docx_roundtrip_test.ps1"
 Assert-File "src/page-flow.js"
 Assert-File "assets/page-flow.js"
 Assert-File "scripts/ci/publication_typesetting_test.ps1"
+Assert-File "scripts/ci/publication_ingram_pdfx_test.ps1"
 Assert-File "scripts/ci/local_intake_status_test.ps1"
 if ((Read-Utf8 -Path "scripts/run_pipeline.ps1") -match '(?m)^\s*Invoke-Expression\s+\$cmd') { throw "Direct Invoke-Expression command execution remains in runner." }
 foreach ($contractPath in @(Get-ChildItem "runtime/phase-contracts/*.json" -File)) {

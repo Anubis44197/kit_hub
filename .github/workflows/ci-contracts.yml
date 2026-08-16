@@ -47,6 +47,10 @@ jobs:
           Split-Path -Parent $pdfInfo.FullName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           .\scripts\install_epubcheck.ps1
 
+      - name: Install Ghostscript for Ingram PDF/X-3 conversion
+        shell: powershell
+        run: choco install ghostscript --yes --no-progress
+
       - name: Test Studio book request bridge
         shell: powershell
         run: .\scripts\ci\studio_bridge_book_request_test.ps1
@@ -66,6 +70,10 @@ jobs:
       - name: Test print PDF, EPUB, EAN-13, and EPUBCheck
         shell: powershell
         run: .\scripts\ci\publication_typesetting_test.ps1
+
+      - name: Test Ingram PDF/X-3 + CMYK conversion
+        shell: powershell
+        run: .\scripts\ci\publication_ingram_pdfx_test.ps1
 
       - name: Test bridge publication build end to end
         shell: powershell

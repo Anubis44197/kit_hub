@@ -65,6 +65,48 @@ function Get-EpubCheckRunner {
   if ($jar.Count -and $java) { return [ordered]@{ mode = "jar"; path = $jar[0]; java = $java.Source } }
   return $null
 }
+function Get-Ghostscript {
+  $command = Get-Command gswin64c, gswin32c, gs -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($command) { return [ordered]@{ binary = $command.Source; lib = (Split-Path $command.Source) } }
+  $exe = @(Get-ChildItem "C:\Program Files\gs" -Recurse -Filter "gswin64c.exe" -ErrorAction SilentlyContinue | Select-Object -First 1)
+  if ($exe.Count) {
+    $binDir = Split-Path $exe[0].FullName
+    return [ordered]@{ binary = $exe[0].FullName; lib = (Split-Path $binDir -Parent) }
+  }
+  return $null
+}
+
+function ConvertTo-PrintPdfX {
+  param(
+    [string]$InputPdf,
+    [string]$OutputPdf,
+    [string]$GhostscriptBinary,
+    [string]$GhostscriptHome
+  )
+  $iccDir = Join-Path $GhostscriptHome "iccprofiles"
+  $libDir = Join-Path $GhostscriptHome "lib"
+  if (-not (Test-Path -LiteralPath $iccDir -PathType Container) -or -not (Test-Path -LiteralPath (Join-Path $iccDir "default_cmyk.icc") -PathType Leaf)) { throw "Ghostscript iccprofiles/default_cmyk.icc not found under $GhostscriptHome." }
+  if (-not (Test-Path -LiteralPath (Join-Path $libDir "PDFX_def.ps") -PathType Leaf)) { throw "Ghostscript lib/PDFX_def.ps not found under $GhostscriptHome." }
+  $def = Get-Content -LiteralPath (Join-Path $libDir "PDFX_def.ps") -Raw
+  $def = $def -replace '/ICCProfile \(ISO Coated sb\.icc\) def', '/ICCProfile (default_cmyk.icc) def'
+  $def = $def -replace '/OutputConditionIdentifier \(CGATS TR001\)', '/OutputConditionIdentifier (ISO Coated v2 300\%)'
+  $defPath = Join-Path ([IO.Path]::GetTempPath()) ("kithub-pdfx-" + [guid]::NewGuid().ToString("N") + ".ps")
+  [IO.File]::WriteAllText($defPath, $def, [Text.UTF8Encoding]::new($false))
+  $outputPath = [IO.Path]::GetFullPath($OutputPdf)
+  $previous = Get-Location
+  try {
+    Set-Location -LiteralPath $iccDir
+    $stdout = (& $GhostscriptBinary "-dNOSAFER" "-dPDFX=3" "-dBATCH" "-dNOPAUSE" "-dPreserveAnnots=false" "-sColorConversionStrategy=CMYK" "-sDEVICE=pdfwrite" "-sOutputFile=$outputPath" $defPath $InputPdf 2>&1 | Out-String)
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $outputPath -PathType Leaf) -or (Get-Item -LiteralPath $outputPath).Length -eq 0) {
+      throw "Ghostscript PDF/X conversion failed: $stdout"
+    }
+  }
+  finally {
+    if ($previous) { Set-Location -LiteralPath $previous.Path }
+    if (Test-Path -LiteralPath $defPath -PathType Leaf) { Remove-Item -LiteralPath $defPath -Force -ErrorAction SilentlyContinue }
+  }
+  return $outputPath
+}
 $formatList = if ($PreflightOnly) { @() } else { @($Formats.Split(",") | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ }) }
 if ((-not $formatList.Count -and -not $PreflightOnly) -or @($formatList | Where-Object { $_ -notin @("pdf","epub") }).Count) {
   throw "Formats must contain pdf, epub, or both."
@@ -249,6 +291,9 @@ if ($formatList -contains "epub") {
   $results += [ordered]@{ format = "EPUB"; path = $epubPath; bytes = (Get-Item -LiteralPath $epubPath).Length }
 }
 if ($formatList -contains "pdf") {
+  $ghostscript = Get-Ghostscript
+  $pdfXStatus = "not_run"
+  $pdfXOutput = ""
   & $pandoc.Source @common "--css=$cssPath" "--output=$htmlPath" @printInputs
   if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $htmlPath -PathType Leaf)) { throw "Pandoc HTML generation failed." }
   $pdfPath = Join-Path $exportDir "$safeName-baski.pdf"
@@ -265,6 +310,27 @@ if ($formatList -contains "pdf") {
     $pdfFontStatus = "unavailable"
   }
   $results += [ordered]@{ format = "PDF"; path = $pdfPath; bytes = (Get-Item -LiteralPath $pdfPath).Length }
+
+  if ($publicationProfile -eq "ingram") {
+    if (-not $ghostscript) { $ghostscript = Get-Ghostscript }
+    if ($ghostscript) {
+      $ghHome = [IO.Path]::GetFullPath((Join-Path ([string]$ghostscript.lib) ".."))
+      $pdfxPath = Join-Path $exportDir "$safeName-baski-pdfx.pdf"
+      try {
+        ConvertTo-PrintPdfX -InputPdf $pdfPath -OutputPdf $pdfxPath -GhostscriptBinary ([string]$ghostscript.binary) -GhostscriptHome $ghHome | Out-Null
+        $pdfXStatus = "pass"
+        $pdfPath = $pdfxPath
+        $results[-1].path = $pdfPath
+        $results[-1].bytes = (Get-Item -LiteralPath $pdfPath).Length
+        $results[-1].pdf_x = "PDF/X-3:2002"
+      } catch {
+        $pdfXStatus = "fail"
+        $pdfXOutput = $_.Exception.Message
+      }
+    } else {
+      $pdfXStatus = "unavailable"
+    }
+  }
 
   if ($layout.cover_spec) {
     function Escape-Html([string]$Value) { return [System.Net.WebUtility]::HtmlEncode($Value) }
@@ -332,6 +398,17 @@ body { font-family: "$font", Garamond, serif; color: #1f1a14; background: #e8dfc
     $coverUri = ([Uri]$coverHtmlPath).AbsoluteUri
     $coverProcess = Start-Process -FilePath $edge -ArgumentList @("--headless=new","--disable-gpu","--no-pdf-header-footer","--print-to-pdf=$coverPdfPath",$coverUri) -WindowStyle Hidden -Wait -PassThru
     if ($coverProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $coverPdfPath -PathType Leaf)) { throw "Full-wrap cover PDF generation failed." }
+    if ($publicationProfile -eq "ingram" -and $ghostscript) {
+      $coverPdfxPath = Join-Path $exportDir "$safeName-kapak-pdfx.pdf"
+      $ghHome = [IO.Path]::GetFullPath((Join-Path ([string]$ghostscript.lib) ".."))
+      try {
+        ConvertTo-PrintPdfX -InputPdf $coverPdfPath -OutputPdf $coverPdfxPath -GhostscriptBinary ([string]$ghostscript.binary) -GhostscriptHome $ghHome | Out-Null
+        $coverPdfPath = $coverPdfxPath
+      } catch {
+        $pdfXStatus = if ($pdfXStatus -eq "pass") { "fail" } else { "fail" }
+        $pdfXOutput = $_.Exception.Message
+      }
+    }
     $results += [ordered]@{ format = "COVER_PDF"; path = $coverPdfPath; bytes = (Get-Item -LiteralPath $coverPdfPath).Length; width_mm = [Math]::Round($coverWidth, 3); height_mm = [Math]::Round($coverHeight, 3); spine_width_mm = [Math]::Round($spineWidth, 3) }
   }
 }
@@ -350,6 +427,8 @@ $requiredBleed = if ($publicationProfile -eq "ingram") { 3.175 } else { 3.2 }
 $bleedValue = if ($layout.cover_spec) { [double]$layout.cover_spec.bleed_mm } else { 0 }
 $bleedOk = $bleedValue -ge ($requiredBleed - 0.01)
 $pdfXRequired = $publicationProfile -eq "ingram"
+$pdfXPassed = $pdfXStatus -eq "pass"
+$pdfXAvailable = $pdfXStatus -in @("pass","fail")
 $epubCheckRequired = $formatList -contains "epub"
 $pdfFontRequired = $formatList -contains "pdf"
 $coverAssetOk = $coverAssetStatus -in @("not_used","pass")
@@ -365,7 +444,7 @@ $checks = @(
   [ordered]@{ key = "isbn_ean13"; ok = (-not $isbnRequired -or $isbnValid); severity = "blocker"; detail = if (-not $isbnRequired) { "barkod kapalı" } elseif ($isbnValid) { "geçerli ISBN-13" } else { "13 haneli ISBN ve doğru kontrol basamağı gerekli" } },
   [ordered]@{ key = "cover_asset_dpi"; ok = $coverAssetOk; severity = if ($coverAssetStatus -eq "fail") { "blocker" } else { "output" }; detail = if ($coverAssetStatus -eq "not_used") { "tipografik/vektör kapak" } elseif ($coverAssetDpi) { "$coverAssetDpi DPI" } else { $coverAssetStatus } },
   [ordered]@{ key = "font_embedding"; ok = (-not $pdfFontRequired -or $pdfFontStatus -eq "pass"); severity = if ($pdfFontRequired -and $pdfFontStatus -eq "fail") { "blocker" } elseif ($pdfFontRequired -and $pdfFontStatus -eq "unavailable") { "external" } else { "output" }; detail = $pdfFontStatus },
-  [ordered]@{ key = "pdf_x"; ok = (-not $pdfXRequired); severity = if ($pdfXRequired) { "external" } else { "output" }; detail = if ($pdfXRequired) { "Ingram profili PDF/X-1a veya PDF/X-3 ve CMYK ister" } else { "KDP profili PDF/X zorunlu tutmaz" } },
+  [ordered]@{ key = "pdf_x"; ok = (-not $pdfXRequired -or $pdfXPassed); severity = if (-not $pdfXRequired) { "output" } elseif ($pdfXPassed) { "output" } elseif ($pdfXAvailable) { "blocker" } else { "external" }; detail = if (-not $pdfXRequired) { "KDP profili PDF/X zorunlu tutmaz" } elseif ($pdfXPassed) { "PDF/X-3:2002 + CMYK (Ghostscript)" } elseif ($pdfXAvailable) { "Ghostscript PDF/X donusumu basarisiz: $pdfXOutput" } else { "Ingram PDF/X-3 + CMYK icin Ghostscript kurulu degil" } },
   [ordered]@{ key = "epub"; ok = [bool]$epubGenerated; severity = "output"; detail = if ($PreflightOnly) { "preflight-only çalışmada üretilmedi" } else { "EPUB paketi" } },
   [ordered]@{ key = "epubcheck"; ok = (-not $epubCheckRequired -or $epubCheckStatus -eq "pass"); severity = if ($epubCheckRequired -and $epubCheckStatus -eq "fail") { "blocker" } elseif ($epubCheckRequired -and $epubCheckStatus -eq "unavailable") { "external" } else { "output" }; detail = $epubCheckStatus }
 )
@@ -386,7 +465,8 @@ $preflight = [ordered]@{
   external_reviews = [object[]]$externalReviews
   epubcheck_output = $epubCheckOutput
   pdf_font_output = $pdfFontOutput
-  note = if ($publicationProfile -eq "ingram") { "Ingram için PDF/X ve CMYK harici üretim adımı tamamlanmalıdır." } else { "READY dosya düzeyi kontrollerin geçtiğini gösterir; son fiziksel prova ve platform yükleme önizlemesi yine yapılmalıdır." }
+  pdf_x_output = $pdfXOutput
+  note = if ($publicationProfile -eq "ingram" -and -not $pdfXPassed) { "Ingram icin PDF/X-3 + CMYK donusumu gerekir (Ghostscript)." } elseif ($publicationProfile -eq "ingram") { "Ingram PDF/X-3 + CMYK donusumu Ghostscript ile yapildi; son fiziksel prova ve platform yukleme onizlemesi yine yapilmalidir." } else { "READY dosya duzeyi kontrollerin gectigini gosterir; son fiziksel prova ve platform yukleme onizlemesi yine yapilmalidir." }
 }
 $preflightPath = Join-Path $ProjectRoot "runtime/publication-preflight-report.json"
 [IO.File]::WriteAllText($preflightPath, ($preflight | ConvertTo-Json -Depth 12), [Text.UTF8Encoding]::new($true))
@@ -406,6 +486,7 @@ $report = [ordered]@{
   page_design = $pageDesign
   typography = [ordered]@{ font_family = $font; font_size_pt = $fontSize; line_spacing = $lineSpacing }
   font_embedding = $pdfFontStatus
+  pdf_x = $pdfXStatus
   cover_asset = [ordered]@{ status = $coverAssetStatus; effective_dpi = $coverAssetDpi; metadata = $coverAsset }
   page = [ordered]@{ width_mm = $width; height_mm = $height; margin_top_mm = $top; margin_inside_mm = $inside; margin_outside_mm = $outside }
   flow = [ordered]@{
