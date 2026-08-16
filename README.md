@@ -437,9 +437,9 @@ The runner rejects a fake brief approval. The brief must contain structured `req
 ## Agent Architecture
 | Metric | Value |
 |---|---|
-| Base architecture | 18 specialist agents |
-| Added project-specific agents/layers | `tdk-polisher`, `tdk-layout-agent`, export approval/validator/exporter set, and related gates |
-| Current total | 32 agent definitions |
+| Registry-governed agents | 36 (canonical source: `runtime/agent-registry.json`) |
+| Added project-specific agents/layers | `tdk-polisher`, `tdk-layout-agent`, `layout-profile-planner`, `research-citation-auditor`, export approval/validator/exporter set, front-matter/cover/publication gates, and `final-proofreader` |
+| Golden agent fixtures | 36 (one `input.md`/`expected.md` pair per registered agent under `tests/golden/agents/`) |
 
 For complete mapping see `docs/ARCHITECTURE_MAP.md`.
 

@@ -3,6 +3,7 @@
   [string]$ReportPath = ""
 )
 $ErrorActionPreference = "Stop"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $edge = Get-ChildItem "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $edge) { throw "Microsoft Edge executable not found." }
 $node = Get-Command node -ErrorAction SilentlyContinue
@@ -29,7 +30,13 @@ foreach ($case in $cases) {
     [ordered]@{name="publication-matter";pass=($html -match 'id="matterManagerDialog"')},
     [ordered]@{name="cover-studio";pass=($html -match 'id="coverStudioDialog"')},
     [ordered]@{name="publication-preflight";pass=($html -match 'id="runPreflightBtn"')},
-    [ordered]@{name="professional-studio";pass=($html -match 'id="openProfessionalStudioBtn"')}
+    [ordered]@{name="professional-studio";pass=($html -match 'id="openProfessionalStudioBtn"')},
+    [ordered]@{name="version-diff-dialog";pass=($html -match 'id="versionDiffDialog"')},
+    [ordered]@{name="version-diff-files";pass=($html -match 'id="versionDiffFiles"')},
+    [ordered]@{name="scene-manager-dialog";pass=($html -match 'id="sceneManagerDialog"')},
+    [ordered]@{name="scene-manager-button";pass=($html -match 'id="sceneManagerBtn"')},
+    [ordered]@{name="scene-list";pass=($html -match 'id="sceneManagerList"')},
+    [ordered]@{name="quick-jump-dialog";pass=($html -match 'id="quickJumpDialog"')}
   )
   $failed = @($checks | Where-Object { -not $_.pass })
   $results += [ordered]@{name=$case.name;size=$case.size;status=if($failed.Count -eq 0){"PASS"}else{"FAIL"};checks=$checks;failed=@($failed | ForEach-Object { $_.name })}
@@ -84,6 +91,50 @@ $interactionPass = (
   [int]$interaction.editorCore.editorialRules.findingCount -ge 4 -and
   $interaction.editorCore.editorialRules.settingsPresent -eq $true -and
   $interaction.editorCore.editorialRules.mutatesWithoutApproval -ne $true -and
+  [int]$interaction.editorCore.findSearchOptions.defaultCount -eq 2 -and
+  [int]$interaction.editorCore.findSearchOptions.caseCount -eq 2 -and
+  [int]$interaction.editorCore.findSearchOptions.wholeCount -eq 1 -and
+  [int]$interaction.editorCore.findSearchOptions.regexCount -eq 2 -and
+  [int]$interaction.editorCore.findSearchOptions.wholeReplaceCount -eq 1 -and
+  $interaction.editorCore.findSearchOptions.wholeReplaceApplied -eq $true -and
+  $interaction.editorCore.quickJump.opened -eq $true -and
+  [int]$interaction.editorCore.quickJump.filteredCount -eq 1 -and
+  [int]$interaction.editorCore.quickJump.jumpedIndex -eq 1 -and
+  $interaction.editorCore.quickJump.closedAfterJump -eq $true -and
+  [int]$interaction.editorCore.spellcheck.enabledFindings -ge 5 -and
+  [int]$interaction.editorCore.spellcheck.disabledFindings -eq 0 -and
+  [int]$interaction.editorCore.spellcheck.ignoredFindings -eq ([int]$interaction.editorCore.spellcheck.enabledFindings - 1) -and
+  $interaction.editorCore.spellcheck.dictionaryHasWord -eq $true -and
+  $interaction.editorCore.spellcheck.jumped -eq $true -and
+  $interaction.editorCore.spellcheck.editorialRender -eq $true -and
+  [int]$interaction.editorCore.lineDiff.addedCount -eq 2 -and
+  [int]$interaction.editorCore.lineDiff.removedCount -eq 1 -and
+  [int]$interaction.editorCore.lineDiff.contextCount -eq 3 -and
+  @($interaction.editorCore.lineDiff.removedText) -contains "satır2" -and
+  @($interaction.editorCore.lineDiff.addedText) -contains "satır2 DEĞİŞTİ" -and
+  @($interaction.editorCore.lineDiff.addedText) -contains "satır5 YENİ" -and
+  $interaction.editorCore.lineDiff.lineNumbers -eq $true -and
+  [int]$interaction.editorCore.versionDiffUi.fileButtons -eq 2 -and
+  [int]$interaction.editorCore.versionDiffUi.changedChip -eq 1 -and
+  [int]$interaction.editorCore.versionDiffUi.unchangedChip -eq 1 -and
+  [int]$interaction.editorCore.versionDiffUi.addedLines -eq 2 -and
+  [int]$interaction.editorCore.versionDiffUi.removedLines -eq 1 -and
+  $interaction.editorCore.versionDiffUi.diffMetaFilled -eq $true -and
+  $interaction.editorCore.versionDiffUi.selectedMarked -eq $true -and
+  $interaction.editorCore.versionDiffUi.opened -eq $true -and
+  $interaction.editorCore.versionDiffUi.closed -eq $true -and
+  [int]$interaction.editorCore.sceneParse.count -eq 3 -and
+  $interaction.editorCore.sceneParse.roundtrip -eq $true -and
+  @($interaction.editorCore.sceneParse.titles) -contains "İkinci Sahne" -and
+  @($interaction.editorCore.sceneParse.bodies) -contains "İkinci sahne metni" -and
+  $interaction.editorCore.sceneManagerUi.firstOpen -eq $true -and
+  [int]$interaction.editorCore.sceneManagerUi.rowsInitial -eq 2 -and
+  [int]$interaction.editorCore.sceneManagerUi.rowsAfterAdd -eq 3 -and
+  @($interaction.editorCore.sceneManagerUi.titlesAfterMove) -contains "İkinci" -and
+  [string]$interaction.editorCore.sceneManagerUi.progressWidth -eq "1%" -and
+  [int]$interaction.editorCore.sceneManagerUi.appliedSceneCount -eq 3 -and
+  $interaction.editorCore.sceneManagerUi.appliedTargets.'ep001.md' -contains 500 -and
+  $interaction.editorCore.sceneManagerUi.dialogClosed -eq $true -and
   $interaction.editorCore.publishingCompatibility.before.font -eq "Garamond" -and
   $interaction.editorCore.publishingCompatibility.before.pageSize -eq "A5 (148 x 210 mm)" -and
   $interaction.editorCore.publishingCompatibility.before.design -eq "classicFrame" -and
@@ -120,9 +171,10 @@ $interactionPass = (
   [int]$interaction.editorCore.paginationFlow.overflowPages -eq 0 -and
   [int]$interaction.editorCore.paginationFlow.strandedHeadings -eq 0 -and
   [int]$interaction.editorCore.paginationFlow.minimumContinuationLines -ge 3 -and
-  $interaction.editorCore.chapterSwitchGuard.switched -ne $true -and
-  [int]$interaction.editorCore.chapterSwitchGuard.currentChapterIndex -eq 0 -and
-  $interaction.editorCore.chapterSwitchGuard.textPreserved -eq $true -and
+$interaction.editorCore.chapterSwitchGuard.dialogSeen -eq $true -and
+  $interaction.editorCore.chapterSwitchGuard.cancelBlocked -eq $true -and
+  $interaction.editorCore.chapterSwitchGuard.discardSwitched -eq $true -and
+  $interaction.editorCore.chapterSwitchGuard.discardTextPreserved -eq $true -and
   $interaction.editorCore.chapterManagerDialog.open -eq $true -and
   $interaction.editorCore.chapterManagerDialog.title -eq "Yeni bölüm" -and
   $interaction.editorCore.chapterManagerDialog.addEnabled -eq $true -and
@@ -173,7 +225,7 @@ $report = [ordered]@{
   desktop_accessibility=if($desktopAccessibilityPass){"PASS"}else{"FAIL"}
   mobile_accessibility=if($mobileAccessibilityPass){"PASS"}else{"FAIL"}
   wcag_conformance="AUTOMATED_AA_SUBSET_ONLY"
-  notes=@("Headless Edge DOM render and computed accessibility audits were executed at desktop and 390x844 mobile viewport sizes.","Edge DevTools interaction automation verified the structured editor, workflow rail, expanded AI prompt, front/back matter manager, cover studio, preflight access, Turkish editorial rules, measured pagination, dirty-state recovery, Ctrl+S/F/H, mobile toolbar fit, settings access, focus restoration, Escape handling, and preview zoom state.","The automated subset checks language, landmarks, live status semantics, heading order, control names, duplicate IDs, 24px targets, computed text contrast, horizontal overflow, and reduced-motion support.","Manual screen-reader, cognitive, and complete WCAG conformance testing remains required.")
+  notes=@("Headless Edge DOM render and computed accessibility audits were executed at desktop and 390x844 mobile viewport sizes.","Edge DevTools interaction automation verified the structured editor, workflow rail, expanded AI prompt, front/back matter manager, cover studio, preflight access, Turkish editorial rules and spelling engine, find search options, quick chapter jump, measured pagination, dirty-state recovery, Ctrl+S/F/H/K, version diff rendering, scene management, mobile toolbar fit, settings access, focus restoration, Escape handling, and preview zoom state.","The automated subset checks language, landmarks, live status semantics, heading order, control names, duplicate IDs, 24px targets, computed text contrast, horizontal overflow, and reduced-motion support.","Manual screen-reader, cognitive, and complete WCAG conformance testing remains required.")
   interaction=$interaction
   cases=$results
 }

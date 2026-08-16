@@ -1960,6 +1960,99 @@ function Get-RestorePreview {
   $missing = @($manifest.files | Where-Object { -not (Test-Path -LiteralPath (Join-Path (Join-Path $versionRoot 'files') (([string]$_.relativePath) -replace '/','\')) -PathType Leaf) } | ForEach-Object { [string]$_.relativePath })
   return [ordered]@{ ok = $true; canRestore = (@($orphans).Count -eq 0 -and @($missing).Count -eq 0); versionId = $versionId; orphanFiles = @($orphans); missingFiles = @($missing); restoredFileCount = @($manifest.files).Count }
 }
+
+function Get-VersionFiles {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $versionId = [string]$Payload.versionId
+  if ($versionId -notmatch '^\d{8}-\d{6}$') { throw "Invalid versionId: $versionId" }
+  $versionRoot = Join-Path $projectRoot "revision/_versions/$versionId"
+  $manifest = Read-Utf8JsonIfExists -Path (Join-Path $versionRoot 'manifest.json')
+  if (-not $manifest) { throw "Version manifest not found: $versionId" }
+  $filesRoot = Join-Path $versionRoot 'files'
+  $maxPerFile = 250000
+  $files = @()
+  foreach ($entry in @($manifest.files)) {
+    $relative = ([string]$entry.relativePath).Trim().Replace('/','\')
+    if (-not $relative) { continue }
+    $snapshotPath = Join-Path $filesRoot $relative
+    $snapshotText = ""
+    $truncated = $false
+    if (Test-Path -LiteralPath $snapshotPath -PathType Leaf) {
+      $snapshotText = Read-Utf8TextIfExists -Path $snapshotPath
+      if ($snapshotText.Length -gt $maxPerFile) {
+        $snapshotText = $snapshotText.Substring(0, $maxPerFile)
+        $truncated = $true
+      }
+    }
+    $currentPath = Join-Path $projectRoot $relative
+    $currentExists = Test-Path -LiteralPath $currentPath -PathType Leaf
+    $currentWords = 0
+    $currentContent = ""
+    $currentTruncated = $false
+    if ($currentExists) {
+      $currentText = Read-Utf8TextIfExists -Path $currentPath
+      if ($currentText.Length -gt $maxPerFile) {
+        $currentContent = $currentText.Substring(0, $maxPerFile)
+        $currentTruncated = $true
+      }
+      else {
+        $currentContent = $currentText
+      }
+      $currentWords = if ([System.IO.Path]::GetExtension($relative) -in @('.md','.txt')) { Get-WordCount -Text $currentText } else { 0 }
+    }
+    $files += [ordered]@{
+      relativePath = ($relative -replace '\\','/')
+      words = [int]$entry.words
+      content = $snapshotText
+      truncated = $truncated
+      currentExists = $currentExists
+      currentWords = $currentWords
+      currentContent = $currentContent
+      currentTruncated = $currentTruncated
+    }
+  }
+  return [ordered]@{
+    ok = $true
+    versionId = $versionId
+    title = [string]$manifest.title
+    reason = [string]$manifest.reason
+    created_at = [string]$manifest.created_at
+    words = [int]$manifest.words
+    files = [object[]]@($files)
+  }
+}
+function New-ProjectBackup {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $backupRoot = [string]$Payload.backupRoot
+  if (-not $backupRoot.Trim()) {
+    $backupRoot = Join-Path (Split-Path -Parent $projectRoot) "kit-hub-backups"
+  }
+  if (-not (Test-Path -LiteralPath $backupRoot -PathType Container)) {
+    New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
+  }
+  $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+  $zipPath = Join-Path $backupRoot "kit-hub-backup-$stamp.zip"
+  if (Test-Path -LiteralPath $zipPath -PathType Leaf) {
+    Remove-Item -LiteralPath $zipPath -Force
+  }
+  Compress-Archive -Path (Join-Path $projectRoot '*') -DestinationPath $zipPath -CompressionLevel Optimal
+  if (-not (Test-Path -LiteralPath $zipPath -PathType Leaf)) {
+    throw "Backup archive was not created."
+  }
+  $size = (Get-Item -LiteralPath $zipPath).Length
+  $sizeText = if ($size -gt 1MB) { "{0:N1} MB" -f ($size / 1MB) } else { "{0:N0} KB" -f ($size / 1KB) }
+  return [ordered]@{
+    ok = $true
+    backupPath = (Resolve-Path -LiteralPath $zipPath).Path
+    backupRoot = (Resolve-Path -LiteralPath $backupRoot).Path
+    created_at = (Get-Date).ToString("o")
+    sizeBytes = [long]$size
+    sizeText = $sizeText
+  }
+}
+
 function Get-ChapterOrder {
   param([string]$ProjectRoot)
   $episodeDir = Join-Path $ProjectRoot "episode"
@@ -3059,9 +3152,23 @@ try {
           continue
         }
 
-        if ($method -eq "POST" -and $path -eq "/api/restore-version-preview") {
+if ($method -eq "POST" -and $path -eq "/api/restore-version-preview") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           Write-JsonHttpResponse -Stream $stream -Value (Get-RestorePreview -Payload $payload)
+          continue
+        }
+        if ($method -eq "POST" -and $path -eq "/api/version-files") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $result = Get-VersionFiles -Payload $payload
+          $status = if ($result.ok) { 200 } else { 500 }
+          Write-JsonHttpResponse -Stream $stream -Value $result -StatusCode $status
+          continue
+        }
+        if ($method -eq "POST" -and $path -eq "/api/backup-project") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $result = New-ProjectBackup -Payload $payload
+          $status = if ($result.ok) { 200 } else { 500 }
+          Write-JsonHttpResponse -Stream $stream -Value $result -StatusCode $status
           continue
         }
         if ($method -eq "POST" -and $path -eq "/api/restore-version") {

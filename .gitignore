@@ -28,3 +28,6 @@ runtime/fixture-reports/
 runtime/provider-fixture-reports/
 studio-stdout.log
 studio-stderr.log
+
+# Portable package build output
+dist/

@@ -264,6 +264,176 @@ const editorialRules = await evaluate(`(() => {
     mutatesWithoutApproval: document.getElementById('manuscriptText').value.includes('çok çok  ,yanlış.... "Söz"') === false
   };
 })()`);
+const findSearchOptions = await evaluate(`(() => {
+  const editor = document.getElementById('manuscriptText');
+  setEditorText('KitHub KitHub kit hub');
+  const counts = {
+    defaultCount: findOccurrences(editor.value, 'kitHub', { caseSensitive: false, wholeWord: false, regex: false }).length,
+    caseCount: findOccurrences(editor.value, 'KitHub', { caseSensitive: true, wholeWord: false, regex: false }).length,
+    wholeCount: findOccurrences(editor.value, 'kit', { caseSensitive: false, wholeWord: true, regex: false }).length,
+    regexCount: findOccurrences(editor.value, 'Kit.{1}ub', { caseSensitive: false, wholeWord: false, regex: true }).length
+  };
+  const replaced = replaceAllLiteral(editor.value, 'kit', 'metin', { caseSensitive: true, wholeWord: true, regex: false });
+  return {
+    ...counts,
+    wholeReplaceCount: replaced.count,
+    wholeReplaceApplied: replaced.text === 'KitHub KitHub metin hub'
+  };
+})()`);
+const quickJump = await evaluate(`(async () => {
+  const originalChapters = chapters;
+  const originalIndex = currentChapterIndex;
+  chapters = [
+    { id: 'Bölüm 1', title: 'Defnenin Girişi', text: 'İlk' },
+    { id: 'Bölüm 2', title: 'Ormandaki Sır', text: 'İkinci' },
+    { id: 'Bölüm 3', title: 'Son Karar', text: 'Üçüncü' }
+  ];
+  currentChapterIndex = 0;
+  editorDirty = false;
+  openQuickJump();
+  const opened = quickJumpDialog.open;
+  quickJumpInput.value = 'ormandaki';
+  renderQuickJumpResults('ormandaki');
+  const filteredCount = quickJumpResults.querySelectorAll('[data-quick-jump-index]').length;
+  await activateQuickJumpItem();
+  const jumpedIndex = currentChapterIndex;
+  const closedAfterJump = !quickJumpDialog.open;
+  chapters = originalChapters;
+  currentChapterIndex = originalIndex;
+  return { opened, filteredCount, jumpedIndex, closedAfterJump };
+})()`);
+const spellcheck = await evaluate(`(() => {
+  const editor = document.getElementById('manuscriptText');
+  const originalEnabled = localStorage.getItem('kithub-spellcheck-enabled');
+  const originalDictionary = localStorage.getItem('kithub-spell-ignore:studio');
+  const text = 'herkez birsey yanlız ve ya şuan';
+  setEditorText(text);
+  editorContentChanged();
+  const enabledFindings = runTurkishEditorialChecks(text).filter(finding => finding.rule === 'spell');
+  localStorage.setItem('kithub-spellcheck-enabled', 'off');
+  const disabledFindings = runTurkishEditorialChecks(text).filter(finding => finding.rule === 'spell');
+  localStorage.setItem('kithub-spellcheck-enabled', 'on');
+  addToSpellDictionary('herkez');
+  const ignoredFindings = runTurkishEditorialChecks(text).filter(finding => finding.rule === 'spell');
+  setEditorText(text);
+  editorContentChanged();
+  renderEditorialPanel();
+  const originalMode = structuredEditorMode;
+  structuredEditorMode = 'source';
+  manuscriptText.selectionStart = 0;
+  jumpToNextFinding();
+  const jumped = manuscriptText.selectionStart > 0;
+  structuredEditorMode = originalMode;
+  if (originalEnabled === null) localStorage.removeItem('kithub-spellcheck-enabled');
+  else localStorage.setItem('kithub-spellcheck-enabled', originalEnabled);
+  if (originalDictionary === null) localStorage.removeItem('kithub-spell-ignore:studio');
+  else localStorage.setItem('kithub-spell-ignore:studio', originalDictionary);
+  return {
+    enabledFindings: enabledFindings.length,
+    enabledLabels: enabledFindings.map(finding => finding.original),
+    disabledFindings: disabledFindings.length,
+    ignoredFindings: ignoredFindings.length,
+    dictionaryHasWord: loadSpellDictionary().includes('herkez'),
+    jumped,
+    editorialRender: document.getElementById('editorialSpellcheckToggle') !== null
+  };
+})()`);
+const lineDiff = await evaluate(`(() => {
+  const snapshot = 'satır1\\nsatır2\\nsatır3\\nsatır4';
+  const current = 'satır1\\nsatır2 DEĞİŞTİ\\nsatır3\\nsatır4\\nsatır5 YENİ';
+  const rows = computeLineDiff(snapshot, current);
+  const added = rows.filter(row => row.type === 'added');
+  const removed = rows.filter(row => row.type === 'removed');
+  const context = rows.filter(row => row.type === 'context');
+  return {
+    addedCount: added.length,
+    removedCount: removed.length,
+    contextCount: context.length,
+    addedText: added.map(row => row.text),
+    removedText: removed.map(row => row.text),
+    lineNumbers: rows.some(row => row.type === 'added' && row.bIndex) && rows.some(row => row.type === 'removed' && row.aIndex)
+  };
+})()`);
+const versionDiffUi = await evaluate(`(() => {
+  const originalData = versionDiffData;
+  const originalSelected = versionDiffSelected;
+  versionDiffData = {
+    ok: true,
+    versionId: '20260815-120000',
+    title: 'Test sürümü',
+    created_at: '2026-08-15T12:00:00.000Z',
+    files: [
+      { relativePath: 'episode/ep001.md', words: 4, content: 'satır1\\nsatır2\\nsatır3\\n', currentExists: true, currentWords: 5, currentContent: 'satır1\\nsatır2 YENİ\\nsatır3\\nsatır4\\n', truncated: false, currentTruncated: false },
+      { relativePath: 'runtime/book-request.md', words: 2, content: 'a\\nb\\n', currentExists: true, currentWords: 2, currentContent: 'a\\nb\\n', truncated: false, currentTruncated: false }
+    ]
+  };
+  versionDiffSelected = '';
+  renderVersionDiffFiles();
+  const fileButtons = versionDiffFiles.querySelectorAll('[data-diff-file]').length;
+  const changedChip = versionDiffFiles.querySelectorAll('.diff-chip.added').length;
+  const unchangedChip = versionDiffFiles.querySelectorAll('.diff-chip.unchanged').length;
+  showVersionFileDiff('episode/ep001.md');
+  const addedLines = versionDiffLines.querySelectorAll('.diff-line.added').length;
+  const removedLines = versionDiffLines.querySelectorAll('.diff-line.removed').length;
+  const diffMetaFilled = versionDiffMeta.textContent.includes('ep001.md');
+  const selectedMarked = versionDiffFiles.querySelectorAll('[data-diff-file][aria-selected="true"]').length === 1;
+  versionDiffDialog.showModal();
+  const opened = versionDiffDialog.open;
+  closeVersionDiff();
+  const closed = !versionDiffDialog.open;
+  versionDiffData = originalData;
+  versionDiffSelected = originalSelected;
+  return { fileButtons, changedChip, unchangedChip, addedLines, removedLines, diffMetaFilled, selectedMarked, opened, closed };
+})()`);
+const sceneParse = await evaluate(`(() => {
+  const text = 'İlk sahne metni\\n\\n<!-- scene: İkinci Sahne -->\\n\\nİkinci sahne metni\\n\\n<!-- scene -->\\n\\nÜçüncü sahne\\n';
+  const scenes = parseScenes(text);
+  return {
+    count: scenes.length,
+    titles: scenes.map(scene => scene.title),
+    bodies: scenes.map(scene => scene.body.trim()),
+    roundtrip: serializeScenes(scenes) === text
+  };
+})()`);
+const sceneManagerUi = await evaluate(`(() => {
+  const originalChapters = chapters;
+  const originalMode = structuredEditorMode;
+  const originalText = manuscriptText.value;
+  const originalKey = currentChapterIndex;
+  structuredEditorMode = 'source';
+  chapters = [{ id: 'B01', filename: 'ep001.md', title: 'Birinci Bölüm', words: 0, state: 'wait', heat: { risk: 0, level: 'ok' } }];
+  currentChapterIndex = 0;
+  manuscriptText.value = 'İlk sahne\\n\\n<!-- scene: İkinci -->\\n\\nİkinci sahne metni\\n';
+  openSceneManager();
+  const firstOpen = sceneManagerDialog.open;
+  const rowsInitial = sceneManagerList.querySelectorAll('.scene-row').length;
+  const titlesInitial = [...sceneManagerList.querySelectorAll('.scene-title-input')].map(input => input.value);
+  addScene();
+  const rowsAfterAdd = sceneManagerList.querySelectorAll('.scene-row').length;
+  const summaryAfterAdd = sceneManagerSummary.textContent;
+  moveScene(0, 1);
+  const titlesAfterMove = [...sceneManagerList.querySelectorAll('.scene-title-input')].map(input => input.value);
+  const titleInputs = sceneManagerList.querySelectorAll('.scene-title-input');
+  titleInputs[0].value = 'Yeni İsim';
+  titleInputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+  const targetInputs = sceneManagerList.querySelectorAll('.scene-target-input');
+  targetInputs[0].value = '500';
+  targetInputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+  const progressWidth = sceneManagerList.querySelectorAll('.scene-progress')[0].querySelector('i').style.width;
+  applyScenes();
+  const appliedText = manuscriptText.value;
+  const appliedTargets = JSON.parse(localStorage.getItem('kithub-scene-targets:studio') || '{}');
+  const dialogClosed = !sceneManagerDialog.open;
+  const appliedSceneCount = parseScenes(appliedText).length;
+  manuscriptText.value = originalText;
+  chapters = originalChapters;
+  currentChapterIndex = originalKey;
+  structuredEditorMode = originalMode;
+  return {
+    firstOpen, rowsInitial, titlesInitial, rowsAfterAdd, summaryAfterAdd,
+    titlesAfterMove, progressWidth, appliedSceneCount, appliedTargets, dialogClosed
+  };
+})()`);
 const publishingCompatibility = await evaluate(`(() => {
   const font = document.getElementById('typeFont');
   const pageSize = document.getElementById('pageSize');
@@ -429,11 +599,30 @@ const chapterSwitchGuard = await evaluate(`(async () => {
   currentChapterIndex = 0;
   lastSavedContent = 'önceki kayıt';
   editorDirty = true;
-  const switched = await selectChapter(1);
+  const originalShowChoice = window.showChoiceDialog;
+  let capturedOptions = null;
+  window.showChoiceDialog = ({ options }) => {
+    capturedOptions = (options || []).map(option => option.label);
+    return Promise.resolve(null);
+  };
+  const cancelSwitched = await selectChapter(1);
+  const cancelBlocked = cancelSwitched === false && currentChapterIndex === 0 && editor.value === unsavedText;
+  let discardSwitched = false;
+  let discardTextPreserved = false;
+  window.showChoiceDialog = ({ options }) => {
+    const chosen = (options || []).find(option => option.label === 'Kaydetmeden Geç');
+    return Promise.resolve(chosen || null);
+  };
+  editorDirty = true;
+  discardSwitched = await selectChapter(1);
+  discardTextPreserved = editor.value === 'İkinci bölüm' && currentChapterIndex === 1;
+  window.showChoiceDialog = originalShowChoice;
   return {
-    switched,
-    currentChapterIndex,
-    textPreserved: editor.value === unsavedText,
+    dialogSeen: Array.isArray(capturedOptions) && capturedOptions.length === 3,
+    options: capturedOptions || [],
+    cancelBlocked,
+    discardSwitched,
+    discardTextPreserved,
     state: document.getElementById('saveState').textContent.trim()
   };
 })()`);
@@ -543,6 +732,13 @@ const result = {
     replaceShortcut,
     saveShortcut,
     editorialRules,
+    findSearchOptions,
+    quickJump,
+    spellcheck,
+    lineDiff,
+    versionDiffUi,
+    sceneParse,
+    sceneManagerUi,
     publishingCompatibility,
     publicationUx,
     professionalUx,
