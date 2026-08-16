@@ -15,15 +15,127 @@ import { defaultMarkdownSerializer, MarkdownSerializer } from "prosemirror-markd
 import { schema as basicSchema } from "prosemirror-schema-basic";
 import { addListNodes, liftListItem, wrapInList } from "prosemirror-schema-list";
 
-const nodes = addListNodes(basicSchema.spec.nodes, "paragraph block*", "block");
+const listNodes = addListNodes(basicSchema.spec.nodes, "paragraph block*", "block");
+const extraNodes = {
+  table: {
+    content: "table_row+",
+    tableRole: "table",
+    isolating: true,
+    group: "block",
+    parseDOM: [{ tag: "table" }],
+    toDOM() { return ["table", 0]; }
+  },
+  table_row: {
+    content: "(table_cell | table_header)*",
+    tableRole: "row",
+    parseDOM: [{ tag: "tr" }],
+    toDOM() { return ["tr", 0]; }
+  },
+  table_cell: {
+    content: "block+",
+    tableRole: "cell",
+    isolating: true,
+    parseDOM: [{ tag: "td" }],
+    toDOM() { return ["td", 0]; }
+  },
+  table_header: {
+    content: "block+",
+    tableRole: "header_cell",
+    isolating: true,
+    parseDOM: [{ tag: "th" }],
+    toDOM() { return ["th", 0]; }
+  },
+  footnote_ref: {
+    inline: true,
+    group: "inline",
+    atom: true,
+    attrs: { ref: { default: "" } },
+    parseDOM: [{
+      tag: "sup[data-footnote-ref]",
+      getAttrs(dom) { return { ref: dom.getAttribute("data-footnote-ref") || "" }; }
+    }],
+    toDOM(node) {
+      return ["sup", { class: "footnote-ref", "data-footnote-ref": node.attrs.ref }, `[${node.attrs.ref}]`];
+    }
+  },
+  footnote_def: {
+    group: "block",
+    content: "block+",
+    isolating: true,
+    attrs: { ref: { default: "" } },
+    parseDOM: [{
+      tag: "div[data-footnote-def]",
+      getAttrs(dom) { return { ref: dom.getAttribute("data-footnote-def") || "" }; }
+    }],
+    toDOM(node) {
+      return ["div", { class: "footnote-def", "data-footnote-def": node.attrs.ref }, 0];
+    }
+  }
+};
+const nodes = typeof listNodes.append === "function" ? listNodes.append(extraNodes) : Object.assign({}, listNodes, extraNodes);
 const marks = basicSchema.spec.marks.addToEnd("underline", {
   parseDOM: [{ tag: "u" }],
   toDOM() { return ["u", 0]; }
 });
 const schema = new Schema({ nodes, marks });
 const markdown = new MarkdownIt({ html: true, linkify: false, typographer: false });
+
+markdown.inline.ruler.after("link", "footnote_ref", (state, silent) => {
+  const start = state.pos;
+  const src = state.src;
+  if (src[start] !== "[" || src[start + 1] !== "^") return false;
+  const close = src.indexOf("]", start);
+  if (close < 0) return false;
+  if (src[close + 1] === ":") return false;
+  const ref = src.slice(start + 2, close);
+  if (!ref) return false;
+  if (silent) return true;
+  const token = state.push("footnote_ref", "sup", 0);
+  token.attrs = [["class", "footnote-ref"], ["data-footnote-ref", ref]];
+  token.content = `[${ref}]`;
+  state.pos = close + 1;
+  return true;
+});
+markdown.renderer.rules.footnote_ref = (tokens, idx) => {
+  const token = tokens[idx];
+  const ref = (token && typeof token.attrGet === "function" && token.attrGet("data-footnote-ref")) || token?.content || "";
+  return `<sup class="footnote-ref" data-footnote-ref="${ref}">[${ref}]</sup>`;
+};
+
 const serializer = new MarkdownSerializer(
-  { ...defaultMarkdownSerializer.nodes },
+  {
+    ...defaultMarkdownSerializer.nodes,
+    table(state, node) {
+      const rows = [];
+      node.forEach(row => {
+        const cells = [];
+        row.forEach(cell => {
+          const parts = [];
+          cell.forEach(block => parts.push(block.textContent.trim()));
+          cells.push(parts.join(" ").replace(/\s*\n\s*/g, " "));
+        });
+        rows.push(cells);
+      });
+      if (!rows.length) return;
+      const header = rows[0];
+      const lines = [
+        `| ${header.join(" | ")} |`,
+        `|${header.map(() => "---").join("|")}|`
+      ];
+      for (let i = 1; i < rows.length; i += 1) lines.push(`| ${rows[i].join(" | ")} |`);
+      state.ensureNewLine();
+      state.write(lines.join("\n"));
+      state.closeBlock(node);
+    },
+    footnote_ref(state, node) {
+      state.write(`[^${node.attrs.ref}]`);
+    },
+    footnote_def(state, node) {
+      state.write(`[^${node.attrs.ref}]: `);
+      state.renderContent(node);
+      state.closeBlock(node);
+    }
+  },
   {
     ...defaultMarkdownSerializer.marks,
     underline: {
@@ -38,6 +150,18 @@ const serializer = new MarkdownSerializer(
 function documentFromMarkdown(value) {
   const host = document.createElement("div");
   host.innerHTML = markdown.render(String(value || ""));
+  host.querySelectorAll("p").forEach(p => {
+    const first = p.firstChild;
+    if (!first || first.nodeType !== Node.TEXT_NODE) return;
+    const m = /^\[\^([\w]+)\]:\s*/.exec(first.textContent);
+    if (!m) return;
+    first.textContent = first.textContent.slice(m[0].length);
+    const div = document.createElement("div");
+    div.setAttribute("data-footnote-def", m[1]);
+    div.className = "footnote-def";
+    p.parentNode.replaceChild(div, p);
+    div.appendChild(p);
+  });
   return ProseMirrorDOMParser.fromSchema(schema).parse(host);
 }
 
@@ -175,6 +299,41 @@ function mount(element, options = {}) {
     if (name === "replaceCurrentBlock") {
       const { $from } = view.state.selection;
       view.dispatch(view.state.tr.insertText(String(payload || ""), $from.start(), $from.end()).scrollIntoView());
+      view.focus();
+      return true;
+    }
+    if (name === "table") {
+      const makeCell = (header, text) => {
+        const type = header ? schema.nodes.table_header : schema.nodes.table_cell;
+        const paragraph = schema.nodes.paragraph.create(null, text ? schema.text(text) : undefined);
+        return type.create(null, paragraph);
+      };
+      const headerRow = schema.nodes.table_row.create(
+        null,
+        [makeCell(true, "Sütun 1"), makeCell(true, "Sütun 2")]
+      );
+      const bodyRow = schema.nodes.table_row.create(
+        null,
+        [makeCell(false, "Hücre"), makeCell(false, "Hücre")]
+      );
+      const tableNode = schema.nodes.table.create(null, [headerRow, bodyRow]);
+      const { $from } = view.state.selection;
+      const pos = $from.before($from.depth + 1) + ($from.parent.textContent.length > 0 ? $from.parent.textContent.length : 0);
+      view.dispatch(view.state.tr.insert(Math.max(1, Math.min(pos, view.state.doc.content.size - 1)), tableNode).scrollIntoView());
+      view.focus();
+      return true;
+    }
+    if (name === "footnote") {
+      let maxRef = 0;
+      view.state.doc.descendants(node => {
+        if (node.type === schema.nodes.footnote_ref) {
+          const parsed = parseInt(node.attrs.ref, 10);
+          if (!Number.isNaN(parsed)) maxRef = Math.max(maxRef, parsed);
+        }
+      });
+      const ref = String(maxRef + 1);
+      const inline = schema.nodes.footnote_ref.create({ ref });
+      view.dispatch(view.state.tr.replaceSelectionWith(inline).scrollIntoView());
       view.focus();
       return true;
     }

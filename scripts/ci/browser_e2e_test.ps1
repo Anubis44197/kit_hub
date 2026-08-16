@@ -139,6 +139,18 @@ $interactionPass = (
   $interaction.editorCore.richRoundTrip.italicMarkdown -eq "Ilk ***paragraf*** metni" -and
   $interaction.editorCore.richRoundTrip.sourceHasBold -eq $true -and
   $interaction.editorCore.richRoundTrip.roundtripPreserved -eq $true -and
+  [int]$interaction.editorCore.structuredNodes.tableNodes -eq 1 -and
+  [int]$interaction.editorCore.structuredNodes.tableCells -eq 2 -and
+  [int]$interaction.editorCore.structuredNodes.tableHeaders -eq 2 -and
+  $interaction.editorCore.structuredNodes.tablePreserved -eq $true -and
+  [int]$interaction.editorCore.structuredNodes.footnoteRefs -eq 1 -and
+  [int]$interaction.editorCore.structuredNodes.footnoteDefs -eq 1 -and
+  $interaction.editorCore.structuredNodes.footnotePreserved -eq $true -and
+  [int]$interaction.editorCore.structuredNodes.imageNodes -eq 1 -and
+  $interaction.editorCore.structuredNodes.imagePreserved -eq $true -and
+  $interaction.editorCore.structuredNodes.insertTable -eq $true -and
+  [int]$interaction.editorCore.structuredNodes.insertedTables -eq 1 -and
+  [int]$interaction.editorCore.structuredNodes.insertedRefs -eq 1 -and
   $interaction.editorCore.findShortcut.open -eq $true -and
   $interaction.editorCore.findShortcut.focused -eq "findInput" -and
   $interaction.editorCore.findSelection.selected -eq "KitHub" -and

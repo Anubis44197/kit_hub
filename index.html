@@ -3544,6 +3544,8 @@
           <button type="button" data-format="bold" title="Kalın">B</button>
           <button type="button" data-format="italic" title="İtalik">I</button>
           <button type="button" data-format="underline" title="Altı çizili">U</button>
+          <button type="button" data-format="table" title="Tablo ekle">▦</button>
+          <button type="button" data-format="footnote" title="Dipnot ekle">¹</button>
           <button type="button" data-align="left" title="Sola hizala">≡</button>
           <button type="button" data-align="justify" title="İki yana yasla">▤</button>
         </div>
@@ -7594,6 +7596,14 @@ function applyEditorialFinding(index) {
       if (command === "bold") replaceSelection("**", "**", "kalın metin");
       if (command === "italic") replaceSelection("_", "_", "italik metin");
       if (command === "underline") replaceSelection("<u>", "</u>", "altı çizili metin");
+      if (command === "footnote") {
+        const count = (manuscriptText.value.match(/\[\^\w+\]/g) || []).length;
+        const ref = count + 1;
+        replaceSelection(`[^${ref}]`, "", `dipnot ${ref}`);
+      }
+      if (command === "table") {
+        replaceSelection("\n\n| Sütun 1 | Sütun 2 |\n|---|---|\n| Hücre | Hücre |\n\n", "", "tablo");
+      }
       syncFormatButtons();
       setStatus(`Motor olayı: ${command} biçimi uygulandı`);
     }

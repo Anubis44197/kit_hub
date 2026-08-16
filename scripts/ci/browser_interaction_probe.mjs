@@ -370,6 +370,62 @@ const richRoundTrip = await evaluate(`(() => {
     roundtripPreserved
   };
 })()`);
+const structuredNodes = await evaluate(`(() => {
+  const editor = document.getElementById('manuscriptText');
+  const originalMode = structuredEditorMode;
+  setEditorMode('rich');
+  const api = structuredEditorApi;
+  const countType = (doc, type) => {
+    let c = 0;
+    const walk = n => { if (n.type === type) c++; (n.content || []).forEach(walk); };
+    walk(doc);
+    return c;
+  };
+  const tableInput = 'Tanim\\n\\n| A | B |\\n|---|---|\\n| 1 | 2 |';
+  setEditorText(tableInput);
+  const tableDoc = api.getJSON();
+  const tableNodes = countType(tableDoc, 'table');
+  const tableCells = countType(tableDoc, 'table_cell');
+  const tableHeaders = countType(tableDoc, 'table_header');
+  const tableRoundtrip = api.getMarkdown();
+  const tablePreserved = tableRoundtrip.includes('| A | B |') && tableRoundtrip.includes('| 1 | 2 |');
+
+  const footnoteInput = 'metin[^1] cikisi\\n\\n[^1]: dipnot tanimi';
+  setEditorText(footnoteInput);
+  const footnoteDoc = api.getJSON();
+  const footnoteRefs = countType(footnoteDoc, 'footnote_ref');
+  const footnoteDefs = countType(footnoteDoc, 'footnote_def');
+  const footnoteRoundtrip = api.getMarkdown();
+  const footnotePreserved = footnoteRoundtrip.includes('[^1]') && footnoteRoundtrip.includes('[^1]: dipnot tanimi');
+
+  const imageInput = '![kapak](https://x/y.png "Kapak")';
+  setEditorText(imageInput);
+  const imageDoc = api.getJSON();
+  const imageNodes = countType(imageDoc, 'image');
+  const imageRoundtrip = api.getMarkdown();
+  const imagePreserved = imageRoundtrip.includes('![kapak](https://x/y.png "Kapak")');
+
+  const insertTable = api.run('table');
+  const insertedTables = countType(api.getJSON(), 'table');
+  api.run('footnote');
+  const insertedRefs = countType(api.getJSON(), 'footnote_ref');
+
+  setEditorMode(originalMode);
+  return {
+    tableNodes,
+    tableCells,
+    tableHeaders,
+    tablePreserved,
+    footnoteRefs,
+    footnoteDefs,
+    footnotePreserved,
+    imageNodes,
+    imagePreserved,
+    insertTable,
+    insertedTables,
+    insertedRefs
+  };
+})()`);
 const lineDiff = await evaluate(`(() => {
   const snapshot = 'satır1\\nsatır2\\nsatır3\\nsatır4';
   const current = 'satır1\\nsatır2 DEĞİŞTİ\\nsatır3\\nsatır4\\nsatır5 YENİ';
@@ -884,6 +940,7 @@ const result = {
   editorCore: {
     dirtyState,
     richRoundTrip,
+    structuredNodes,
     findShortcut,
     findSelection,
     replaceShortcut,
