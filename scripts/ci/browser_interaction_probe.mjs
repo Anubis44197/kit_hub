@@ -338,6 +338,38 @@ const spellcheck = await evaluate(`(() => {
     editorialRender: document.getElementById('editorialSpellcheckToggle') !== null
   };
 })()`);
+const richRoundTrip = await evaluate(`(() => {
+  const editor = document.getElementById('manuscriptText');
+  const originalMode = structuredEditorMode;
+  setEditorMode('rich');
+  const api = structuredEditorApi;
+  const setEditorTextValue = (text) => { editor.value = text; editor.dispatchEvent(new Event('input', { bubbles: true })); editorContentChanged(); renderPreview(); };
+  setEditorTextValue('Ilk paragraf metni');
+  const synced = api.getMarkdown() === 'Ilk paragraf metni';
+  const boldSelected = api.selectText('paragraf', 0);
+  document.querySelector('[data-format="bold"]').click();
+  const boldMarkdown = api.getMarkdown();
+  const boldActive = api.isActive('strong');
+  const italicSelected = api.selectText('paragraf', 0);
+  document.querySelector('[data-format="italic"]').click();
+  const italicMarkdown = api.getMarkdown();
+  setEditorMode('source');
+  const sourceText = editor.value;
+  const sourceHasBold = editor.value.includes('**');
+  setEditorMode('rich');
+  const roundtripPreserved = api.getMarkdown() === sourceText;
+  setEditorMode(originalMode);
+  return {
+    synced,
+    boldSelected,
+    italicSelected,
+    boldMarkdown,
+    boldActive,
+    italicMarkdown,
+    sourceHasBold,
+    roundtripPreserved
+  };
+})()`);
 const lineDiff = await evaluate(`(() => {
   const snapshot = 'satır1\\nsatır2\\nsatır3\\nsatır4';
   const current = 'satır1\\nsatır2 DEĞİŞTİ\\nsatır3\\nsatır4\\nsatır5 YENİ';
@@ -851,6 +883,7 @@ const result = {
   },
   editorCore: {
     dirtyState,
+    richRoundTrip,
     findShortcut,
     findSelection,
     replaceShortcut,

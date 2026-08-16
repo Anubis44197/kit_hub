@@ -131,6 +131,14 @@ $interactionPass = (
   $interaction.editorCore.dirtyState.mode -eq "rich" -and
   $interaction.editorCore.dirtyState.sourceHidden -eq $true -and
   $interaction.editorCore.dirtyState.schemaVersion -eq "1.0.0" -and
+  $interaction.editorCore.richRoundTrip.synced -eq $true -and
+  $interaction.editorCore.richRoundTrip.boldSelected -eq $true -and
+  $interaction.editorCore.richRoundTrip.italicSelected -eq $true -and
+  $interaction.editorCore.richRoundTrip.boldMarkdown -eq "Ilk **paragraf** metni" -and
+  $interaction.editorCore.richRoundTrip.boldActive -eq $true -and
+  $interaction.editorCore.richRoundTrip.italicMarkdown -eq "Ilk ***paragraf*** metni" -and
+  $interaction.editorCore.richRoundTrip.sourceHasBold -eq $true -and
+  $interaction.editorCore.richRoundTrip.roundtripPreserved -eq $true -and
   $interaction.editorCore.findShortcut.open -eq $true -and
   $interaction.editorCore.findShortcut.focused -eq "findInput" -and
   $interaction.editorCore.findSelection.selected -eq "KitHub" -and
