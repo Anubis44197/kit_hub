@@ -87,7 +87,12 @@ try {
   if (-not $perfReady) { throw "Edge debug target did not become ready on port $perfPort." }
   $perfScript = Join-Path $PSScriptRoot "browser_performance_probe.mjs"
   $perfRaw = & $node.Source $perfScript $perfPort $Url $perfReportPath
-  if ($LASTEXITCODE -ne 0) { throw "Browser performance probe failed with exit code $LASTEXITCODE." }
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "[browser-e2e] performance probe FAILED; stderr/report below"
+    Write-Host ($perfRaw | Out-String)
+    if (Test-Path -LiteralPath $perfReportPath -PathType Leaf) { Get-Content -LiteralPath $perfReportPath -Raw }
+    throw "Browser performance probe failed with exit code $LASTEXITCODE."
+  }
   $performance = $perfRaw | ConvertFrom-Json
 }
 finally {
