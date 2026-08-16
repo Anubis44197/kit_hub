@@ -96,7 +96,7 @@ function ConvertTo-PrintPdfX {
   $previous = Get-Location
   try {
     Set-Location -LiteralPath $iccDir
-    $stdout = (& $GhostscriptBinary "-dNOSAFER" "-dPDFX=3" "-dBATCH" "-dNOPAUSE" "-dPreserveAnnots=false" "-sColorConversionStrategy=CMYK" "-sDEVICE=pdfwrite" "-sOutputFile=$outputPath" $defPath $InputPdf 2>&1 | Out-String)
+    $stdout = (& $GhostscriptBinary "-dNOSAFER" "-dPDFX=3" "-dBATCH" "-dNOPAUSE" "-dPreserveAnnots=false" "-dSubsetFonts=false" "-sColorConversionStrategy=CMYK" "-sDEVICE=pdfwrite" "-sOutputFile=$outputPath" $defPath $InputPdf 2>&1 | Out-String)
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $outputPath -PathType Leaf) -or (Get-Item -LiteralPath $outputPath).Length -eq 0) {
       throw "Ghostscript PDF/X conversion failed: $stdout"
     }
@@ -219,7 +219,6 @@ function Write-MatterMarkdown {
     if (-not $heading) { continue }
     $parts += "# $heading"
     if ($content) { $parts += $content } else { $parts += "_İçerik yayın öncesinde tamamlanmalıdır._" }
-    $parts += "\newpage"
   }
   $separator = [Environment]::NewLine + [Environment]::NewLine
   [IO.File]::WriteAllText($path, ($parts -join $separator), [Text.UTF8Encoding]::new($false))

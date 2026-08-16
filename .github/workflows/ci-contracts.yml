@@ -75,6 +75,10 @@ jobs:
         shell: powershell
         run: .\scripts\ci\publication_ingram_pdfx_test.ps1
 
+      - name: Test print proof checks (overflow, blank pages, chapter starts, cover)
+        shell: powershell
+        run: .\scripts\ci\print_proof_test.ps1
+
       - name: Test bridge publication build end to end
         shell: powershell
         run: .\scripts\ci\studio_bridge_publication_build_test.ps1
