@@ -150,6 +150,7 @@ Assert-File "runtime/runner-config.provider.template.json"
 Assert-File "scripts/ide_phase_prompt.ps1"
 Assert-File "scripts/provider_phase.ps1"
 Assert-File "scripts/studio_bridge.ps1"
+Assert-File "scripts/build_publication_outputs.ps1"
 Assert-File "scripts/ci/write_agent_compliance.ps1"
 Assert-File "scripts/ci/validate_agent_governance.ps1"
 Assert-File "scripts/ci/validate_state_reducers.ps1"
@@ -183,6 +184,7 @@ Assert-Contains -Path "index.html" -Pattern "testLiveEditApi" -ErrorMessage "Stu
 Assert-Contains -Path "index.html" -Pattern "chapterStartPolicy" -ErrorMessage "Studio UI missing chapter start layout control"
 Assert-Contains -Path "index.html" -Pattern "pageNumberPosition" -ErrorMessage "Studio UI missing page number layout control"
 Assert-Contains -Path "index.html" -Pattern "widowOrphanControl" -ErrorMessage "Studio UI missing widow/orphan layout control"
+Assert-Contains -Path "index.html" -Pattern "KitHubPageFlow.paginate" -ErrorMessage "Studio UI missing measured page-flow integration"
 Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "/api/live-edit" -ErrorMessage "Studio Bridge missing live edit endpoint"
 Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "/api/live-edit-applied" -ErrorMessage "Studio Bridge missing live edit applied endpoint"
 Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "/api/import-docx" -ErrorMessage "Studio Bridge missing DOCX import endpoint"
@@ -191,6 +193,8 @@ Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "Confirm-LiveEditAppl
 Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "Assert-LiveEditSuggestionClean" -ErrorMessage "Studio Bridge missing live edit cleanliness gate"
 Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "Import-DocxText" -ErrorMessage "Studio Bridge missing DOCX import function"
 Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "widow_orphan_control" -ErrorMessage "Studio Bridge missing professional typography control persistence"
+Assert-Contains -Path "scripts/studio_bridge.ps1" -Pattern "/assets/page-flow.js" -ErrorMessage "Studio Bridge missing measured page-flow asset route"
+Assert-Contains -Path "scripts/build_publication_outputs.ps1" -Pattern "running_header_strategy" -ErrorMessage "Publication builder missing page-flow capability report"
 Assert-Contains -Path "runtime/layout-profile.schema.json" -Pattern "widow_orphan_control" -ErrorMessage "Layout profile schema missing widow/orphan control"
 Assert-Contains -Path "runtime/layout-profile.schema.json" -Pattern "heading_hierarchy_policy" -ErrorMessage "Layout profile schema missing heading hierarchy policy"
 Assert-Contains -Path "scripts/run_pipeline.ps1" -Pattern "current-run.json" -ErrorMessage "Missing current-run pointer contract in runner"
@@ -452,12 +456,36 @@ Assert-File "scripts/ci/verify_docx_layout_profile.ps1"
 Assert-File "scripts/ci/external_smoke_test.ps1"
 Assert-File "scripts/ci/tdk_dict_check.py"
 Assert-File "scripts/ci/tdk_dict_check.ps1"
+Assert-File "scripts/ci/provider_agent_runner.ps1"
+Assert-File "scripts/ci/browser_e2e_test.ps1"
+Assert-File "scripts/ci/browser_interaction_probe.mjs"
+Assert-File "scripts/ci/studio_bridge_book_request_test.ps1"
+Assert-File "scripts/ci/studio_bridge_security_export_test.ps1"
+Assert-File "scripts/ci/studio_bridge_chapter_manager_test.ps1"
+Assert-File "scripts/ci/studio_typography_baseline_test.ps1"
+Assert-File "scripts/ci/studio_bridge_docx_roundtrip_test.ps1"
+Assert-File "src/page-flow.js"
+Assert-File "assets/page-flow.js"
+Assert-File "scripts/ci/publication_typesetting_test.ps1"
+Assert-File "scripts/ci/local_intake_status_test.ps1"
+if ((Read-Utf8 -Path "scripts/run_pipeline.ps1") -match '(?m)^\s*Invoke-Expression\s+\$cmd') { throw "Direct Invoke-Expression command execution remains in runner." }
+foreach ($contractPath in @(Get-ChildItem "runtime/phase-contracts/*.json" -File)) {
+  $contract = Read-Utf8 -Path $contractPath.FullName | ConvertFrom-Json
+  if (@($contract.allowed_output_patterns) -contains "revision/_workspace/*.md" -or @($contract.allowed_output_patterns) -contains "revision/_workspace/*.json") { throw "Broad workspace output pattern remains: $($contractPath.Name)" }
+}
 
 Write-Host "[final-readiness-ps] checking agent golden placeholders..."
 foreach ($agent in $agentFiles) {
   $agentName = [System.IO.Path]::GetFileNameWithoutExtension($agent.Name)
   Assert-File "tests/golden/agents/$agentName/input.md"
   Assert-File "tests/golden/agents/$agentName/expected.md"
+  $inputRaw = Read-Utf8 -Path "tests/golden/agents/$agentName/input.md"
+  if ($inputRaw -match "(?i)\bPlaceholder input\b") {
+    throw "Golden input still contains placeholder text: $agentName"
+  }
+  if ($inputRaw.Trim().Length -lt 80) {
+    throw "Golden input is too short for a behavioral scenario: $agentName"
+  }
   Assert-Contains -Path "tests/golden/agents/$agentName/expected.md" -Pattern "Expected contract" -ErrorMessage "Golden expected output is not contract-backed: $agentName"
   $expectedRaw = Read-Utf8 -Path "tests/golden/agents/$agentName/expected.md"
   if ($expectedRaw -match "Placeholder expected output") {

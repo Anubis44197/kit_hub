@@ -236,6 +236,7 @@ function Validate-CommandSafety {
 
   $blockedPatterns = @(
     @{ pattern = "(?i)\bInvoke-Expression\b|\biex\b"; reason = "nested Invoke-Expression is not allowed in configured phase commands" },
+    @{ pattern = '[;&|<>`]|\$\(|\$\{|\r|\n'; reason = "PowerShell command operators and interpolation are not allowed in configured phase commands" },
     @{ pattern = "(?i)\bRemove-Item\b[^\r\n]*(?:-Recurse|-Force)|\brm\s+-rf\b|\bdel\s+/[fsq]\b"; reason = "destructive delete commands are not allowed in phase commands" },
     @{ pattern = "(?i)\bgit\s+reset\s+--hard\b|\bgit\s+clean\b[^\r\n]*\s-[^\r\n]*f"; reason = "destructive git commands are not allowed in phase commands" },
     @{ pattern = "(?i)(?:curl|wget|Invoke-WebRequest|iwr)[^\r\n]*(?:\||;|&&)[^\r\n]*(?:sh|bash|powershell|pwsh|cmd|iex|Invoke-Expression)"; reason = "remote download piped into execution is not allowed" },
@@ -347,8 +348,8 @@ function Validate-PhaseArtifacts {
     "propose" {
       Ensure-Any -Patterns @(
         "_workspace/01_proposals.md",
-        "_workspace/01_proposals*.md",
-        "*_proposal.md"
+        "revision/_workspace/01_proposals*.md",
+        "revision/_workspace/*_proposal.md"
       ) -BasePath $Root
     }
     "design-big" {
@@ -444,7 +445,7 @@ function Validate-PhaseArtifacts {
       ) -BasePath $Root
       Ensure-Any -Patterns @("revision/_state/*.json") -BasePath $Root
     }
-    "rewrite" {
+        "rewrite" {
       Ensure-Any -Patterns @("episode/ep*.md") -BasePath $Root
       Ensure-Any -Patterns @(
         "revision/_workspace/*rewrite*report*.md",
@@ -514,16 +515,16 @@ function Get-PhaseOutputArtifacts {
       $patterns = @("runtime/book-brief.json","runtime/book-dna.json","runtime/layout-profile.json","runtime/approvals/book-brief-approval.json")
     }
     "propose" {
-      $patterns = @("_workspace/01_proposals*.md","*_proposal.md","runtime/approvals/story-choice.json")
+      $patterns = @("revision/_workspace/01_proposals*.md","revision/_workspace/*_proposal.md","runtime/approvals/story-choice.json")
     }
     "design-big" {
-      $patterns = @("novel-config.md","design/*_bootstrap.md","design/02_character_core.md","design/*_character*.md","design/03_macro_plot_hooks.md","design/*plot*hook*.md","design/04_book_plan.md","design/05_chapter_plan.md","design/06_layout_plan.md","runtime/approvals/book-plan-approval.json","revision/_state/*.json")
+      $patterns = @("novel-config.md","design/*_bootstrap.md","design/02_character_core.md","design/*_character*.md","design/03_macro_plot_hooks.md","design/*plot*hook*.md","design/04_book_plan.md","design/05_chapter_plan.md","design/06_layout_plan.md","runtime/approvals/book-plan-approval.json","revision/_state/*.json","revision/_workspace/02_domain-researcher_design-big.md","revision/_workspace/02_domain-researcher_design-big.json","revision/_workspace/07_research-citation-auditor_design-big.md","revision/_workspace/07_research-citation-auditor_design-big.json")
     }
     "design-small" {
-      $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md")
+      $patterns = @("design/*_character-detail_*.md","design/*_plot-detail_*.md","design/*scene_plan*.md","design/*hook*table*.md","revision/_workspace/02_domain-researcher_design-small.md","revision/_workspace/02_domain-researcher_design-small.json")
     }
     "create" {
-      $patterns = @("episode/ep*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
+      $patterns = @("episode/ep*.md","revision/_workspace/04_quality-verifier_verdict_EP*.md","revision/_workspace/*quality*verdict*EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/*tdk-polisher*issues*EP*.json","revision/_state/*.json")
     }
     "polish" {
       $patterns = @("episode/ep*.md","revision/_workspace/*revision-reviewer*EP*.md","revision/_workspace/08_tdk-polisher_issues_EP*.json","revision/_workspace/10_tdk-dictionary-check_polish.json","revision/_workspace/macro-continuity-audit_EP*.json","revision/_workspace/macro-continuity-audit_EP*.md","revision/_state/*.json")
@@ -565,6 +566,20 @@ function Get-PhaseOutputArtifacts {
     $hits = Get-ChildItem -Path $resolved -ErrorAction SilentlyContinue -File | Select-Object -ExpandProperty FullName
     if ($hits) {
       $files += $hits
+    }
+  }
+
+  $compliancePath = Join-Path $Root ("runtime/agent-compliance/" + $Phase + ".json")
+  if (Test-Path -LiteralPath $compliancePath -PathType Leaf) {
+    $compliance = Read-Utf8 -Path $compliancePath | ConvertFrom-Json
+    if ($compliance.PSObject.Properties.Name -contains "output_artifacts") {
+      foreach ($artifact in @($compliance.output_artifacts)) {
+        $rel = ConvertTo-RelativeContractPath -Path ([string]$artifact)
+        $artifactPath = Join-Path $Root $rel
+        if (Test-Path -LiteralPath $artifactPath -PathType Leaf) {
+          $files += (Resolve-Path -LiteralPath $artifactPath).Path
+        }
+      }
     }
   }
 
@@ -844,7 +859,7 @@ function Invoke-DictionaryCheck {
 
   Write-Host "[runner] dictionary-check: $cmd"
   Validate-CommandSafety -Command $cmd -Root $Root -Enabled $CommandSafetyEnabled
-  Invoke-Expression $cmd
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -Command $cmd
   if ($LASTEXITCODE -ne 0) {
     throw "Dictionary check failed (exit=$LASTEXITCODE): $cmd"
   }
@@ -2236,7 +2251,18 @@ function Validate-CrossChapterProgression {
     if ($chain.Count -lt $episodes.Count) {
       throw "Cross-chapter progression gate failed: plot-ledger cause_effect_chain has $($chain.Count) entries for $($episodes.Count) chapters."
     }
-    $uniqueEffects = @($chain | ForEach-Object { [string]$_.effect } | Where-Object { $_.Trim() -ne "" } | Sort-Object -Unique)
+    $effects = @($chain | ForEach-Object {
+      if ($_ -is [string]) {
+        [string]$_
+      }
+      else {
+        [string]$_.effect
+      }
+    } | Where-Object { $_.Trim() -ne "" })
+    $uniqueEffects = @($effects | Sort-Object -Unique)
+    if ($effects.Count -lt $chain.Count) {
+      throw "Cross-chapter progression gate failed: plot-ledger cause_effect_chain contains an empty effect."
+    }
     if ($uniqueEffects.Count -lt $chain.Count) {
       throw "Cross-chapter progression gate failed: plot-ledger cause_effect_chain effects are duplicated."
     }
@@ -2735,7 +2761,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       $step.command = $cmd
       Validate-CommandSafety -Command $cmd -Root $ProjectRoot -Enabled $enableCommandSafety
       Write-Host "[runner] executing: $cmd"
-      Invoke-Expression $cmd
+      & powershell.exe -NoProfile -ExecutionPolicy Bypass -Command $cmd
       if ($LASTEXITCODE -ne 0) {
         throw "Phase command failed (exit=$LASTEXITCODE): $cmd"
       }
@@ -2885,6 +2911,11 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
   })
 }
 
+$integrityScript = Join-Path $PSScriptRoot "ci/verify_run_integrity.ps1"
+if (Test-Path -LiteralPath $integrityScript -PathType Leaf) {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $integrityScript -ProjectRoot $ProjectRoot
+  if ($LASTEXITCODE -ne 0) { throw "Run integrity verification failed (exit=$LASTEXITCODE)." }
+}
 $summary.status = "completed"
 $summary.finished_at = (Get-Date).ToString("o")
 Write-RunJournalEvent -Path $runJournalPath -RunId $runId -Phase "run" -StepId "run" -EventType "run.completed" -Metadata ([ordered]@{ steps = @($summary.steps).Count })

@@ -23,3 +23,58 @@ jobs:
 
       - name: Run final readiness check
         run: bash scripts/ci/final_readiness_check.sh
+
+  studio-bridge-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Pandoc for DOCX round-trip tests
+        shell: powershell
+        run: choco install pandoc --version=3.7.0.2 --yes --no-progress
+
+      - name: Install publication validators
+        shell: powershell
+        run: |
+          $popplerArchive = Join-Path $env:RUNNER_TEMP 'poppler-26.02.0-0.zip'
+          $popplerRoot = Join-Path $env:RUNNER_TEMP 'poppler-26.02.0-0'
+          Invoke-WebRequest -Uri 'https://github.com/oschwartz10612/poppler-windows/releases/download/v26.02.0-0/Release-26.02.0-0.zip' -OutFile $popplerArchive -UseBasicParsing
+          if ((Get-FileHash -LiteralPath $popplerArchive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '993e4a94376ed712fafc7058d724ea0b943d118bbd2305cd9ed55174eb85cda5') { throw 'Poppler archive checksum mismatch.' }
+          Expand-Archive -LiteralPath $popplerArchive -DestinationPath $popplerRoot -Force
+          $pdfInfo = Get-ChildItem -LiteralPath $popplerRoot -Filter 'pdfinfo.exe' -File -Recurse | Select-Object -First 1
+          if (-not $pdfInfo) { throw 'Pinned Poppler pdfinfo.exe was not found after extraction.' }
+          Split-Path -Parent $pdfInfo.FullName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          .\scripts\install_epubcheck.ps1
+
+      - name: Test Studio book request bridge
+        shell: powershell
+        run: .\scripts\ci\studio_bridge_book_request_test.ps1
+
+      - name: Test Studio bridge security and final export
+        shell: powershell
+        run: .\scripts\ci\studio_bridge_security_export_test.ps1
+
+      - name: Test Studio chapter manager and atomic saves
+        shell: powershell
+        run: .\scripts\ci\studio_bridge_chapter_manager_test.ps1
+
+      - name: Test print PDF, EPUB, EAN-13, and EPUBCheck
+        shell: powershell
+        run: .\scripts\ci\publication_typesetting_test.ps1
+
+      - name: Protect existing Studio typography and page defaults
+        shell: powershell
+        run: .\scripts\ci\studio_typography_baseline_test.ps1
+
+      - name: Test structured DOCX round trip
+        shell: powershell
+        run: .\scripts\ci\studio_bridge_docx_roundtrip_test.ps1
+
+      - name: Test local intake status
+        shell: powershell
+        run: .\scripts\ci\local_intake_status_test.ps1
+
+      - name: Validate agent fixtures
+        shell: powershell
+        run: .\scripts\ci\fixture_agent_runner.ps1

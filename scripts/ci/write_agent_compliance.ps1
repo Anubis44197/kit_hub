@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$ProjectRoot = (Get-Location).Path,
   [Parameter(Mandatory = $true)]
   [ValidateSet("intake","propose","design-big","design-small","create","polish","rewrite","export")]
@@ -92,7 +92,8 @@ function Normalize-List {
       if ($clean) { $out += $clean }
     }
   }
-  return @($out | Select-Object -Unique)
+  $out = @($out | Select-Object -Unique)
+  return ,([string[]]$out)
 }
 
 $RequiredAgents = Normalize-List -Values $RequiredAgents

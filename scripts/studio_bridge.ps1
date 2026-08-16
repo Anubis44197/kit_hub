@@ -1,9 +1,17 @@
-param(
+﻿param(
   [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
-  [int]$Port = 8765
+  [int]$Port = 8765,
+  [string]$SessionToken = "",
+  [string]$ProviderSettingsPath = ""
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $SessionToken.Trim()) {
+  $tokenBytes = New-Object byte[] 32
+  [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($tokenBytes)
+  $SessionToken = [Convert]::ToBase64String($tokenBytes)
+}
+$script:SessionToken = $SessionToken
 
 function Resolve-ExistingDirectory {
   param([string]$Path)
@@ -45,6 +53,62 @@ function Write-Utf8Json {
     New-Item -ItemType Directory -Path $dir | Out-Null
   }
   [System.IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 20), [System.Text.UTF8Encoding]::new($true))
+}
+
+function Write-Utf8TextAtomic {
+  param([string]$Path, [string]$Text)
+  $directory = Split-Path -Parent $Path
+  if (-not (Test-Path -LiteralPath $directory -PathType Container)) {
+    New-Item -ItemType Directory -Path $directory | Out-Null
+  }
+  $leaf = Split-Path -Leaf $Path
+  $temporaryPath = Join-Path $directory (".{0}.{1}.tmp" -f $leaf, [guid]::NewGuid().ToString("N"))
+  $backupPath = Join-Path $directory (".{0}.{1}.bak" -f $leaf, [guid]::NewGuid().ToString("N"))
+  try {
+    [System.IO.File]::WriteAllText($temporaryPath, $Text, [System.Text.UTF8Encoding]::new($true))
+    if (Test-Path -LiteralPath $Path -PathType Leaf) {
+      [System.IO.File]::Replace($temporaryPath, $Path, $backupPath, $true)
+      Remove-Item -LiteralPath $backupPath -Force -ErrorAction SilentlyContinue
+    }
+    else {
+      Move-Item -LiteralPath $temporaryPath -Destination $Path
+    }
+  }
+  finally {
+    foreach ($cleanupPath in @($temporaryPath, $backupPath)) {
+      if (Test-Path -LiteralPath $cleanupPath -PathType Leaf) {
+        Remove-Item -LiteralPath $cleanupPath -Force -ErrorAction SilentlyContinue
+      }
+    }
+  }
+}
+
+function Write-BytesAtomic {
+  param([string]$Path, [byte[]]$Bytes)
+  $directory = Split-Path -Parent $Path
+  if (-not (Test-Path -LiteralPath $directory -PathType Container)) {
+    New-Item -ItemType Directory -Path $directory | Out-Null
+  }
+  $leaf = Split-Path -Leaf $Path
+  $temporaryPath = Join-Path $directory (".{0}.{1}.tmp" -f $leaf, [guid]::NewGuid().ToString("N"))
+  $backupPath = Join-Path $directory (".{0}.{1}.bak" -f $leaf, [guid]::NewGuid().ToString("N"))
+  try {
+    [IO.File]::WriteAllBytes($temporaryPath, $Bytes)
+    if (Test-Path -LiteralPath $Path -PathType Leaf) {
+      [IO.File]::Replace($temporaryPath, $Path, $backupPath, $true)
+      Remove-Item -LiteralPath $backupPath -Force -ErrorAction SilentlyContinue
+    }
+    else {
+      Move-Item -LiteralPath $temporaryPath -Destination $Path
+    }
+  }
+  finally {
+    foreach ($cleanupPath in @($temporaryPath, $backupPath)) {
+      if (Test-Path -LiteralPath $cleanupPath -PathType Leaf) {
+        Remove-Item -LiteralPath $cleanupPath -Force -ErrorAction SilentlyContinue
+      }
+    }
+  }
 }
 
 function Get-RelativeProjectPath {
@@ -159,20 +223,52 @@ function Restore-ProjectVersion {
   $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
   $versionId = [string]$Payload.versionId
   $confirmation = [string]$Payload.confirmation
-  if ($versionId -notmatch "^\d{8}-\d{6}$") { throw "Invalid versionId: $versionId" }
-  if ($confirmation.Trim().ToLowerInvariant() -notin @("geri dön", "surume don", "sürüme dön")) {
-    throw "Restore requires explicit confirmation text: geri dön"
+  if ($versionId -notmatch '^\d{8}-\d{6}$') { throw "Invalid versionId: $versionId" }
+  $confirmationNormalized = $confirmation.Trim().Normalize([System.Text.NormalizationForm]::FormC).ToLowerInvariant()
+  $validConfirmations = @(
+    ("geri d" + [char]0x00F6 + "n"),
+    "geri don",
+    ("geri d" + [char]0x00C3 + [char]0x00B6 + "n"),
+    "surume don",
+    ("s" + [char]0x00FC + "r" + [char]0x00FC + "me " + [char]0x00F6 + "n"),
+    ("s" + [char]0x00C3 + [char]0x00BC + "r" + [char]0x00C3 + [char]0x00BC + "me d" + [char]0x00C3 + [char]0x00B6 + "n")
+  )
+  if ($validConfirmations -notcontains $confirmationNormalized) {
+    $confirmationHint = "geri d" + [char]0x00F6 + "n"
+    throw "Restore requires explicit confirmation text: $confirmationHint"
   }
 
   $versionRoot = Join-Path $projectRoot "revision/_versions/$versionId"
   $manifest = Read-Utf8JsonIfExists -Path (Join-Path $versionRoot "manifest.json")
   if (-not $manifest) { throw "Version manifest not found: $versionId" }
 
-  New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Geri dönüş öncesi otomatik kayıt" -Title "Geri dönüş öncesi"
+  New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Geri dönüş öncesi otomatik kayıt" -Title "Geri dönüş öncesi" | Out-Null
 
+  $manifestPaths = @{}
   foreach ($file in @($manifest.files)) {
-    $relative = [string]$file.relativePath
-    if (-not $relative.Trim()) { continue }
+    $relative = ([string]$file.relativePath).Trim().Replace("\", "/")
+    if ($relative) { $manifestPaths[$relative.ToLowerInvariant()] = $true }
+  }
+
+  $orphanFiles = @()
+  foreach ($relativeDir in @("runtime", "design", "episode", "revision/_state")) {
+    $dir = Join-Path $projectRoot $relativeDir
+    if (-not (Test-Path -LiteralPath $dir -PathType Container)) { continue }
+    foreach ($currentFile in @(Get-ChildItem -LiteralPath $dir -File -Recurse | Where-Object {
+      $_.FullName -notmatch "\\revision\\_versions\\" -and $_.Extension -match "^\.(md|json|txt)$"
+    })) {
+      $currentRelative = (Get-RelativeProjectPath -ProjectRoot $projectRoot -Path $currentFile.FullName).ToLowerInvariant()
+      if (-not $manifestPaths.ContainsKey($currentRelative)) { $orphanFiles += $currentRelative }
+    }
+  }
+  if (@($orphanFiles).Count -gt 0) {
+    throw "Restore blocked: snapshot does not contain current project files: $($orphanFiles -join ', '). Review or remove these files explicitly, then retry."
+  }
+
+  $restoredFiles = @()
+  foreach ($file in @($manifest.files)) {
+    $relative = ([string]$file.relativePath).Trim().Replace("\", "/")
+    if (-not $relative) { continue }
     $source = Join-Path (Join-Path $versionRoot "files") ($relative -replace "/", "\")
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
     $target = Resolve-ProjectChildPath -ProjectRoot $projectRoot -RelativePath $relative
@@ -181,18 +277,22 @@ function Restore-ProjectVersion {
       New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
     }
     Copy-Item -LiteralPath $source -Destination $target -Force
+    $restoredFiles += $relative
   }
 
   return [ordered]@{
     ok = $true
     projectRoot = $projectRoot
     restoredVersion = $versionId
-    restoredFiles = @($manifest.files).Count
+    restoredFiles = @($restoredFiles).Count
+    orphanFiles = @()
     versions = Get-ProjectVersionHistory -ProjectRoot $projectRoot
   }
 }
-
 function Get-ProviderSettingsPath {
+  if ($ProviderSettingsPath.Trim()) {
+    return [System.IO.Path]::GetFullPath($ProviderSettingsPath)
+  }
   $appData = [Environment]::GetFolderPath("ApplicationData")
   if (-not $appData.Trim()) {
     $appData = Join-Path ([Environment]::GetFolderPath("UserProfile")) "AppData\Roaming"
@@ -251,7 +351,7 @@ function Set-ProviderEnvironment {
   if ($ApiKey.Trim()) {
     $env:KITHUB_API_KEY = $ApiKey
   }
-  if (-not $env:KITHUB_PROVIDER_ARGS.Trim()) {
+  if (-not ([string]$env:KITHUB_PROVIDER_ARGS).Trim()) {
     $env:KITHUB_PROVIDER_ARGS = "--project-root `"{project_root}`" --phase {phase} --run-id `"{run_id}`" --prompt-file `"{prompt_file}`""
   }
 }
@@ -307,6 +407,13 @@ function Save-ProviderSettings {
 
   $path = Get-ProviderSettingsPath
   $existing = Read-Utf8JsonIfExists -Path $path
+  $existingProvider = if ($existing) { [string]$existing.provider } else { "" }
+  $existingBaseUrl = if ($existing) { [string]$existing.baseUrl } else { "" }
+  if ($baseUrl.Trim()) {
+    try { $uri = [Uri]$baseUrl } catch { throw "Invalid API endpoint URL." }
+    if ($uri.Scheme -ne "https" -or -not $uri.Host -or $uri.UserInfo) { throw "API endpoint must be an HTTPS URL without embedded credentials." }
+  }
+  if (-not $apiKey.Trim() -and $existing -and ($existingProvider -ne $provider -or $existingBaseUrl -ne $baseUrl)) { throw "Changing provider or endpoint requires entering a new API key." }
   $protected = if ($apiKey.Trim()) { Protect-ProviderSecret -Secret $apiKey } elseif ($existing) { [string]$existing.apiKeyProtected } else { "" }
   if (-not $protected.Trim()) { throw "API key is required for API mode." }
 
@@ -398,7 +505,7 @@ function Invoke-ProviderTextRewrite {
 function Assert-LiveEditSuggestionClean {
   param([string]$Text)
   if (-not $Text.Trim()) { throw "Live edit returned empty text." }
-  $blocked = @('```', 'EP001', 'SCENE', 'Sahne 1', 'Ajan notu', 'Yayin notu', 'runtime/', 'revision/', 'episode/')
+  $blocked = @('```', 'EP001', 'SCENE', 'Sahne 1', 'Ajan notu', 'Yayın notu', 'runtime/', 'revision/', 'episode/')
   foreach ($item in $blocked) {
     if ($Text -match [regex]::Escape($item)) {
       throw "Live edit rejected: suggestion contains technical/control marker '$item'."
@@ -525,41 +632,367 @@ function Import-DocxText {
   $archive = $null
   try {
     $archive = [System.IO.Compression.ZipArchive]::new($memory, [System.IO.Compression.ZipArchiveMode]::Read)
-    $entry = $archive.GetEntry("word/document.xml")
-    if (-not $entry) {
-      throw "DOCX document body was not found."
+    $readEntryText = {
+      param([string]$Name)
+      $zipEntry = $archive.GetEntry($Name)
+      if (-not $zipEntry) { return "" }
+      $entryReader = [System.IO.StreamReader]::new($zipEntry.Open(), [System.Text.Encoding]::UTF8)
+      try { return $entryReader.ReadToEnd() } finally { $entryReader.Dispose() }
     }
-    $reader = [System.IO.StreamReader]::new($entry.Open(), [System.Text.Encoding]::UTF8)
-    try {
-      $documentXml = $reader.ReadToEnd()
-    }
-    finally {
-      $reader.Dispose()
-    }
+    $documentXml = & $readEntryText "word/document.xml"
+    if (-not $documentXml) { throw "DOCX document body was not found." }
 
     $doc = [System.Xml.XmlDocument]::new()
     $doc.PreserveWhitespace = $true
     $doc.LoadXml($documentXml)
-    $paragraphs = @()
-    foreach ($paragraphNode in @($doc.GetElementsByTagName("w:p"))) {
-      $parts = @()
-      foreach ($textNode in @($paragraphNode.GetElementsByTagName("w:t"))) {
-        if ($null -ne $textNode.InnerText) {
-          $parts += [string]$textNode.InnerText
+    $ns = [System.Xml.XmlNamespaceManager]::new($doc.NameTable)
+    $ns.AddNamespace("w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main")
+    $ns.AddNamespace("r", "http://schemas.openxmlformats.org/officeDocument/2006/relationships")
+    $ns.AddNamespace("a", "http://schemas.openxmlformats.org/drawingml/2006/main")
+    $ns.AddNamespace("wp", "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing")
+    $wUri = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    $rUri = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+    $relationshipTargets = @{}
+    $relationshipTypes = @{}
+    $relsXml = & $readEntryText "word/_rels/document.xml.rels"
+    if ($relsXml) {
+      $relsDoc = [System.Xml.XmlDocument]::new()
+      $relsDoc.LoadXml($relsXml)
+      foreach ($relationship in @($relsDoc.DocumentElement.ChildNodes)) {
+        $id = [string]$relationship.GetAttribute("Id")
+        if ($id) {
+          $relationshipTargets[$id] = [string]$relationship.GetAttribute("Target")
+          $relationshipTypes[$id] = [string]$relationship.GetAttribute("Type")
         }
       }
-      $paragraph = (($parts -join "") -replace "\s+", " ").Trim()
-      if ($paragraph) {
-        $paragraphs += $paragraph
+    }
+
+    $numberFormats = @{}
+    $numberingXml = & $readEntryText "word/numbering.xml"
+    if ($numberingXml) {
+      $numberingDoc = [System.Xml.XmlDocument]::new()
+      $numberingDoc.LoadXml($numberingXml)
+      $numberingNs = [System.Xml.XmlNamespaceManager]::new($numberingDoc.NameTable)
+      $numberingNs.AddNamespace("w", $wUri)
+      $abstractByNum = @{}
+      foreach ($numNode in @($numberingDoc.SelectNodes("//w:num", $numberingNs))) {
+        $numId = [string]$numNode.GetAttribute("numId", $wUri)
+        $abstractNode = $numNode.SelectSingleNode("./w:abstractNumId", $numberingNs)
+        if ($numId -and $abstractNode) { $abstractByNum[$numId] = [string]$abstractNode.GetAttribute("val", $wUri) }
+      }
+      foreach ($abstractNode in @($numberingDoc.SelectNodes("//w:abstractNum", $numberingNs))) {
+        $abstractId = [string]$abstractNode.GetAttribute("abstractNumId", $wUri)
+        foreach ($levelNode in @($abstractNode.SelectNodes("./w:lvl", $numberingNs))) {
+          $level = [string]$levelNode.GetAttribute("ilvl", $wUri)
+          $formatNode = $levelNode.SelectSingleNode("./w:numFmt", $numberingNs)
+          if ($formatNode) { $numberFormats["$abstractId/$level"] = [string]$formatNode.GetAttribute("val", $wUri) }
+        }
+      }
+      foreach ($numId in @($abstractByNum.Keys)) {
+        for ($level = 0; $level -le 8; $level++) {
+          $key = "$($abstractByNum[$numId])/$level"
+          if ($numberFormats.ContainsKey($key)) { $numberFormats["$numId/$level"] = $numberFormats[$key] }
+        }
       }
     }
-    $text = ($paragraphs -join "`r`n`r`n").Trim()
+
+    $projectRoot = ""
+    if ([string]$Payload.projectRoot -and ([string]$Payload.projectRoot).Trim()) {
+      $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+      if (-not (Test-Path -LiteralPath (Join-Path $projectRoot ".kithub-project.json") -PathType Leaf)) {
+        throw "DOCX media extraction requires a valid KitHub project."
+      }
+    }
+    $safeStem = [regex]::Replace([IO.Path]::GetFileNameWithoutExtension($filename), "[^\p{L}\p{Nd}._-]+", "-").Trim("-")
+    if (-not $safeStem) { $safeStem = "docx" }
+    $mediaRelativeRoot = "design/imported-media/$safeStem-$([DateTime]::UtcNow.ToString('yyyyMMddHHmmss'))"
+    $mediaAbsoluteRoot = if ($projectRoot) { Join-Path $projectRoot ($mediaRelativeRoot -replace "/", "\") } else { "" }
+    $mediaCreated = $false
+    $mediaRecords = [System.Collections.Generic.List[object]]::new()
+    $comments = [System.Collections.Generic.List[object]]::new()
+    $counts = [ordered]@{
+      paragraphs = 0
+      headings = 0
+      lists = 0
+      tables = 0
+      images = 0
+      hyperlinks = 0
+      footnotes = 0
+      comments = 0
+      page_breaks = 0
+      section_breaks = 0
+    }
+
+    $testToggle = {
+      param([System.Xml.XmlNode]$Properties, [string]$Name)
+      if (-not $Properties) { return $false }
+      $toggle = $Properties.SelectSingleNode("./w:$Name", $ns)
+      if (-not $toggle) { return $false }
+      $value = [string]$toggle.GetAttribute("val", $wUri)
+      return ($value -notin @("0", "false", "off"))
+    }
+
+    $convertRun = {
+      param([System.Xml.XmlNode]$Run)
+      $parts = [System.Collections.Generic.List[string]]::new()
+      foreach ($child in @($Run.ChildNodes)) {
+        switch ($child.LocalName) {
+          "t" { $parts.Add([string]$child.InnerText) }
+          "tab" { $parts.Add("    ") }
+          "br" {
+            $breakType = [string]$child.GetAttribute("type", $wUri)
+            if ($breakType -eq "page") {
+              $counts.page_breaks++
+              $parts.Add("`n`n<!-- page-break -->`n`n")
+            } else { $parts.Add("<br>") }
+          }
+          "cr" { $parts.Add("<br>") }
+          "noBreakHyphen" { $parts.Add("-") }
+          "softHyphen" { $parts.Add([char]0x00AD) }
+          "footnoteReference" {
+            $footnoteId = [string]$child.GetAttribute("id", $wUri)
+            if ($footnoteId -and $footnoteId -notin @("-1", "0")) { $parts.Add("[^$footnoteId]") }
+          }
+          "drawing" {
+            $blip = $child.SelectSingleNode(".//a:blip", $ns)
+            if (-not $blip) { continue }
+            $relationshipId = [string]$blip.GetAttribute("embed", $rUri)
+            $target = [string]$relationshipTargets[$relationshipId]
+            if (-not $target) { continue }
+            $targetUri = [Uri]::new([Uri]"http://kithub.local/word/document.xml", $target)
+            $entryName = $targetUri.AbsolutePath.TrimStart("/")
+            $imageEntry = $archive.GetEntry($entryName)
+            if (-not $imageEntry) { continue }
+            $docProperty = $child.SelectSingleNode(".//wp:docPr", $ns)
+            $alt = if ($docProperty) {
+              $description = [string]$docProperty.GetAttribute("descr")
+              if ($description) { $description } else { [string]$docProperty.GetAttribute("name") }
+            } else { "DOCX görseli" }
+            $fileName = [IO.Path]::GetFileName($entryName)
+            $safeFileName = [regex]::Replace($fileName, "[^\p{L}\p{Nd}._-]+", "-")
+            if (-not $safeFileName) { $safeFileName = "image-$($counts.images + 1).bin" }
+            $relativePath = "$mediaRelativeRoot/$safeFileName"
+            $extracted = $false
+            if ($mediaAbsoluteRoot) {
+              if (-not $mediaCreated) {
+                New-Item -ItemType Directory -Path $mediaAbsoluteRoot -Force | Out-Null
+                $mediaCreated = $true
+              }
+              $destination = Join-Path $mediaAbsoluteRoot $safeFileName
+              $suffix = 1
+              while (Test-Path -LiteralPath $destination -PathType Leaf) {
+                $destination = Join-Path $mediaAbsoluteRoot ("{0}-{1}{2}" -f [IO.Path]::GetFileNameWithoutExtension($safeFileName), $suffix, [IO.Path]::GetExtension($safeFileName))
+                $suffix++
+              }
+              $safeFileName = [IO.Path]::GetFileName($destination)
+              $relativePath = "$mediaRelativeRoot/$safeFileName"
+              $tempDestination = "$destination.importing"
+              $sourceStream = $imageEntry.Open()
+              $destinationStream = [IO.File]::Create($tempDestination)
+              try { $sourceStream.CopyTo($destinationStream) }
+              finally { $destinationStream.Dispose(); $sourceStream.Dispose() }
+              Move-Item -LiteralPath $tempDestination -Destination $destination
+              $extracted = $true
+            }
+            $counts.images++
+            $mediaRecords.Add([ordered]@{
+              relationship_id = $relationshipId
+              source_entry = $entryName
+              relative_path = $relativePath
+              alt = $alt
+              extracted = $extracted
+              bytes = $imageEntry.Length
+            })
+            $imageUrl = if ($extracted) { "../$relativePath" } else { "docx-media://$safeFileName" }
+            $parts.Add("![$alt]($imageUrl)")
+          }
+        }
+      }
+      $value = $parts -join ""
+      if (-not $value) { return "" }
+      $properties = $Run.SelectSingleNode("./w:rPr", $ns)
+      if (& $testToggle $properties "b") { $value = "**$value**" }
+      if (& $testToggle $properties "i") { $value = "_${value}_" }
+      if (& $testToggle $properties "u") { $value = "<u>$value</u>" }
+      if ((& $testToggle $properties "strike") -or (& $testToggle $properties "dstrike")) { $value = "~~$value~~" }
+      return $value
+    }
+
+    $convertParagraph = {
+      param([System.Xml.XmlNode]$Paragraph)
+      $counts.paragraphs++
+      $parts = [System.Collections.Generic.List[string]]::new()
+      foreach ($child in @($Paragraph.ChildNodes)) {
+        if ($child.LocalName -eq "r") {
+          $parts.Add([string](& $convertRun $child))
+          continue
+        }
+        if ($child.LocalName -eq "hyperlink") {
+          $linkText = (@($child.SelectNodes(".//w:r", $ns)) | ForEach-Object { [string](& $convertRun $_) }) -join ""
+          $relationshipId = [string]$child.GetAttribute("id", $rUri)
+          $anchor = [string]$child.GetAttribute("anchor", $wUri)
+          $target = if ($relationshipId) { [string]$relationshipTargets[$relationshipId] } elseif ($anchor) { "#$anchor" } else { "" }
+          if ($target -and $linkText) {
+            $counts.hyperlinks++
+            $parts.Add("[$linkText]($target)")
+          } else { $parts.Add($linkText) }
+          continue
+        }
+        if ($child.LocalName -in @("smartTag", "sdt", "ins", "customXml", "fldSimple")) {
+          foreach ($run in @($child.SelectNodes(".//w:r", $ns))) { $parts.Add([string](& $convertRun $run)) }
+        }
+      }
+      $value = ($parts -join "").Trim()
+      $properties = $Paragraph.SelectSingleNode("./w:pPr", $ns)
+      if ($properties -and $properties.SelectSingleNode("./w:pageBreakBefore", $ns)) {
+        $counts.page_breaks++
+        $value = "<!-- page-break -->`n`n$value"
+      }
+      $styleNode = if ($properties) { $properties.SelectSingleNode("./w:pStyle", $ns) } else { $null }
+      $styleId = if ($styleNode) { [string]$styleNode.GetAttribute("val", $wUri) } else { "" }
+      $headingLevel = 0
+      if ($styleId -match "(?i)^Heading[ _-]?([1-6])$") { $headingLevel = [int]$Matches[1] }
+      elseif ($styleId -match "(?i)^Ba.?l.k[ _-]?([1-6])$") { $headingLevel = [int]$Matches[1] }
+      elseif ($styleId -match "(?i)^(Title|KitHubChapterTitle)$") { $headingLevel = 1 }
+      if ($headingLevel -gt 0) {
+        $counts.headings++
+        return ("#" * $headingLevel) + " " + $value
+      }
+      $numberProperties = if ($properties) { $properties.SelectSingleNode("./w:numPr", $ns) } else { $null }
+      if ($numberProperties) {
+        $numIdNode = $numberProperties.SelectSingleNode("./w:numId", $ns)
+        $levelNode = $numberProperties.SelectSingleNode("./w:ilvl", $ns)
+        $numId = if ($numIdNode) { [string]$numIdNode.GetAttribute("val", $wUri) } else { "0" }
+        $level = if ($levelNode) { [int]$levelNode.GetAttribute("val", $wUri) } else { 0 }
+        $format = [string]$numberFormats["$numId/$level"]
+        $marker = if ($format -eq "bullet") { "- " } else { "1. " }
+        $counts.lists++
+        return ("  " * $level) + $marker + $value
+      }
+      if ($styleId -match "(?i)Quote|Al.nt.") { return "> $value" }
+      return $value
+    }
+
+    $blocks = [System.Collections.Generic.List[string]]::new()
+    $body = $doc.SelectSingleNode("/w:document/w:body", $ns)
+    foreach ($bodyNode in @($body.ChildNodes)) {
+      if ($bodyNode.LocalName -eq "p") {
+        $paragraph = [string](& $convertParagraph $bodyNode)
+        if ($paragraph.Trim()) { $blocks.Add($paragraph) }
+        continue
+      }
+      if ($bodyNode.LocalName -eq "tbl") {
+        $rows = [System.Collections.Generic.List[object]]::new()
+        foreach ($rowNode in @($bodyNode.SelectNodes("./w:tr", $ns))) {
+          $cells = [System.Collections.Generic.List[string]]::new()
+          foreach ($cellNode in @($rowNode.SelectNodes("./w:tc", $ns))) {
+            $cellParts = @($cellNode.SelectNodes(".//w:p", $ns) | ForEach-Object { [string](& $convertParagraph $_) } | Where-Object { $_.Trim() })
+            $cellText = (($cellParts -join "<br>") -replace "\|", "\|")
+            $cells.Add($cellText)
+          }
+          if ($cells.Count) { $rows.Add(@($cells)) }
+        }
+        if ($rows.Count) {
+          $columnCount = @($rows | ForEach-Object { $_.Count } | Measure-Object -Maximum).Maximum
+          $tableLines = [System.Collections.Generic.List[string]]::new()
+          $header = @($rows[0])
+          while ($header.Count -lt $columnCount) { $header += "" }
+          $tableLines.Add("| " + ($header -join " | ") + " |")
+          $tableLines.Add("| " + ((1..$columnCount | ForEach-Object { "---" }) -join " | ") + " |")
+          foreach ($row in @($rows | Select-Object -Skip 1)) {
+            $values = @($row)
+            while ($values.Count -lt $columnCount) { $values += "" }
+            $tableLines.Add("| " + ($values -join " | ") + " |")
+          }
+          $blocks.Add($tableLines -join "`n")
+          $counts.tables++
+        }
+        continue
+      }
+      if ($bodyNode.LocalName -eq "sectPr") {
+        $counts.section_breaks++
+        $blocks.Add("<!-- section-break -->")
+      }
+    }
+
+    $footnotesXml = & $readEntryText "word/footnotes.xml"
+    if ($footnotesXml) {
+      $footnotesDoc = [System.Xml.XmlDocument]::new()
+      $footnotesDoc.LoadXml($footnotesXml)
+      $footnotesNs = [System.Xml.XmlNamespaceManager]::new($footnotesDoc.NameTable)
+      $footnotesNs.AddNamespace("w", $wUri)
+      foreach ($footnoteNode in @($footnotesDoc.SelectNodes("//w:footnote", $footnotesNs))) {
+        $footnoteId = [string]$footnoteNode.GetAttribute("id", $wUri)
+        if (-not $footnoteId -or $footnoteId -in @("-1", "0")) { continue }
+        $footnoteText = (@($footnoteNode.SelectNodes(".//w:t", $footnotesNs)) | ForEach-Object { $_.InnerText }) -join ""
+        if ($footnoteText.Trim()) {
+          $blocks.Add("[^$footnoteId]: $($footnoteText.Trim())")
+          $counts.footnotes++
+        }
+      }
+    }
+
+    $commentsXml = & $readEntryText "word/comments.xml"
+    if ($commentsXml) {
+      $commentsDoc = [System.Xml.XmlDocument]::new()
+      $commentsDoc.LoadXml($commentsXml)
+      $commentsNs = [System.Xml.XmlNamespaceManager]::new($commentsDoc.NameTable)
+      $commentsNs.AddNamespace("w", $wUri)
+      foreach ($commentNode in @($commentsDoc.SelectNodes("//w:comment", $commentsNs))) {
+        $commentText = (@($commentNode.SelectNodes(".//w:t", $commentsNs)) | ForEach-Object { $_.InnerText }) -join ""
+        $comments.Add([ordered]@{
+          id = [string]$commentNode.GetAttribute("id", $wUri)
+          author = [string]$commentNode.GetAttribute("author", $wUri)
+          date = [string]$commentNode.GetAttribute("date", $wUri)
+          text = $commentText.Trim()
+        })
+      }
+      $counts.comments = $comments.Count
+    }
+
+    $warnings = [System.Collections.Generic.List[string]]::new()
+    if ($counts.images -gt 0 -and -not $projectRoot) {
+      $warnings.Add("Görseller referans olarak korundu; dosyaları çıkarmak için gerçek bir KitHub projesi bağlayın.")
+    }
+    $headerCount = @($archive.Entries | Where-Object { $_.FullName -match "^word/header\d+\.xml$" }).Count
+    $footerCount = @($archive.Entries | Where-Object { $_.FullName -match "^word/footer\d+\.xml$" }).Count
+    if ($headerCount -or $footerCount) {
+      $warnings.Add("Üstbilgi/altbilgi metne eklenmedi; kaynak belge yapısı raporda kaydedildi.")
+    }
+    $text = ($blocks -join "`r`n`r`n").Trim()
     return [ordered]@{
       ok = $true
       filename = $filename
       text = $text
-      paragraphs = @($paragraphs).Count
+      paragraphs = [int]$counts.paragraphs
       words = Get-WordCount -Text $text
+      media = [object[]]$mediaRecords
+      comments = [object[]]$comments
+      importReport = [ordered]@{
+        schema_version = "1.0.0"
+        mode = "ooxml-structured"
+        preserved = [ordered]@{
+          headings = $true
+          bold = $true
+          italic = $true
+          underline = $true
+          strike = $true
+          lists = $true
+          tables = $true
+          hyperlinks = $true
+          page_breaks = $true
+          section_breaks = $true
+          footnotes = $true
+          comments_metadata = $true
+          images = ($counts.images -eq 0 -or [bool]$projectRoot)
+        }
+        counts = $counts
+        headers = $headerCount
+        footers = $footerCount
+        media_root = if (@($mediaRecords | Where-Object { $_.extracted }).Count -gt 0) { $mediaRelativeRoot } else { "" }
+        warnings = [object[]]$warnings
+      }
     }
   }
   finally {
@@ -594,14 +1027,17 @@ function Test-Approved {
 function Get-BookRequestChecklist {
   param([string]$Text)
   $checks = @(
-    [ordered]@{ key = "writing_type"; label = "Tür"; ok = ($Text -match "(?im)^\s*-\s*T.{0,2}r\s*:") },
-    [ordered]@{ key = "target_pages"; label = "Hedef sayfa"; ok = ($Text -match "(?im)^\s*-\s*Hedef sayfa\s*:") },
-    [ordered]@{ key = "premise"; label = "Konu"; ok = ($Text -match "(?im)^\s*-\s*Konu\s*:") },
-    [ordered]@{ key = "characters"; label = "Karakterler"; ok = ($Text -match "(?im)^\s*-\s*Karakter") },
-    [ordered]@{ key = "setting"; label = "Dönem ve mekân"; ok = ($Text -match "(?im)^\s*-\s*D.{0,2}nem") },
-    [ordered]@{ key = "narration"; label = "Anlatıcı"; ok = ($Text -match "(?im)^\s*-\s*Anlat") },
-    [ordered]@{ key = "ending"; label = "Final"; ok = ($Text -match "(?im)^\s*-\s*Final") },
-    [ordered]@{ key = "boundaries"; label = "Sınırlar"; ok = ($Text -match "(?im)^\s*-\s*S.{0,2}n.{0,2}r") }
+    [ordered]@{ key = "writing_type"; label = "Tür"; ok = ($Text -match "(?im)^\s*-\s*T.{0,2}r\s*:[ \t]*\S") },
+    [ordered]@{ key = "target_pages"; label = "Hedef sayfa"; ok = ($Text -match "(?im)^\s*-\s*Hedef sayfa\s*:[ \t]*\S") },
+    [ordered]@{ key = "target_reader"; label = "Hedef okur"; ok = ($Text -match "(?im)^\s*-\s*Hedef okur\s*:[ \t]*\S") },
+    [ordered]@{ key = "premise"; label = "Konu"; ok = ($Text -match "(?im)^\s*-\s*Konu\s*:[ \t]*\S") },
+    [ordered]@{ key = "characters"; label = "Karakterler"; ok = ($Text -match "(?im)^\s*-\s*Karakter[^\r\n]*:[ \t]*\S") },
+    [ordered]@{ key = "setting"; label = "Dönem ve mekân"; ok = ($Text -match "(?im)^\s*-\s*D.{0,2}nem[^\r\n]*:[ \t]*\S") },
+    [ordered]@{ key = "narration"; label = "Anlatıcı"; ok = ($Text -match "(?im)^\s*-\s*Anlat[^\r\n]*:[ \t]*\S") },
+    [ordered]@{ key = "ending"; label = "Final"; ok = ($Text -match "(?im)^\s*-\s*Final[^\r\n]*:[ \t]*\S") },
+    [ordered]@{ key = "style_tone"; label = "Üslup"; ok = ($Text -match "(?im)^\s*-\s*[ÜU]slup\s*:[ \t]*\S") },
+    [ordered]@{ key = "boundaries"; label = "Sınırlar"; ok = ($Text -match "(?im)^\s*-\s*S.{0,2}n.{0,2}r[^\r\n]*:[ \t]*\S") },
+    [ordered]@{ key = "publication_package"; label = "Yayın paketi"; ok = ($Text -match "(?im)^\s*-\s*Yay.{0,2}n paketi\s*:[ \t]*\S") }
   )
   $missing = @($checks | Where-Object { $_.ok -ne $true } | ForEach-Object { $_.label })
   return [ordered]@{
@@ -643,7 +1079,9 @@ function Get-QualityAudit {
 
   $hasDocx = @($Exports | Where-Object { $_.kind -eq "DOCX" }).Count -gt 0
   $reportText = (@($Reports) | ForEach-Object { ([string]$_.name + "`n" + [string]$_.text).ToLowerInvariant() }) -join "`n"
-  $hasTdk = $reportText -match "tdk|turkish|diacritics|yaz"
+  $hasTdk = $reportText -match "(?i)\btdk\b|dictionary|turkish|diacritics"
+  $tdkSkipped = $reportText -match "(?i)status\s*[:=]\s*skipped|provider unavailable|provider bulunamad"
+  $tdkDetail = if (-not $hasTdk) { "TDK/dictionary report bekleniyor" } elseif ($tdkSkipped) { "TDK sağlayıcısı yok; rapor skipped" } else { "TDK/dictionary denetimi kanıtı bulundu" }
   $hasContinuity = $reportText -match "continuity|tutarl|character|plot|ledger"
   $hasTypography = $reportText -match "typography|layout|docx|dizgi|mizanpaj"
 
@@ -652,7 +1090,7 @@ function Get-QualityAudit {
     [ordered]@{ key = "chapters"; label = "Bölüm doluluğu"; ok = ($chapterCount -gt 0 -and $emptyChapters -eq 0); detail = "$chapterCount bölüm, $emptyChapters boş" },
     [ordered]@{ key = "length"; label = "Uzunluk hedefi"; ok = ($targetPages -eq 0 -or $lengthRatio -ge 0.85); detail = "$estimatedPages / $targetPages tahmini sayfa" },
     [ordered]@{ key = "continuity"; label = "Tutarlılık raporu"; ok = $hasContinuity; detail = "karakter/olay kanıtı" },
-    [ordered]@{ key = "language"; label = "Türkçe/TDK raporu"; ok = $hasTdk; detail = "dil denetimi kanıtı" },
+    [ordered]@{ key = "language"; label = "Türkçe/TDK raporu"; ok = ($hasTdk -and -not $tdkSkipped); detail = $tdkDetail },
     [ordered]@{ key = "layout"; label = "Dizgi/DOCX raporu"; ok = ($hasTypography -or $hasDocx); detail = "mizanpaj/export kanıtı" },
     [ordered]@{ key = "export"; label = "Final DOCX"; ok = $hasDocx; detail = if ($hasDocx) { "DOCX bulundu" } else { "DOCX bekleniyor" } }
   )
@@ -817,14 +1255,14 @@ function Get-AgentFlowSummary {
 
   $phaseOrder = @("intake", "propose", "design-big", "design-small", "create", "polish", "rewrite", "export")
   $phaseLabels = @{
-    "intake" = "Baslangic"
-    "propose" = "Oneri"
-    "design-big" = "Buyuk Plan"
-    "design-small" = "Bolum Plani"
-    "create" = "Yazim"
-    "polish" = "Editor"
+    "intake" = "Başlangıç"
+    "propose" = "Öneri"
+    "design-big" = "Büyük Plan"
+    "design-small" = "Bölüm Planı"
+    "create" = "Yazım"
+    "polish" = "Editör"
     "rewrite" = "Revizyon"
-    "export" = "Yayin"
+    "export" = "Yayın"
   }
   $contractsDir = Join-Path $RepoRoot "runtime/phase-contracts"
   $complianceDir = Join-Path $ProjectRoot "runtime/agent-compliance"
@@ -884,7 +1322,7 @@ function Get-AgentFlowSummary {
         state = $state
         progress = if ($state -eq "done") { 100 } elseif ($state -eq "review") { 50 } else { 0 }
         status = if ($rawStatus) { $rawStatus } else { "waiting" }
-        text = if ($state -eq "done") { "Sozlesmeye uygun kanit var." } elseif ($state -eq "blocked") { "Ajan ciktisi gecersiz veya bloke." } elseif ($state -eq "review") { "Faz kullanici veya duzeltme bekliyor." } else { "Bu faz henuz tamamlanmadi." }
+        text = if ($state -eq "done") { "Sözleşmeye uygun kanıt var." } elseif ($state -eq "blocked") { "Ajan çıktısı geçersiz veya bloke." } elseif ($state -eq "review") { "Faz kullanıcı veya düzeltme bekliyor." } else { "Bu faz henüz tamamlanmadı." }
         evidence = if ($manifest) { @([ordered]@{ name = "$phase.json"; relativePath = "runtime/agent-compliance/$phase.json"; bytes = 0 }) } else { @() }
         notes = if ($manifestNotesByAgent.ContainsKey($agentKey)) { $manifestNotesByAgent[$agentKey] } else { "" }
       }
@@ -912,6 +1350,293 @@ function Get-AgentFlowSummary {
   }
 }
 
+function Get-ProfessionalStatePath {
+  param([string]$ProjectRoot)
+  return Join-Path $ProjectRoot "revision/_state/studio-professional.json"
+}
+
+function New-ProfessionalState {
+  return [ordered]@{
+    schema_version = "1.0.0"
+    updated_at = (Get-Date).ToString("o")
+    comments = [object[]]@()
+    changes = [object[]]@()
+    collaboration = [ordered]@{
+      current_role = "author"
+      current_name = "Yazar"
+      members = [object[]]@()
+    }
+    writing = [ordered]@{
+      daily_goal_words = 1000
+      project_goal_words = 80000
+      deadline = ""
+      sessions = [object[]]@()
+    }
+    publication = [ordered]@{
+      profile = "kdp"
+      isbn = ""
+      imprint = ""
+      language = "tr-TR"
+      cover_asset = $null
+    }
+  }
+}
+
+function Get-ProfessionalState {
+  param([string]$ProjectRoot)
+  $state = Read-Utf8JsonIfExists -Path (Get-ProfessionalStatePath -ProjectRoot $ProjectRoot)
+  if (-not $state) { return New-ProfessionalState }
+  if (-not $state.comments) { $state | Add-Member -NotePropertyName comments -NotePropertyValue @() -Force }
+  if (-not $state.changes) { $state | Add-Member -NotePropertyName changes -NotePropertyValue @() -Force }
+  if (-not $state.collaboration) { $state | Add-Member -NotePropertyName collaboration -NotePropertyValue ([pscustomobject]@{ current_role = "author"; current_name = "Yazar"; members = @() }) -Force }
+  if (-not $state.writing) { $state | Add-Member -NotePropertyName writing -NotePropertyValue ([pscustomobject]@{ daily_goal_words = 1000; project_goal_words = 80000; deadline = ""; sessions = @() }) -Force }
+  if (-not $state.publication) { $state | Add-Member -NotePropertyName publication -NotePropertyValue ([pscustomobject]@{ profile = "kdp"; isbn = ""; imprint = ""; language = "tr-TR"; cover_asset = $null }) -Force }
+  return $state
+}
+
+function Get-SafeRecordId {
+  param([string]$Value, [string]$Prefix = "item")
+  $safe = [regex]::Replace($Value.ToLowerInvariant(), '[^a-z0-9._-]+', '-').Trim('-')
+  if (-not $safe) { $safe = "$Prefix-$([guid]::NewGuid().ToString('N').Substring(0,8))" }
+  if ($safe.Length -gt 80) { $safe = $safe.Substring(0,80) }
+  return $safe
+}
+
+function Save-ProfessionalState {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $incoming = $Payload.state
+  if (-not $incoming) { throw "Professional state is required." }
+
+  $comments = @()
+  foreach ($item in @($incoming.comments | Select-Object -First 500)) {
+    $text = ([string]$item.text).Trim()
+    if (-not $text -or $text.Length -gt 4000) { throw "Comment text must be 1-4000 characters." }
+    $quote = [string]$item.quote
+    if ($quote.Length -gt 2000) { throw "Comment quote is too long." }
+    $comments += [ordered]@{
+      id = Get-SafeRecordId -Value ([string]$item.id) -Prefix "comment"
+      chapter = ([string]$item.chapter).Trim()
+      quote = $quote
+      text = $text
+      author = ([string]$item.author).Trim()
+      role = if ([string]$item.role -in @("author","editor","reviewer","admin")) { [string]$item.role } else { "author" }
+      status = if ([string]$item.status -eq "resolved") { "resolved" } else { "open" }
+      created_at = if ([string]$item.created_at) { [string]$item.created_at } else { (Get-Date).ToString("o") }
+      replies = [object[]]@(@($item.replies | Select-Object -First 100 | ForEach-Object {
+        $replyText = ([string]$_.text).Trim()
+        if ($replyText.Length -gt 2000) { throw "Comment reply is too long." }
+        [ordered]@{ id = Get-SafeRecordId -Value ([string]$_.id) -Prefix "reply"; text = $replyText; author = ([string]$_.author).Trim(); role = ([string]$_.role).Trim(); created_at = if ([string]$_.created_at) { [string]$_.created_at } else { (Get-Date).ToString("o") } }
+      }))
+    }
+  }
+
+  $changes = @()
+  foreach ($item in @($incoming.changes | Select-Object -First 500)) {
+    $original = [string]$item.original
+    $replacement = [string]$item.replacement
+    if (-not $original.Trim() -or $original.Length -gt 12000 -or $replacement.Length -gt 12000) { throw "Tracked change text is invalid." }
+    $changes += [ordered]@{
+      id = Get-SafeRecordId -Value ([string]$item.id) -Prefix "change"
+      chapter = ([string]$item.chapter).Trim()
+      original = $original
+      replacement = $replacement
+      author = ([string]$item.author).Trim()
+      role = if ([string]$item.role -in @("author","editor","reviewer","admin")) { [string]$item.role } else { "editor" }
+      status = if ([string]$item.status -in @("accepted","rejected")) { [string]$item.status } else { "pending" }
+      created_at = if ([string]$item.created_at) { [string]$item.created_at } else { (Get-Date).ToString("o") }
+    }
+  }
+
+  $members = @()
+  foreach ($member in @($incoming.collaboration.members | Select-Object -First 50)) {
+    $name = ([string]$member.name).Trim()
+    if (-not $name -or $name.Length -gt 120) { throw "Collaborator name must be 1-120 characters." }
+    $members += [ordered]@{
+      id = Get-SafeRecordId -Value ([string]$member.id) -Prefix "member"
+      name = $name
+      role = if ([string]$member.role -in @("author","editor","reviewer","admin")) { [string]$member.role } else { "reviewer" }
+    }
+  }
+
+  $sessions = @()
+  foreach ($session in @($incoming.writing.sessions | Select-Object -Last 500)) {
+    $sessions += [ordered]@{
+      id = Get-SafeRecordId -Value ([string]$session.id) -Prefix "session"
+      started_at = [string]$session.started_at
+      ended_at = [string]$session.ended_at
+      start_words = [Math]::Max(0, [int]$session.start_words)
+      end_words = [Math]::Max(0, [int]$session.end_words)
+      chapter = ([string]$session.chapter).Trim()
+    }
+  }
+
+  $profile = [string]$incoming.publication.profile
+  if ($profile -notin @("kdp","ingram","custom")) { $profile = "kdp" }
+  $isbn = ([string]$incoming.publication.isbn -replace '[^0-9]', '')
+  if ($isbn -and $isbn.Length -ne 13) { throw "ISBN must contain 13 digits." }
+  $coverAsset = $incoming.publication.cover_asset
+  $state = [ordered]@{
+    schema_version = "1.0.0"
+    updated_at = (Get-Date).ToString("o")
+    comments = [object[]]$comments
+    changes = [object[]]$changes
+    collaboration = [ordered]@{
+      current_role = if ([string]$incoming.collaboration.current_role -in @("author","editor","reviewer","admin")) { [string]$incoming.collaboration.current_role } else { "author" }
+      current_name = ([string]$incoming.collaboration.current_name).Trim().Substring(0, [Math]::Min(120, ([string]$incoming.collaboration.current_name).Trim().Length))
+      members = [object[]]$members
+    }
+    writing = [ordered]@{
+      daily_goal_words = [Math]::Min(100000, [Math]::Max(0, [int]$incoming.writing.daily_goal_words))
+      project_goal_words = [Math]::Min(10000000, [Math]::Max(0, [int]$incoming.writing.project_goal_words))
+      deadline = ([string]$incoming.writing.deadline).Trim()
+      sessions = [object[]]$sessions
+    }
+    publication = [ordered]@{
+      profile = $profile
+      isbn = $isbn
+      imprint = ([string]$incoming.publication.imprint).Trim()
+      language = if ([string]$incoming.publication.language) { ([string]$incoming.publication.language).Trim() } else { "tr-TR" }
+      cover_asset = $coverAsset
+    }
+  }
+  Write-Utf8TextAtomic -Path (Get-ProfessionalStatePath -ProjectRoot $projectRoot) -Text ($state | ConvertTo-Json -Depth 20)
+  return [ordered]@{ ok = $true; state = $state; relativePath = "revision/_state/studio-professional.json" }
+}
+
+function Merge-EntityRecord {
+  param([object]$Existing, [hashtable]$Fields)
+  $record = [ordered]@{}
+  if ($Existing) {
+    foreach ($property in $Existing.PSObject.Properties) { $record[$property.Name] = $property.Value }
+  }
+  foreach ($key in $Fields.Keys) { $record[$key] = $Fields[$key] }
+  return $record
+}
+
+function Manage-ProjectEntity {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $kind = ([string]$Payload.kind).Trim().ToLowerInvariant()
+  $action = ([string]$Payload.action).Trim().ToLowerInvariant()
+  if ($kind -notin @("characters","locations","plot","research")) { throw "Unsupported entity kind." }
+  if ($action -notin @("create","update","delete")) { throw "Unsupported entity action." }
+  $rawId = [string]$Payload.id
+  if ($kind -eq "research" -and $rawId.Replace("\","/").StartsWith("design/", [StringComparison]::OrdinalIgnoreCase) -and $action -ne "create") {
+    throw "Design documents are read-only in the research registry."
+  }
+  $id = Get-SafeRecordId -Value $rawId -Prefix $kind.TrimEnd("s")
+  $label = ([string]$Payload.label).Trim()
+  if ($action -ne "delete" -and (-not $label -or $label.Length -gt 180)) { throw "Entity label must be 1-180 characters." }
+  $detail = ([string]$Payload.detail).Trim()
+  if ($detail.Length -gt 4000) { throw "Entity detail is too long." }
+  $stateDir = Join-Path $projectRoot "revision/_state"
+
+  if ($kind -eq "characters") {
+    $path = Join-Path $stateDir "character-state.json"
+    $stored = Read-Utf8JsonIfExists -Path $path
+    $items = @($stored.characters)
+    $existing = @($items | Where-Object { [string]$_.id -eq $id } | Select-Object -First 1)
+    if ($action -eq "delete") { $items = @($items | Where-Object { [string]$_.id -ne $id }) }
+    else {
+      $record = Merge-EntityRecord -Existing ($existing | Select-Object -First 1) -Fields @{ id = $id; name = $label; role = ([string]$Payload.role).Trim(); goal = ([string]$Payload.goal).Trim(); conflict = ([string]$Payload.conflict).Trim(); arc_position = $detail; notes = ([string]$Payload.notes).Trim() }
+      $items = @($items | Where-Object { [string]$_.id -ne $id }) + @($record)
+    }
+    $next = [ordered]@{ schema_version = "1.0.0"; updated_at = (Get-Date).ToString("o"); characters = [object[]]$items }
+    Write-Utf8TextAtomic -Path $path -Text ($next | ConvertTo-Json -Depth 20)
+  }
+  elseif ($kind -eq "locations") {
+    $path = Join-Path $stateDir "world-state.json"
+    $stored = Read-Utf8JsonIfExists -Path $path
+    $items = @($stored.locations)
+    $existing = @($items | Where-Object { [string]$_.id -eq $id } | Select-Object -First 1)
+    if ($action -eq "delete") { $items = @($items | Where-Object { [string]$_.id -ne $id }) }
+    else {
+      $record = Merge-EntityRecord -Existing ($existing | Select-Object -First 1) -Fields @{ id = $id; name = $label; introduced_in = $detail; description = ([string]$Payload.notes).Trim() }
+      $items = @($items | Where-Object { [string]$_.id -ne $id }) + @($record)
+    }
+    $next = [ordered]@{ schema_version = "1.0.0"; updated_at = (Get-Date).ToString("o"); locations = [object[]]$items }
+    Write-Utf8TextAtomic -Path $path -Text ($next | ConvertTo-Json -Depth 20)
+  }
+  elseif ($kind -eq "plot") {
+    $path = Join-Path $stateDir "plot-ledger.json"
+    $stored = Read-Utf8JsonIfExists -Path $path
+    $open = @($stored.open_threads | ForEach-Object { [string]$_ })
+    $closed = @($stored.closed_threads | ForEach-Object { [string]$_ })
+    $original = ([string]$Payload.originalLabel).Trim()
+    if ($original) { $open = @($open | Where-Object { $_ -ne $original }); $closed = @($closed | Where-Object { $_ -ne $original }) }
+    if ($action -ne "delete") {
+      if ([string]$Payload.status -eq "closed") { $closed += $label } else { $open += $label }
+    }
+    $next = [ordered]@{ schema_version = "1.0.0"; updated_at = (Get-Date).ToString("o"); open_threads = [string[]]@($open | Select-Object -Unique); closed_threads = [string[]]@($closed | Select-Object -Unique); cause_effect_chain = [object[]]@($stored.cause_effect_chain) }
+    Write-Utf8TextAtomic -Path $path -Text ($next | ConvertTo-Json -Depth 20)
+  }
+  else {
+    $path = Join-Path $stateDir "research-state.json"
+    $stored = Read-Utf8JsonIfExists -Path $path
+    $items = @($stored.items)
+    if ($action -eq "delete") { $items = @($items | Where-Object { [string]$_.id -ne $id }) }
+    else {
+      $record = [ordered]@{ id = $id; title = $label; source = $detail; notes = ([string]$Payload.notes).Trim(); status = if ([string]$Payload.status -eq "verified") { "verified" } else { "draft" } }
+      $items = @($items | Where-Object { [string]$_.id -ne $id }) + @($record)
+    }
+    $next = [ordered]@{ schema_version = "1.0.0"; updated_at = (Get-Date).ToString("o"); items = [object[]]$items }
+    Write-Utf8TextAtomic -Path $path -Text ($next | ConvertTo-Json -Depth 20)
+  }
+  $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Varlık yönetimi: $kind/$action" -Title $label
+  return [ordered]@{ ok = $true; kind = $kind; action = $action; id = $id; version = $snapshot }
+}
+
+function Save-CoverAsset {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $filename = [IO.Path]::GetFileName([string]$Payload.filename)
+  $extension = [IO.Path]::GetExtension($filename).ToLowerInvariant()
+  if ($extension -notin @(".png",".jpg",".jpeg")) { throw "Cover image must be PNG or JPEG." }
+  $bytes = [Convert]::FromBase64String([string]$Payload.contentBase64)
+  if ($bytes.Length -lt 100 -or $bytes.Length -gt 15728640) { throw "Cover image must be between 100 bytes and 15 MB." }
+  try {
+    Add-Type -AssemblyName System.Drawing
+    $memory = [IO.MemoryStream]::new($bytes, $false)
+    try {
+      $image = [Drawing.Image]::FromStream($memory, $true, $true)
+      try { $widthPx = $image.Width; $heightPx = $image.Height }
+      finally { $image.Dispose() }
+    }
+    finally { $memory.Dispose() }
+  }
+  catch { throw "Cover image bytes are not a valid PNG or JPEG." }
+  if ($widthPx -lt 1 -or $heightPx -lt 1) { throw "Cover image dimensions are invalid." }
+  $designDir = Join-Path $projectRoot "design"
+  if (-not (Test-Path -LiteralPath $designDir -PathType Container)) { New-Item -ItemType Directory -Path $designDir -Force | Out-Null }
+  $target = Join-Path $designDir ("cover-source" + $extension)
+  Write-BytesAtomic -Path $target -Bytes $bytes
+  $state = Get-ProfessionalState -ProjectRoot $projectRoot
+  $asset = [ordered]@{
+    relative_path = Get-RelativeProjectPath -ProjectRoot $projectRoot -Path $target
+    filename = $filename
+    mime = if ($extension -eq ".png") { "image/png" } else { "image/jpeg" }
+    bytes = $bytes.Length
+    width_px = $widthPx
+    height_px = $heightPx
+    uploaded_at = (Get-Date).ToString("o")
+  }
+  $state.publication.cover_asset = $asset
+  Save-ProfessionalState -Payload ([pscustomobject]@{ projectRoot = $projectRoot; state = $state }) | Out-Null
+  return [ordered]@{ ok = $true; asset = $asset }
+}
+
+function Read-CoverAsset {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $state = Get-ProfessionalState -ProjectRoot $projectRoot
+  $asset = $state.publication.cover_asset
+  if (-not $asset -or -not [string]$asset.relative_path) { return [ordered]@{ ok = $true; asset = $null; contentBase64 = "" } }
+  $path = Resolve-ProjectChildPath -ProjectRoot $projectRoot -RelativePath ([string]$asset.relative_path)
+  if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return [ordered]@{ ok = $true; asset = $asset; contentBase64 = "" } }
+  return [ordered]@{ ok = $true; asset = $asset; contentBase64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($path)) }
+}
+
 function Get-ProjectSummary {
   param([object]$Payload)
 
@@ -923,12 +1648,22 @@ function Get-ProjectSummary {
   $complianceDir = Join-Path $projectRoot "runtime/agent-compliance"
   $workspaceDir = Join-Path $projectRoot "revision/_workspace"
 
-  $chapters = @()
+$chapters = @()
+  $chapterPlan = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "chapter-plan.json")
+  $planByFilename = @{}
+  if ($null -ne $chapterPlan -and $chapterPlan.PSObject.Properties.Name -contains "chapters") {
+    foreach ($entry in @($chapterPlan.chapters)) {
+      $key = ([string]$entry.filename).Trim()
+      if (-not $key) { $key = ([string]$entry.id).Trim() }
+      if ($key) { $planByFilename[$key.ToLowerInvariant()] = $entry }
+    }
+  }
   if (Test-Path -LiteralPath $episodeDir -PathType Container) {
-    foreach ($file in @(Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File | Sort-Object Name)) {
+    foreach ($file in @(Get-OrderedChapterFiles -ProjectRoot $projectRoot)) {
       $text = Read-Utf8TextIfExists -Path $file.FullName
       $number = [regex]::Match($file.BaseName, "\d+").Value
       $chapterNo = if ($number) { [int]$number } else { $chapters.Count + 1 }
+      $planned = $planByFilename[[string]$file.Name.ToLowerInvariant()]
       $chapters += [ordered]@{
         id = "Bölüm $chapterNo"
         title = Get-ReaderTitle -Text $text -Fallback $file.BaseName
@@ -936,6 +1671,7 @@ function Get-ProjectSummary {
         relativePath = "episode/$($file.Name)"
         words = Get-WordCount -Text $text
         text = $text
+        plan = if ($planned) { $planned } else { $null }
       }
     }
   }
@@ -943,7 +1679,7 @@ function Get-ProjectSummary {
   $exports = @()
   if (Test-Path -LiteralPath $exportDir -PathType Container) {
     foreach ($file in @(Get-ChildItem -LiteralPath $exportDir -File | Sort-Object LastWriteTime -Descending)) {
-      if ($file.Extension -match "^\.(docx|pdf|zip|md|json)$") {
+      if ($file.Extension -match "^\.(docx|pdf|epub|zip|md|json)$") {
         $exports += [ordered]@{
           name = $file.Name
           kind = $file.Extension.TrimStart(".").ToUpperInvariant()
@@ -1005,22 +1741,67 @@ function Get-ProjectSummary {
   $revisionProposals = Read-Utf8JsonIfExists -Path (Join-Path $workspaceDir "revision-proposals.json")
   $revisionDraftLock = Read-Utf8JsonIfExists -Path (Join-Path $workspaceDir "draft-v1-lock.json")
   $revisionApproval = Read-Utf8JsonIfExists -Path (Join-Path $approvalDir "revision-proposals-approval.json")
+  $characterState = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "character-state.json")
+  $worldState = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "world-state.json")
+  $plotLedger = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "plot-ledger.json")
+  $researchState = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "research-state.json")
+  $characterEntities = @($characterState.characters | ForEach-Object {
+    [ordered]@{ id = [string]$_.id; label = [string]$_.name; detail = [string]$_.arc_position; status = "character"; role = [string]$_.role; goal = [string]$_.goal; conflict = [string]$_.conflict; notes = [string]$_.notes }
+  })
+  $locationEntities = @($worldState.locations | ForEach-Object {
+    [ordered]@{ id = [string]$_.id; label = [string]$_.name; detail = [string]$_.introduced_in; status = "location"; notes = [string]$_.description }
+  })
+  $plotEntities = @()
+  foreach ($thread in @($plotLedger.open_threads)) {
+    $plotEntities += [ordered]@{ id = "open-$($plotEntities.Count + 1)"; label = [string]$thread; detail = "Açık olay örgüsü"; status = "open" }
+  }
+  foreach ($thread in @($plotLedger.closed_threads)) {
+    $plotEntities += [ordered]@{ id = "closed-$($plotEntities.Count + 1)"; label = [string]$thread; detail = "Kapanmış olay örgüsü"; status = "closed" }
+  }
+  $researchEntities = @($designDocs | ForEach-Object {
+    [ordered]@{ id = [string]$_.relativePath; label = [string]$_.name; detail = [string]$_.relativePath; status = "document"; readonly = $true }
+  })
+  $researchEntities += @($researchState.items | Where-Object { ([string]$_.id).Trim() -or ([string]$_.title).Trim() } | ForEach-Object {
+    [ordered]@{ id = [string]$_.id; label = [string]$_.title; detail = [string]$_.source; status = if ([string]$_.status) { [string]$_.status } else { "draft" }; notes = [string]$_.notes }
+  })
+
+  $runnerConfigPath = Join-Path $ProjectRoot "runtime/runner-config.json"
+  $runnerConfig = Read-Utf8JsonIfExists -Path $runnerConfigPath
+  $executionSource = "project"
+  if (-not $runnerConfig) {
+    $runnerConfig = Read-Utf8JsonIfExists -Path (Join-Path $RepoRoot "runtime/runner-config.json")
+    $executionSource = "repository-default"
+  }
+  $execution = [ordered]@{
+    mode = if ($runnerConfig) { [string]$runnerConfig.execution_mode } else { "unknown" }
+    claimMode = if ($runnerConfig -and $runnerConfig.quality_flags) { [string]$runnerConfig.quality_flags.execution_claim_mode } else { "unknown" }
+    criticalClaimsRequired = if ($runnerConfig -and $runnerConfig.quality_flags) { [bool]$runnerConfig.quality_flags.require_executed_claims_for_critical_phases } else { $false }
+    source = $executionSource
+  }
 
   return [ordered]@{
     ok = $true
     projectRoot = $projectRoot
+    execution = $execution
     name = Split-Path -Leaf $projectRoot
     bookRequest = Read-Utf8TextIfExists -Path (Join-Path $projectRoot "runtime/book-request.md")
     bookRequestChecklist = Get-BookRequestChecklist -Text (Read-Utf8TextIfExists -Path (Join-Path $projectRoot "runtime/book-request.md"))
     bookPlan = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "book-plan.json")
     longformPlan = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "longform-plan.json")
     layoutPlan = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "layout-plan.json")
+    professional = Get-ProfessionalState -ProjectRoot $projectRoot
     chapters = [object[]]@($chapters)
     exports = [object[]]@($exports)
     approvals = $approvals
     evidence = [object[]]@($evidence)
     designDocs = [object[]]@($designDocs)
     reports = [object[]]@($reports)
+    entities = [ordered]@{
+      characters = [object[]]@($characterEntities)
+      locations = [object[]]@($locationEntities)
+      plot = [object[]]@($plotEntities)
+      research = [object[]]@($researchEntities)
+    }
     versions = Get-ProjectVersionHistory -ProjectRoot $projectRoot
     revision = [ordered]@{
       draftLock = $revisionDraftLock
@@ -1115,9 +1896,432 @@ function Save-BookRequest {
     throw "Book request text is empty."
   }
   $checklist = Get-BookRequestChecklist -Text $text
+  if ($checklist.complete -ne $true) { throw "Book request is incomplete: $($checklist.missing -join ", ")" }
+  $pagesMatch = [regex]::Match($text, "(?im)^\s*-\s*Hedef sayfa\s*:\s*(\d+)")
+  if (-not $pagesMatch.Success -or [int]$pagesMatch.Groups[1].Value -lt 1 -or [int]$pagesMatch.Groups[1].Value -gt 10000) { throw "Target pages must be an integer between 1 and 10000." }
+  $charactersMatch = [regex]::Match($text, "(?im)^\s*-\s*Karakter[^\r\n]*:\s*(.+?)\s*$")
+  if (-not $charactersMatch.Success -or -not $charactersMatch.Groups[1].Value.Trim()) { throw "Characters must include at least one name or a character policy." }
+  if ($charactersMatch.Groups[1].Value.Length -gt 4000) { throw "Characters must be 4000 characters or fewer." }
   [System.IO.File]::WriteAllText((Join-Path $runtimeDir "book-request.md"), $text, [System.Text.UTF8Encoding]::new($true))
   $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Kitap isteği kaydedildi" -Title "Kitap isteği"
   return [ordered]@{ ok = $true; relativePath = "runtime/book-request.md"; characters = $text.Length; words = Get-WordCount -Text $text; checklist = $checklist; version = $snapshot }
+}
+
+function Get-PageNotesPath {
+  param([string]$ProjectRoot, [string]$ChapterKey)
+  $notesDir = Join-Path $ProjectRoot "runtime/page-notes"
+  if (-not (Test-Path -LiteralPath $notesDir -PathType Container)) { New-Item -ItemType Directory -Path $notesDir -Force | Out-Null }
+  $safe = [regex]::Replace($ChapterKey, '[^A-Za-z0-9._-]+', '_').Trim('_')
+  if (-not $safe) { $safe = 'draft' }
+  if ($safe.Length -gt 80) { $safe = $safe.Substring(0,80) }
+  return Join-Path $notesDir "$safe.json"
+}
+function Read-PageNotes {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $path = Get-PageNotesPath -ProjectRoot $projectRoot -ChapterKey ([string]$Payload.chapterKey)
+  $stored = Read-Utf8JsonIfExists -Path $path
+  return [ordered]@{ ok = $true; chapterKey = [string]$Payload.chapterKey; notes = if ($stored -and $stored.notes) { @($stored.notes) } else { @() } }
+}
+function Save-PageNotes {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $chapterKey = [string]$Payload.chapterKey
+  if (-not $chapterKey.Trim()) { throw 'chapterKey is required.' }
+  $notes = @($Payload.notes | Select-Object -First 80)
+  foreach ($note in $notes) { if ([string]$note.note -and ([string]$note.note).Length -gt 4000) { throw 'Page note is too long.' } }
+  $path = Get-PageNotesPath -ProjectRoot $projectRoot -ChapterKey $chapterKey
+  Write-Utf8Json -Path $path -Value ([ordered]@{ schema_version = '1.0.0'; chapterKey = $chapterKey; updatedAt = (Get-Date).ToString('o'); notes = $notes })
+  return [ordered]@{ ok = $true; relativePath = (Get-RelativeProjectPath -ProjectRoot $projectRoot -Path $path); count = $notes.Count }
+}
+function Get-ProjectDiagnostics {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $checks = @()
+  foreach ($relative in @('.kithub-project.json','runtime/runner-config.json','runtime/agent-registry.json','runtime/agent-status-contract.json','runtime/project-status.json')) {
+    $full = Join-Path $projectRoot $relative
+    $checks += [ordered]@{ path = $relative; exists = (Test-Path -LiteralPath $full -PathType Leaf) }
+  }
+  $pointer = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot 'runtime/current-run.json')
+  $report = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot 'runtime/run-integrity-report.json')
+  $issues = @($checks | Where-Object { -not $_.exists } | ForEach-Object { "Missing: $($_.path)" })
+  if ($report -and [string]$report.verdict -eq 'BLOCKED') { $issues += 'Run integrity is blocked.' }
+  return [ordered]@{ ok = ($issues.Count -eq 0); projectRoot = $projectRoot; bridge = 'online'; checks = $checks; currentRun = $pointer; integrity = $report; issues = $issues }
+}
+
+function Get-RestorePreview {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $versionId = [string]$Payload.versionId
+  if ($versionId -notmatch '^\d{8}-\d{6}$') { throw "Invalid versionId: $versionId" }
+  $versionRoot = Join-Path $projectRoot "revision/_versions/$versionId"
+  $manifest = Read-Utf8JsonIfExists -Path (Join-Path $versionRoot 'manifest.json')
+  if (-not $manifest) { throw "Version manifest not found: $versionId" }
+  $manifestPaths = @{}
+  foreach ($file in @($manifest.files)) { $relative = ([string]$file.relativePath).Trim().Replace('\','/'); if ($relative) { $manifestPaths[$relative.ToLowerInvariant()] = $true } }
+  $orphans = @()
+  foreach ($relativeDir in @('runtime','design','episode','revision/_state')) {
+    $dir = Join-Path $projectRoot $relativeDir
+    if (-not (Test-Path -LiteralPath $dir -PathType Container)) { continue }
+    foreach ($currentFile in @(Get-ChildItem -LiteralPath $dir -File -Recurse | Where-Object { $_.FullName -notmatch '\\revision\\_versions\\' -and $_.Extension -match '^\.(md|json|txt)$' })) {
+      $relative = (Get-RelativeProjectPath -ProjectRoot $projectRoot -Path $currentFile.FullName).ToLowerInvariant()
+      if (-not $manifestPaths.ContainsKey($relative)) { $orphans += $relative }
+    }
+  }
+  $missing = @($manifest.files | Where-Object { -not (Test-Path -LiteralPath (Join-Path (Join-Path $versionRoot 'files') (([string]$_.relativePath) -replace '/','\')) -PathType Leaf) } | ForEach-Object { [string]$_.relativePath })
+  return [ordered]@{ ok = $true; canRestore = (@($orphans).Count -eq 0 -and @($missing).Count -eq 0); versionId = $versionId; orphanFiles = @($orphans); missingFiles = @($missing); restoredFileCount = @($manifest.files).Count }
+}
+
+function Get-VersionFiles {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $versionId = [string]$Payload.versionId
+  if ($versionId -notmatch '^\d{8}-\d{6}$') { throw "Invalid versionId: $versionId" }
+  $versionRoot = Join-Path $projectRoot "revision/_versions/$versionId"
+  $manifest = Read-Utf8JsonIfExists -Path (Join-Path $versionRoot 'manifest.json')
+  if (-not $manifest) { throw "Version manifest not found: $versionId" }
+  $filesRoot = Join-Path $versionRoot 'files'
+  $maxPerFile = 250000
+  $files = @()
+  foreach ($entry in @($manifest.files)) {
+    $relative = ([string]$entry.relativePath).Trim().Replace('/','\')
+    if (-not $relative) { continue }
+    $snapshotPath = Join-Path $filesRoot $relative
+    $snapshotText = ""
+    $truncated = $false
+    if (Test-Path -LiteralPath $snapshotPath -PathType Leaf) {
+      $snapshotText = Read-Utf8TextIfExists -Path $snapshotPath
+      if ($snapshotText.Length -gt $maxPerFile) {
+        $snapshotText = $snapshotText.Substring(0, $maxPerFile)
+        $truncated = $true
+      }
+    }
+    $currentPath = Join-Path $projectRoot $relative
+    $currentExists = Test-Path -LiteralPath $currentPath -PathType Leaf
+    $currentWords = 0
+    $currentContent = ""
+    $currentTruncated = $false
+    if ($currentExists) {
+      $currentText = Read-Utf8TextIfExists -Path $currentPath
+      if ($currentText.Length -gt $maxPerFile) {
+        $currentContent = $currentText.Substring(0, $maxPerFile)
+        $currentTruncated = $true
+      }
+      else {
+        $currentContent = $currentText
+      }
+      $currentWords = if ([System.IO.Path]::GetExtension($relative) -in @('.md','.txt')) { Get-WordCount -Text $currentText } else { 0 }
+    }
+    $files += [ordered]@{
+      relativePath = ($relative -replace '\\','/')
+      words = [int]$entry.words
+      content = $snapshotText
+      truncated = $truncated
+      currentExists = $currentExists
+      currentWords = $currentWords
+      currentContent = $currentContent
+      currentTruncated = $currentTruncated
+    }
+  }
+  return [ordered]@{
+    ok = $true
+    versionId = $versionId
+    title = [string]$manifest.title
+    reason = [string]$manifest.reason
+    created_at = [string]$manifest.created_at
+    words = [int]$manifest.words
+    files = [object[]]@($files)
+  }
+}
+function New-ProjectBackup {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $backupRoot = [string]$Payload.backupRoot
+  if (-not $backupRoot.Trim()) {
+    $backupRoot = Join-Path (Split-Path -Parent $projectRoot) "kit-hub-backups"
+  }
+  if (-not (Test-Path -LiteralPath $backupRoot -PathType Container)) {
+    New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
+  }
+  $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+  $zipPath = Join-Path $backupRoot "kit-hub-backup-$stamp.zip"
+  if (Test-Path -LiteralPath $zipPath -PathType Leaf) {
+    Remove-Item -LiteralPath $zipPath -Force
+  }
+  Compress-Archive -Path (Join-Path $projectRoot '*') -DestinationPath $zipPath -CompressionLevel Optimal
+  if (-not (Test-Path -LiteralPath $zipPath -PathType Leaf)) {
+    throw "Backup archive was not created."
+  }
+  $size = (Get-Item -LiteralPath $zipPath).Length
+  $sizeText = if ($size -gt 1MB) { "{0:N1} MB" -f ($size / 1MB) } else { "{0:N0} KB" -f ($size / 1KB) }
+  return [ordered]@{
+    ok = $true
+    backupPath = (Resolve-Path -LiteralPath $zipPath).Path
+    backupRoot = (Resolve-Path -LiteralPath $backupRoot).Path
+    created_at = (Get-Date).ToString("o")
+    sizeBytes = [long]$size
+    sizeText = $sizeText
+  }
+}
+
+function Get-ChapterOrder {
+  param([string]$ProjectRoot)
+  $episodeDir = Join-Path $ProjectRoot "episode"
+  $existing = if (Test-Path -LiteralPath $episodeDir -PathType Container) {
+    @(Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File | ForEach-Object { $_.Name })
+  }
+  else { @() }
+  $manifest = Read-Utf8JsonIfExists -Path (Join-Path $ProjectRoot "revision/_state/chapter-order.json")
+  $ordered = @()
+  foreach ($name in @($manifest.items)) {
+    if ($name -in $existing -and $name -notin $ordered) { $ordered += [string]$name }
+  }
+  foreach ($name in @($existing | Sort-Object)) {
+    if ($name -notin $ordered) { $ordered += [string]$name }
+  }
+  return [string[]]$ordered
+}
+
+function Save-ChapterOrder {
+  param([string]$ProjectRoot, [string[]]$Items)
+  $path = Join-Path $ProjectRoot "revision/_state/chapter-order.json"
+  $payload = [ordered]@{
+    schema_version = "1.0.0"
+    updatedAt = (Get-Date).ToString("o")
+    items = [string[]]@($Items)
+  }
+  Write-Utf8TextAtomic -Path $path -Text ($payload | ConvertTo-Json -Depth 5)
+}
+
+function Get-OrderedChapterFiles {
+  param([string]$ProjectRoot)
+  $episodeDir = Join-Path $ProjectRoot "episode"
+  if (-not (Test-Path -LiteralPath $episodeDir -PathType Container)) { return @() }
+  $byName = @{}
+  foreach ($file in @(Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File)) {
+    $byName[$file.Name.ToLowerInvariant()] = $file
+  }
+  $result = @()
+  foreach ($name in @(Get-ChapterOrder -ProjectRoot $ProjectRoot)) {
+    $key = $name.ToLowerInvariant()
+    if ($byName.ContainsKey($key)) { $result += $byName[$key] }
+  }
+  return [object[]]$result
+}
+
+function Get-NextEpisodeFilename {
+  param([string]$EpisodeDir)
+  $maximum = 0
+  foreach ($file in @(Get-ChildItem -LiteralPath $EpisodeDir -Filter "ep*.md" -File -ErrorAction SilentlyContinue)) {
+    $number = [regex]::Match($file.BaseName, "\d+").Value
+    if ($number) { $maximum = [Math]::Max($maximum, [int]$number) }
+  }
+  return ("ep{0:D3}.md" -f ($maximum + 1))
+}
+
+function Get-ChapterTitleText {
+  param([string]$Title)
+  $clean = ($Title -replace "[\r\n]+", " ").Trim()
+  if (-not $clean) { throw "Chapter title is required." }
+  if ($clean.Length -gt 140) { throw "Chapter title is too long." }
+  return $clean
+}
+
+function Set-ChapterHeading {
+  param([string]$Text, [string]$Title)
+  $heading = [regex]::Match($Text, "(?m)^#\s+.*$")
+  if ($heading.Success) {
+    return $Text.Substring(0, $heading.Index) + "# $Title" + $Text.Substring($heading.Index + $heading.Length)
+  }
+  $separator = [Environment]::NewLine + [Environment]::NewLine
+  if ($Text.Trim()) { return "# $Title" + $separator + $Text }
+  return "# $Title" + $separator
+}
+
+function Manage-Chapter {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $episodeDir = Join-Path $projectRoot "episode"
+  if (-not (Test-Path -LiteralPath $episodeDir -PathType Container)) {
+    New-Item -ItemType Directory -Path $episodeDir | Out-Null
+  }
+  $action = ([string]$Payload.action).Trim().ToLowerInvariant()
+  $order = [System.Collections.Generic.List[string]]::new()
+  foreach ($name in @(Get-ChapterOrder -ProjectRoot $projectRoot)) { $order.Add($name) }
+  $filename = [string]$Payload.filename
+  if ($filename -and $filename -notmatch "^ep\d+\.md$") { throw "Invalid episode filename: $filename" }
+  $path = if ($filename) { Join-Path $episodeDir $filename } else { "" }
+  $selectedFilename = $filename
+  $trashRelativePath = ""
+  $snapshot = $null
+  $separator = [Environment]::NewLine + [Environment]::NewLine
+
+  switch ($action) {
+    "create" {
+      $title = Get-ChapterTitleText -Title ([string]$Payload.title)
+      $filename = Get-NextEpisodeFilename -EpisodeDir $episodeDir
+      $path = Join-Path $episodeDir $filename
+      Write-Utf8TextAtomic -Path $path -Text ("# $title" + $separator)
+      $order.Add($filename)
+      $selectedFilename = $filename
+    }
+    "rename" {
+      if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Episode not found: $filename" }
+      $title = Get-ChapterTitleText -Title ([string]$Payload.title)
+      $text = Read-Utf8TextIfExists -Path $path
+      Write-Utf8TextAtomic -Path $path -Text (Set-ChapterHeading -Text $text -Title $title)
+    }
+    "duplicate" {
+      if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Episode not found: $filename" }
+      $title = Get-ChapterTitleText -Title ([string]$Payload.title)
+      $newFilename = Get-NextEpisodeFilename -EpisodeDir $episodeDir
+      $newPath = Join-Path $episodeDir $newFilename
+      $text = Set-ChapterHeading -Text (Read-Utf8TextIfExists -Path $path) -Title $title
+      Write-Utf8TextAtomic -Path $newPath -Text $text
+      $sourceIndex = $order.IndexOf($filename)
+      if ($sourceIndex -ge 0) { $order.Insert($sourceIndex + 1, $newFilename) } else { $order.Add($newFilename) }
+      $filename = $newFilename
+      $selectedFilename = $newFilename
+    }
+    "delete" {
+      if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Episode not found: $filename" }
+      $sourceIndex = $order.IndexOf($filename)
+      $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Bölüm silinmeden önce" -Title $filename
+      $trashDir = Join-Path $projectRoot "revision/_trash/chapters"
+      if (-not (Test-Path -LiteralPath $trashDir -PathType Container)) { New-Item -ItemType Directory -Path $trashDir -Force | Out-Null }
+      $trashName = "{0}-{1}" -f (Get-Date -Format "yyyyMMdd-HHmmssfff"), $filename
+      $trashPath = Join-Path $trashDir $trashName
+      Move-Item -LiteralPath $path -Destination $trashPath
+      [void]$order.Remove($filename)
+      $trashRelativePath = Get-RelativeProjectPath -ProjectRoot $projectRoot -Path $trashPath
+      if ($order.Count) {
+        $nextIndex = [Math]::Min([Math]::Max(0, $sourceIndex), $order.Count - 1)
+        $selectedFilename = $order[$nextIndex]
+      }
+      else { $selectedFilename = "" }
+    }
+"reorder" {
+      $requested = @($Payload.order | ForEach-Object { [string]$_ })
+      $existing = @(Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File | ForEach-Object { $_.Name })
+      if ($requested.Count -ne $existing.Count -or @($requested | Where-Object { $_ -notin $existing }).Count -gt 0 -or @($requested | Select-Object -Unique).Count -ne $requested.Count) {
+        throw "Chapter order must contain every episode exactly once."
+      }
+      $order.Clear()
+      foreach ($name in $requested) { $order.Add($name) }
+    }
+    "archive" {
+      if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Episode not found: $filename" }
+      $sourceIndex = $order.IndexOf($filename)
+      $archiveDir = Join-Path $projectRoot "revision/_archive/chapters"
+      if (-not (Test-Path -LiteralPath $archiveDir -PathType Container)) { New-Item -ItemType Directory -Path $archiveDir -Force | Out-Null }
+      $archivePath = Join-Path $archiveDir $filename
+      Move-Item -LiteralPath $path -Destination $archivePath -Force
+      [void]$order.Remove($filename)
+      $trashRelativePath = Get-RelativeProjectPath -ProjectRoot $projectRoot -Path $archivePath
+      if ($order.Count) {
+        $nextIndex = [Math]::Min([Math]::Max(0, $sourceIndex), $order.Count - 1)
+        $selectedFilename = $order[$nextIndex]
+      }
+      else { $selectedFilename = "" }
+    }
+    "restore" {
+      if (-not $filename) { throw "Episode filename is required for restore." }
+      $archiveDir = Join-Path $projectRoot "revision/_archive/chapters"
+      $archivePath = Join-Path $archiveDir $filename
+      if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf)) { throw "Archived episode not found: $filename" }
+      Move-Item -LiteralPath $archivePath -Destination $path -Force
+      $order.Add($filename)
+      $selectedFilename = $filename
+    }
+    default { throw "Unsupported chapter action: $action" }
+  }
+
+  Save-ChapterOrder -ProjectRoot $projectRoot -Items $order.ToArray()
+  if (-not $snapshot) {
+    $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Bölüm yönetimi: $action" -Title $filename
+  }
+  return [ordered]@{
+    ok = $true
+    action = $action
+    filename = $filename
+    selectedFilename = $selectedFilename
+    order = [string[]]$order.ToArray()
+    trashRelativePath = $trashRelativePath
+    version = $snapshot
+  }
+}
+
+function Get-ChapterPlans {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $stateDir = Join-Path $projectRoot "revision/_state"
+  $plans = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "chapter-plan.json")
+  $byFilename = @{}
+  foreach ($entry in @($plans.chapters)) {
+    $key = ([string]$entry.filename).Trim()
+    if (-not $key) { $key = ([string]$entry.id).Trim() }
+    if ($key) { $byFilename[$key.ToLowerInvariant()] = $entry }
+  }
+  return [ordered]@{
+    ok = $true
+    chapters = [object[]]@($byFilename.Values)
+    byFilename = [ordered]@{} + $byFilename
+  }
+}
+
+function Save-ChapterPlan {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $stateDir = Join-Path $projectRoot "revision/_state"
+  $planPath = Join-Path $stateDir "chapter-plan.json"
+  $stored = Read-Utf8JsonIfExists -Path $planPath
+  $items = [System.Collections.Generic.List[object]]::new()
+  foreach ($entry in @($stored.chapters)) { $items.Add($entry) }
+
+  $filename = [string]$Payload.filename
+  if ($filename -notmatch "^ep\d+\.md$") { throw "Invalid episode filename: $filename" }
+  $id = [string]$Payload.id
+  if (-not $id) { $id = $filename -replace "\.md$", "" }
+
+  $allowedStatus = @("idea","draft","editing","completed","ready")
+  $status = [string]$Payload.status
+  if ($status -and $status -notin $allowedStatus) { throw "Unsupported chapter status: $status" }
+
+  function Limit-Text([string]$Value, [int]$Max) {
+    if ([string]::IsNullOrEmpty($Value)) { return "" }
+    return $Value.Trim().Substring(0, [Math]::Min($Value.Trim().Length, $Max))
+  }
+  $record = [ordered]@{
+    id = Get-SafeRecordId -Value $id -Prefix "chapter"
+    filename = $filename
+    status = if ($status) { $status } else { "idea" }
+    summary = Limit-Text ([string]$Payload.summary) 2000
+    pov = Limit-Text ([string]$Payload.pov) 200
+    date = Limit-Text ([string]$Payload.date) 80
+    setting = Limit-Text ([string]$Payload.setting) 200
+    target_words = [int]$Payload.target_words
+    scene_goal = Limit-Text ([string]$Payload.scene_goal) 1000
+    conflict = Limit-Text ([string]$Payload.conflict) 1000
+    outcome = Limit-Text ([string]$Payload.outcome) 1000
+    updated_at = (Get-Date).ToString("o")
+  }
+
+  $foundIndex = -1
+  for ($i = 0; $i -lt $items.Count; $i++) {
+    $existing = $items[$i]
+    $existingKey = ([string]$existing.filename).Trim()
+    if (-not $existingKey) { $existingKey = ([string]$existing.id).Trim() }
+    if ($existingKey -and $existingKey.ToLowerInvariant() -eq $filename.ToLowerInvariant()) { $foundIndex = $i; break }
+  }
+  if ($foundIndex -ge 0) { $items[$foundIndex] = $record } else { $items.Add($record) }
+
+  $next = [ordered]@{
+    schema_version = "1.0.0"
+    updated_at = (Get-Date).ToString("o")
+    chapters = [object[]]$items.ToArray()
+  }
+  Write-Utf8Json -Path $planPath -Value $next
+  return [ordered]@{ ok = $true; filename = $filename; record = $record }
 }
 
 function Save-Episode {
@@ -1132,8 +2336,9 @@ function Save-Episode {
     New-Item -ItemType Directory -Path $episodeDir | Out-Null
   }
   $path = Join-Path $episodeDir $filename
-  [System.IO.File]::WriteAllText($path, [string]$Payload.text, [System.Text.UTF8Encoding]::new($true))
-  $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Bölüm kaydedildi" -Title $filename
+  Write-Utf8TextAtomic -Path $path -Text ([string]$Payload.text)
+  $createSnapshot = -not ($Payload.PSObject.Properties.Name -contains "createSnapshot") -or [bool]$Payload.createSnapshot
+  $snapshot = if ($createSnapshot) { New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Bölüm kaydedildi" -Title $filename } else { $null }
   return [ordered]@{ ok = $true; relativePath = "episode/$filename"; words = Get-WordCount -Text ([string]$Payload.text); version = $snapshot }
 }
 
@@ -1159,6 +2364,7 @@ function Save-LayoutPlan {
   $bookTemplate = if ($Payload.book_template) { [string]$Payload.book_template } else { $layoutProfile }
   $bookTemplateLabel = if ($Payload.book_template_label) { [string]$Payload.book_template_label } else { $bookTemplate }
   $pageSize = [string]$Payload.page_size
+  $pageDesign = if ($Payload.page_design) { [string]$Payload.page_design } else { "classicFrame" }
   $printMode = [string]$Payload.print_mode
   $frontMatterSelection = [string]$Payload.front_matter
   $chapterStartPolicy = if ($Payload.chapter_start_policy) { [string]$Payload.chapter_start_policy } else { "new_page" }
@@ -1175,6 +2381,90 @@ function Save-LayoutPlan {
   $headingHierarchyPolicy = if ($Payload.heading_hierarchy_policy) { [string]$Payload.heading_hierarchy_policy } else { "chapter_only" }
   $widowOrphanControl = if ($Payload.widow_orphan_control) { [string]$Payload.widow_orphan_control } else { "strict" }
   $publisherSubmissionLabel = if ($Payload.publisher_submission_label) { [string]$Payload.publisher_submission_label } else { "publisher_submission_docx" }
+  $matterPlan = $null
+  if ($Payload.matter_plan) {
+    $matterPlan = [ordered]@{ front = @(); back = @() }
+    foreach ($side in @("front", "back")) {
+      foreach ($item in @($Payload.matter_plan.$side)) {
+        $id = [string]$item.id
+        $title = [string]$item.title
+        $content = [string]$item.content
+        if (-not $id.Trim() -or $id.Length -gt 100) { throw "Invalid matter item id." }
+        if (-not $title.Trim() -or $title.Length -gt 120) { throw "Matter item title must be 1-120 characters." }
+        if ($content.Length -gt 12000) { throw "Matter item content exceeds 12000 characters." }
+        $matterPlan[$side] += [ordered]@{
+          id = $id
+          title = $title.Trim()
+          content = $content
+          print = [bool]$item.print
+          epub = [bool]$item.epub
+        }
+      }
+      if ($matterPlan[$side].Count -gt 24) { throw "Too many $side matter items; maximum is 24." }
+    }
+  }
+  $coverSpec = $null
+  if ($Payload.cover_spec) {
+    $coverTitle = [string]$Payload.cover_spec.title
+    $coverAuthor = [string]$Payload.cover_spec.author
+    $backCoverCopy = [string]$Payload.cover_spec.back_cover_copy
+    $paperType = [string]$Payload.cover_spec.paper_type
+    $pageCount = [int]$Payload.cover_spec.page_count
+    $bleedMm = [double]$Payload.cover_spec.bleed_mm
+    $barcodeMode = [string]$Payload.cover_spec.barcode_mode
+    if ($coverTitle.Length -gt 180 -or $coverAuthor.Length -gt 120 -or $backCoverCopy.Length -gt 3000) { throw "Cover text exceeds allowed length." }
+    if ($paperType -notin @("cream", "white", "color")) { throw "Unsupported cover paper_type." }
+    if ($pageCount -lt 24 -or $pageCount -gt 1200) { throw "cover page_count must be between 24 and 1200." }
+    if ($bleedMm -lt 0 -or $bleedMm -gt 10) { throw "cover bleed_mm must be between 0 and 10." }
+    if ($barcodeMode -notin @("placeholder", "ean13", "none")) { throw "Unsupported barcode_mode." }
+    $spineFactor = if ($paperType -eq "white") { 0.0572 } elseif ($paperType -eq "color") { 0.0596 } else { 0.0635 }
+    $coverSpec = [ordered]@{
+      title = $coverTitle.Trim()
+      author = $coverAuthor.Trim()
+      paper_type = $paperType
+      page_count = $pageCount
+      bleed_mm = $bleedMm
+      barcode_mode = $barcodeMode
+      back_cover_copy = $backCoverCopy.Trim()
+      spine_width_mm = [Math]::Round(($pageCount * $spineFactor), 3)
+    }
+  }
+  if ($layoutProfile -notin @("classicNovel", "modernNovel", "publisherA5", "essay", "biography", "poetry", "screenplay", "children", "academic", "article", "selfHelp")) {
+    throw "Unsupported layout_profile: $layoutProfile"
+  }
+$knownPageSizes = @(
+    "A5 (148 x 210 mm)",
+    "A4 (210 x 297 mm)",
+    "5 x 8 in (127 x 203 mm)",
+    "5.25 x 8 in (133 x 203 mm)",
+    "5.5 x 8.5 in (140 x 216 mm)",
+    "6 x 9 in (152 x 229 mm)"
+  )
+  if ($pageSize -eq "Özel ölçü..." -or $pageSize -like "Özel*") {
+    $customSize = $Payload.custom_size_mm
+    if ($null -eq $customSize -or -not ($customSize.PSObject.Properties.Name -contains "width_mm") -or -not ($customSize.PSObject.Properties.Name -contains "height_mm")) { throw "Custom page size requires custom_size_mm { width_mm, height_mm }." }
+    $customWidth = [double]$customSize.width_mm
+    $customHeight = [double]$customSize.height_mm
+    if ($customWidth -lt 80 -or $customWidth -gt 220) { throw "Custom page width must be between 80 and 220 mm." }
+    if ($customHeight -lt 100 -or $customHeight -gt 320) { throw "Custom page height must be between 100 and 320 mm." }
+    $widthMm = $customWidth
+    $heightMm = $customHeight
+    $trimSize = "Custom"
+  }
+  else {
+    if ($pageSize -notin $knownPageSizes) { throw "Unsupported page_size: $pageSize" }
+    if ($pageSize -eq "A4 (210 x 297 mm)") { $widthMm = 210; $heightMm = 297; $trimSize = "A4" }
+    elseif ($pageSize -eq "5 x 8 in (127 x 203 mm)") { $widthMm = 127; $heightMm = 203; $trimSize = "5x8" }
+    elseif ($pageSize -eq "5.25 x 8 in (133 x 203 mm)") { $widthMm = 133; $heightMm = 203; $trimSize = "5.25x8" }
+    elseif ($pageSize -eq "5.5 x 8.5 in (140 x 216 mm)") { $widthMm = 140; $heightMm = 216; $trimSize = "5.5x8.5" }
+    elseif ($pageSize -eq "6 x 9 in (152 x 229 mm)") { $widthMm = 152; $heightMm = 229; $trimSize = "6x9" }
+    else { $widthMm = 148; $heightMm = 210; $trimSize = "A5" }
+  }
+$printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_sided" }
+
+  if ($pageDesign -notin @("classicFrame", "minimalEditorial", "artDeco", "botanical")) { throw "Unsupported page_design: $pageDesign" }
+  if ($printMode -notin @("Tek taraf", "Karşılıklı sayfa")) { throw "Unsupported print_mode: $printMode" }
+  if ($frontMatterSelection -notin @("Künye + İçindekiler", "Yalnız metin")) { throw "Unsupported front_matter: $frontMatterSelection" }
   if ($font -notin @("Garamond", "Times New Roman", "Georgia", "Palatino Linotype", "Courier New")) {
     throw "Unsupported font_family: $font"
   }
@@ -1194,17 +2484,12 @@ function Save-LayoutPlan {
   if ($indent -lt 0 -or $indent -gt 1.5) { throw "paragraph_first_line_indent_cm must be between 0 and 1.5." }
   if ($after -lt 0 -or $after -gt 12) { throw "paragraph_spacing_after_pt must be between 0 and 12." }
   if ($pageNumberPosition -notin @("bottom_center", "bottom_outer", "top_outer", "none")) { throw "Unsupported page_number_position: $pageNumberPosition" }
+  if ($chapterStartPolicy -notin @("new_page", "right_page", "continuous")) { throw "Unsupported chapter_start_policy: $chapterStartPolicy" }
   if ($tocDepth -lt 0 -or $tocDepth -gt 2) { throw "toc_depth must be between 0 and 2." }
   if ($frontMatterNumbering -notin @("roman_or_unnumbered", "none", "arabic")) { throw "Unsupported front_matter_numbering: $frontMatterNumbering" }
   if ($runningHeaderPolicy -notin @("none", "book_title", "chapter_title")) { throw "Unsupported running_header_policy: $runningHeaderPolicy" }
   if ($headingHierarchyPolicy -notin @("chapter_only", "chapter_subhead", "academic")) { throw "Unsupported heading_hierarchy_policy: $headingHierarchyPolicy" }
   if ($widowOrphanControl -notin @("strict", "standard", "off")) { throw "Unsupported widow_orphan_control: $widowOrphanControl" }
-
-  $isA4 = $pageSize -match "A4"
-  $widthMm = if ($isA4) { 210 } else { 148 }
-  $heightMm = if ($isA4) { 297 } else { 210 }
-  $trimSize = if ($isA4) { "A4" } else { "A5" }
-  $printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_sided" }
 
   if (-not $layout.Contains("schema_version")) { $layout["schema_version"] = "1.0.0" }
   if (-not $layout.Contains("run_id")) { $layout["run_id"] = "studio-layout" }
@@ -1214,6 +2499,7 @@ function Save-LayoutPlan {
   $layout["book_template"] = $bookTemplate
   $layout["book_template_label"] = $bookTemplateLabel
   $layout["page_size"] = $pageSize
+  $layout["page_design"] = $pageDesign
   $layout["print_mode"] = $printMode
   $layout["print_mode_key"] = $printModeKey
   $layout["front_matter_selection"] = $frontMatterSelection
@@ -1265,6 +2551,12 @@ function Save-LayoutPlan {
     back_cover_copy = $backCoverCopyPolicy
     final_artwork = "external_publisher_or_designer_review"
   }
+  if ($matterPlan) {
+    $layout["matter_plan"] = $matterPlan
+    $layout["front_matter_pages_estimate"] = @($matterPlan.front | Where-Object { $_.print }).Count
+    $layout["back_matter_pages_estimate"] = @($matterPlan.back | Where-Object { $_.print }).Count
+  }
+  if ($coverSpec) { $layout["cover_spec"] = $coverSpec }
   $layout["studio_updated_at"] = (Get-Date).ToString("o")
 
   [System.IO.File]::WriteAllText($path, ($layout | ConvertTo-Json -Depth 20), [System.Text.UTF8Encoding]::new($true))
@@ -1281,6 +2573,7 @@ function Save-LayoutPlan {
     book_template = $bookTemplate
     book_template_label = $bookTemplateLabel
     trim_size = $trimSize
+    page_design = $pageDesign
     font_family = $font
     body_font_size_pt = $fontSize
     line_spacing = $lineSpacing
@@ -1409,12 +2702,16 @@ function Invoke-Pipeline {
   if ($validPhases -notcontains $toPhase) { throw "Invalid toPhase: $toPhase" }
   if ($validModes -notcontains $mode) { throw "Invalid mode: $mode" }
 
+  if ($mode -eq "manual" -and -not $Payload.configPath) {
+    $Payload | Add-Member -NotePropertyName configPath -NotePropertyValue "runtime/runner-config.ide-manual.template.json" -Force
+  }
+
   if ($toPhase -in @("design-big", "design-small", "create", "polish", "rewrite", "export")) {
     $bookRequestPath = Join-Path $projectRoot "runtime/book-request.md"
     $bookRequest = Read-Utf8TextIfExists -Path $bookRequestPath
     $checklist = Get-BookRequestChecklist -Text $bookRequest
     if ($checklist.complete -ne $true) {
-      throw "Studio pipeline blocked: book request is incomplete. Missing: $($checklist.missing -join ', '). Use the Baslangic Sihirbazi before running design/create/export."
+      throw "Studio pipeline blocked: book request is incomplete. Missing: $($checklist.missing -join ', '). Use the Başlangıç Sihirbazı before running design/create/export."
     }
   }
 
@@ -1488,11 +2785,29 @@ function Invoke-Pipeline {
   }
 }
 
+function Resolve-OutputDirectory {
+  param([object]$Payload, [string]$ProjectRoot)
+  $target = [string]$Payload.outputTarget
+  $requested = [string]$Payload.destinationDirectory
+  if (-not $requested.Trim()) { $requested = [string]$Payload.outputDirectory }
+  if ($target -match '(?i)^Masa') { $requested = [Environment]::GetFolderPath('Desktop') }
+  elseif ($target -match '(?i)^Belge') { $requested = [Environment]::GetFolderPath('MyDocuments') }
+  elseif ($target -match '(?i)^Se') { if (-not $requested.Trim()) { throw 'Selected folder export requires outputDirectory.' } }
+  elseif (-not $requested.Trim()) { $requested = [Environment]::GetFolderPath('Desktop') }
+  if (-not $requested.Trim()) { throw 'Export destination could not be resolved.' }
+  $resolved = [System.IO.Path]::GetFullPath($requested)
+  $projectPrefix = ([System.IO.Path]::GetFullPath($ProjectRoot)).TrimEnd('\') + '\'
+  if ($resolved.StartsWith($projectPrefix, [System.StringComparison]::OrdinalIgnoreCase)) { throw 'Export destination must be outside the project root.' }
+  if (-not (Test-Path -LiteralPath $resolved -PathType Container)) { New-Item -ItemType Directory -Path $resolved -Force | Out-Null }
+  return $resolved
+}
 function Invoke-FinalExport {
   param([object]$Payload)
 
   $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
-  $destinationDirectory = if ($Payload.destinationDirectory) { [string]$Payload.destinationDirectory } else { [Environment]::GetFolderPath("Desktop") }
+  $destinationDirectory = Resolve-OutputDirectory -Payload $Payload -ProjectRoot $projectRoot
+  $outputProfile = if ($Payload.outputProfile) { [string]$Payload.outputProfile } else { "docx" }
+  if ($outputProfile -notin @("docx", "pdf", "epub", "package")) { throw "Unsupported outputProfile: $outputProfile" }
   $exportScript = Join-Path $RepoRoot "scripts/export_final.ps1"
   if (-not (Test-Path -LiteralPath $exportScript -PathType Leaf)) {
     throw "export_final.ps1 not found under RepoRoot: $RepoRoot"
@@ -1503,6 +2818,7 @@ function Invoke-FinalExport {
     "-File", $exportScript,
     "-ProjectRoot", $projectRoot,
     "-DestinationDirectory", $destinationDirectory,
+    "-OutputProfile", $outputProfile,
     "-RequireExportApproval"
   )
 
@@ -1520,6 +2836,30 @@ function Invoke-FinalExport {
     version = $snapshot
     manifest = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot "runtime/final-export-manifest.json")
     cleanupApproval = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot "runtime/approvals/cleanup-approval.json")
+    output = (($output | Out-String).Trim())
+  }
+}
+
+function Invoke-PublicationBuild {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $preflightOnly = [bool]$Payload.preflightOnly
+  $formats = @($Payload.formats | ForEach-Object { ([string]$_).ToLowerInvariant() } | Where-Object { $_ })
+  if (-not $formats.Count -and -not $preflightOnly) { $formats = @("pdf","epub") }
+  if (@($formats | Where-Object { $_ -notin @("pdf","epub") }).Count) { throw "Unsupported publication format." }
+  $scriptPath = Join-Path $RepoRoot "scripts/build_publication_outputs.ps1"
+  if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) { throw "Publication build script is missing." }
+  $args = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$scriptPath,"-ProjectRoot",$projectRoot)
+  if ($formats.Count) { $args += @("-Formats", ($formats -join ",")) }
+  if ($preflightOnly) { $args += "-PreflightOnly" }
+  $output = & powershell @args 2>&1
+  $exit = $LASTEXITCODE
+  return [ordered]@{
+    ok = ($exit -eq 0)
+    exitCode = $exit
+    projectRoot = $projectRoot
+    report = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot "runtime/publication-build-report.json")
+    preflight = Read-Utf8JsonIfExists -Path (Join-Path $projectRoot "runtime/publication-preflight-report.json")
     output = (($output | Out-String).Trim())
   }
 }
@@ -1590,6 +2930,7 @@ function Read-HttpRequest {
   $memory = New-Object System.IO.MemoryStream
   $headerEnd = -1
   $contentLength = 0
+  $headersMap = @{}
   do {
     $read = $Stream.Read($buffer, 0, $buffer.Length)
     if ($read -le 0) { break }
@@ -1604,6 +2945,7 @@ function Read-HttpRequest {
           $contentLength = [int]$Matches[1]
         }
       }
+      foreach ($line in ($headersText -split [Environment]::NewLine)) { if ($line -match "^\s*([^:]+)\s*:\s*(.*)$") { $headersMap[$Matches[1].Trim()] = $Matches[2].Trim() } }
       if ($bytes.Length -ge ($headerEnd + 4 + $contentLength)) { break }
     }
   } while ($true)
@@ -1615,15 +2957,17 @@ function Read-HttpRequest {
   if ($requestLine -notmatch "^(GET|POST|OPTIONS)\s+([^\s]+)\s+HTTP/") {
     throw "Unsupported HTTP request line: $requestLine"
   }
+  $requestMatch = $Matches
   $body = ""
   if ($contentLength -gt 0) {
     $bodyStart = $headerEnd + 4
     $body = [System.Text.Encoding]::UTF8.GetString($allBytes, $bodyStart, $contentLength)
   }
-  $uri = [System.Uri]::new("http://127.0.0.1$($Matches[2])")
+  $uri = [System.Uri]::new("http://127.0.0.1$($requestMatch[2])")
   return [ordered]@{
-    Method = $Matches[1]
+    Method = $requestMatch[1]
     Path = $uri.AbsolutePath
+    Headers = $headersMap
     Body = $body
   }
 }
@@ -1646,17 +2990,24 @@ function Write-HttpResponse {
     "HTTP/1.1 $StatusCode $reason",
     "Content-Type: $ContentType",
     "Content-Length: $($BodyBytes.Length)",
-    "Access-Control-Allow-Origin: *",
     "Access-Control-Allow-Methods: GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers: content-type",
+    "Access-Control-Allow-Headers: content-type, x-kithub-session",
     "Connection: close",
     "",
     ""
-  ) -join "`r`n"
+  )
+  if ($script:CurrentOrigin -and @($script:AllowedOrigins) -contains $script:CurrentOrigin) { $headers = @($headers[0], "Access-Control-Allow-Origin: $script:CurrentOrigin", "Vary: Origin") + @($headers[1..($headers.Count - 1)]) }
+  $headers = $headers -join [Environment]::NewLine
   $headerBytes = [System.Text.Encoding]::ASCII.GetBytes($headers)
-  $Stream.Write($headerBytes, 0, $headerBytes.Length)
+  try {
+    $Stream.Write($headerBytes, 0, $headerBytes.Length)
+  }
+  catch { return }
   if ($BodyBytes.Length -gt 0) {
-    $Stream.Write($BodyBytes, 0, $BodyBytes.Length)
+    try {
+      $Stream.Write($BodyBytes, 0, $BodyBytes.Length)
+    }
+    catch { return }
   }
 }
 
@@ -1680,6 +3031,8 @@ function Write-FileHttpResponse {
 }
 
 $prefix = "http://127.0.0.1:$Port/"
+$script:AllowedOrigins = @("http://127.0.0.1:$Port", "http://localhost:$Port")
+$script:CurrentOrigin = ""
 $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse("127.0.0.1"), $Port)
 $listener.Start()
 
@@ -1692,12 +3045,24 @@ try {
     $client = $listener.AcceptTcpClient()
     try {
       $stream = $client.GetStream()
-      $request = Read-HttpRequest -Stream $stream
-      $method = [string]$request.Method
-      $path = ([string]$request.Path).TrimEnd("/")
-      if ($path -eq "") { $path = "/" }
-
       try {
+        $request = Read-HttpRequest -Stream $stream
+      }
+      catch {
+        Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Invalid HTTP request." }) -StatusCode 400
+        continue
+      }
+      $method = [string]$request.Method
+             $path = ([string]$request.Path).TrimEnd("/")
+       if ($path -eq "") { $path = "/" }
+       $script:CurrentOrigin = ([string]$request.Headers["Origin"]).Trim()
+
+       try {
+         if ($script:CurrentOrigin -and -not (@($script:AllowedOrigins) -contains $script:CurrentOrigin)) {
+           Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Origin is not allowed." }) -StatusCode 403
+           continue
+         }
+
         if ($method -eq "OPTIONS") {
           Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true })
           continue
@@ -1705,6 +3070,42 @@ try {
 
         if ($method -eq "GET" -and $path -eq "/") {
           Write-FileHttpResponse -Stream $stream -Path (Join-Path $RepoRoot "index.html") -ContentType "text/html; charset=utf-8"
+          continue
+        }
+
+        if ($method -eq "GET" -and $path -eq "/assets/studio-editor.js") {
+          $editorBundlePath = Join-Path $RepoRoot "assets/studio-editor.js"
+          if (Test-Path -LiteralPath $editorBundlePath -PathType Leaf) {
+            Write-FileHttpResponse -Stream $stream -Path $editorBundlePath -ContentType "text/javascript; charset=utf-8"
+          }
+          else {
+            Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Structured editor bundle is missing." }) -StatusCode 404
+          }
+          continue
+        }
+
+        if ($method -eq "GET" -and $path -eq "/assets/page-flow.js") {
+          $pageFlowBundlePath = Join-Path $RepoRoot "assets/page-flow.js"
+          if (Test-Path -LiteralPath $pageFlowBundlePath -PathType Leaf) {
+            Write-FileHttpResponse -Stream $stream -Path $pageFlowBundlePath -ContentType "text/javascript; charset=utf-8"
+          }
+          else {
+            Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Measured page-flow bundle is missing." }) -StatusCode 404
+          }
+          continue
+        }
+
+        if ($method -eq "GET" -and $path -eq "/assets/studio-professional.js") {
+          $assetPath = Join-Path $RepoRoot "assets/studio-professional.js"
+          if (Test-Path -LiteralPath $assetPath -PathType Leaf) { Write-FileHttpResponse -Stream $stream -Path $assetPath -ContentType "text/javascript; charset=utf-8" }
+          else { Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Professional Studio bundle is missing." }) -StatusCode 404 }
+          continue
+        }
+
+        if ($method -eq "GET" -and $path -eq "/assets/studio-professional.css") {
+          $assetPath = Join-Path $RepoRoot "assets/studio-professional.css"
+          if (Test-Path -LiteralPath $assetPath -PathType Leaf) { Write-FileHttpResponse -Stream $stream -Path $assetPath -ContentType "text/css; charset=utf-8" }
+          else { Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Professional Studio stylesheet is missing." }) -StatusCode 404 }
           continue
         }
 
@@ -1718,6 +3119,17 @@ try {
           continue
         }
 
+        if ($method -eq "GET" -and $path -eq "/api/session") {
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true; token = $script:SessionToken })
+          continue
+        }
+        if ($path -like "/api/*" -and $path -notin @("/api/health", "/api/session")) {
+          $providedToken = [string]$request.Headers["X-KitHub-Session"]
+          if (-not $providedToken -or $providedToken -ne $script:SessionToken) {
+            Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Studio session token required." }) -StatusCode 401
+            continue
+          }
+        }
         if ($method -eq "GET" -and $path -eq "/api/provider-settings") {
           Write-JsonHttpResponse -Stream $stream -Value (Get-ProviderSettings)
           continue
@@ -1761,6 +3173,37 @@ try {
           continue
         }
 
+        if ($method -eq "POST" -and $path -eq "/api/professional-state/read") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true; state = Get-ProfessionalState -ProjectRoot $projectRoot })
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/professional-state/save") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Save-ProfessionalState -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/manage-entity") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Manage-ProjectEntity -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/cover-asset/upload") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Save-CoverAsset -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/cover-asset/read") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Read-CoverAsset -Payload $payload)
+          continue
+        }
+
         if ($method -eq "POST" -and $path -eq "/api/new-project") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           $result = New-StudioProject -Payload $payload
@@ -1775,9 +3218,41 @@ try {
           continue
         }
 
+        if ($method -eq "POST" -and $path -eq "/api/diagnostics") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Get-ProjectDiagnostics -Payload $payload)
+          continue
+        }
+        if ($method -eq "POST" -and $path -eq "/api/page-notes") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Save-PageNotes -Payload $payload)
+          continue
+        }
+        if ($method -eq "POST" -and $path -eq "/api/page-notes/read") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Read-PageNotes -Payload $payload)
+          continue
+        }
         if ($method -eq "POST" -and $path -eq "/api/save-episode") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           Write-JsonHttpResponse -Stream $stream -Value (Save-Episode -Payload $payload)
+          continue
+        }
+if ($method -eq "POST" -and $path -eq "/api/manage-chapter") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Manage-Chapter -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/chapter-plan/save") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Save-ChapterPlan -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/chapter-plan") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Get-ChapterPlans -Payload $payload)
           continue
         }
 
@@ -1820,6 +3295,25 @@ try {
           continue
         }
 
+if ($method -eq "POST" -and $path -eq "/api/restore-version-preview") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Get-RestorePreview -Payload $payload)
+          continue
+        }
+        if ($method -eq "POST" -and $path -eq "/api/version-files") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $result = Get-VersionFiles -Payload $payload
+          $status = if ($result.ok) { 200 } else { 500 }
+          Write-JsonHttpResponse -Stream $stream -Value $result -StatusCode $status
+          continue
+        }
+        if ($method -eq "POST" -and $path -eq "/api/backup-project") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $result = New-ProjectBackup -Payload $payload
+          $status = if ($result.ok) { 200 } else { 500 }
+          Write-JsonHttpResponse -Stream $stream -Value $result -StatusCode $status
+          continue
+        }
         if ($method -eq "POST" -and $path -eq "/api/restore-version") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           Write-JsonHttpResponse -Stream $stream -Value (Restore-ProjectVersion -Payload $payload)
@@ -1829,6 +3323,14 @@ try {
         if ($method -eq "POST" -and $path -eq "/api/export-final") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           $result = Invoke-FinalExport -Payload $payload
+          $status = if ($result.ok) { 200 } else { 500 }
+          Write-JsonHttpResponse -Stream $stream -Value $result -StatusCode $status
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/build-publication") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $result = Invoke-PublicationBuild -Payload $payload
           $status = if ($result.ok) { 200 } else { 500 }
           Write-JsonHttpResponse -Stream $stream -Value $result -StatusCode $status
           continue

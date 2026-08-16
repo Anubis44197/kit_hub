@@ -1,4 +1,4 @@
-# Novel Writing Engine
+﻿# Novel Writing Engine
 
 Professional multi-agent pipeline for Turkish novel, story, and print-ready book production.
 
@@ -34,7 +34,7 @@ Use API mode when the user wants the application itself to drive writing phases 
 
 In API mode, `scripts/studio_bridge.ps1` loads the saved provider settings and runs `scripts/provider_phase.ps1` through `runtime/runner-config.provider.template.json`. If provider settings or the API key are missing, the pipeline fails closed before claiming that agents ran.
 
-In IDE mode, the IDE agent writes the requested files while KitHub validates the artifacts, approvals, agent evidence, continuity, Turkish quality, layout, and DOCX export.
+In IDE mode, the IDE agent writes the requested files while KitHub validates the artifacts, approvals, agent evidence, continuity, Turkish quality, layout, and DOCX export. IDE/manual evidence is intentionally labeled `execution_claim_mode=simulated`: it proves persisted artifacts and contracts, not that a live external agent process is still running. API/provider mode uses executed command evidence when configured.
 
 ## KitHub Studio: New User Flow
 KitHub Studio is the recommended interface for normal use. The backend still runs through PowerShell scripts, but the user should work from the Studio screen instead of editing runtime files by hand.
@@ -44,6 +44,7 @@ KitHub Studio is the recommended interface for normal use. The backend still run
 git clone https://github.com/Anubis44197/kit_hub.git
 cd kit_hub
 powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+powershell -ExecutionPolicy Bypass -File scripts/install_epubcheck.ps1
 powershell -ExecutionPolicy Bypass -File scripts/start_studio.ps1
 ```
 
@@ -75,6 +76,8 @@ The user writes the subject, genre, target page count, characters, setting, styl
 
 The system must plan before writing. It should not start from an old sample, leftover test project, or hard-coded default topic.
 
+If you import an existing TXT/MD/DOCX manuscript, the source is kept as manuscript context and added to the book request. It does not invent missing brief answers. Fill the required wizard fields (`Tür`, `Hedef sayfa`, `Hedef okur`, `Konu`, `Karakterler / karakter politikası`, `Dönem ve mekân`, `Anlatıcı`, `Final`, `Sınırlar`) before pressing `İsteği Kaydet`; Studio adds the selected/default `Üslup` and the standard `Yayın paketi`, focuses the first missing field, and blocks writing until the structured brief is complete.
+
 ### 4. Choose IDE Mode or API Mode
 Studio supports two production modes.
 
@@ -88,6 +91,9 @@ API keys are stored through Studio provider settings. They must not be committed
 ### 5. Edit, review, and revise
 Studio includes:
 
+- delayed autosave with a visible dirty/saving state, local crash-recovery drafts, atomic episode writes, and an unload guard
+- `Ctrl+S`, `Ctrl+F`, and `Ctrl+H` editor shortcuts with chapter/book search and replace
+- a chapter manager for create, rename, duplicate, keyboard/drag reorder, and recoverable delete
 - page-like manuscript preview
 - DOCX import for existing Word manuscripts
 - live edit panel
@@ -96,6 +102,16 @@ Studio includes:
 - type-specific quality checks
 - long-text chapter splitting for large manuscripts
 - advanced layout controls
+
+After connecting a project, open `Profesyonel Araçlar` in the publication controls. Its four sections provide:
+
+- real character, location, plot-thread, and research CRUD backed by project state files
+- chapter-linked comment threads and tracked-change proposals with accept/reject actions
+- author/editor/reviewer/admin role records and a project team list
+- daily/project word goals, deadlines, and timed focus sessions
+- publication profile, ISBN-13, imprint, language, and PNG/JPEG cover-source management
+
+Design Markdown files shown under research are intentionally read-only; editable research records are stored separately. Professional state is saved atomically in `revision/_state/studio-professional.json`.
 
 Live edit suggestions are not applied automatically. The user must approve or save changes.
 
@@ -107,16 +123,21 @@ The layout panel writes the selected book package to:
 
 Supported layout controls include page size, print mode, front matter, font, point size, line spacing, margins, paragraph indentation, chapter start policy, heading hierarchy, running headers, page number position, table-of-contents depth, and widow/orphan control.
 
+Use `Ön/Arka Sayfaları Otomatik Doldur` in `Profesyonel Araçlar > Yayın Kimliği` to seed copyright and author pages, then review the generated text. KDP, IngramSpark, and custom-print profiles apply profile-specific bleed and validation rules. A valid ISBN-13 can be rendered as an EAN-13 barcode. Uploaded cover art is checked from its real pixel dimensions and blocks readiness below 300 effective DPI; spine text is suppressed below 79 pages.
+
 ### 7. Export
-When the manuscript and approvals are ready, use Studio export controls. Export must pass:
+When the manuscript and approvals are ready, use Studio export controls. `Export Fazını Çalıştır` builds and validates the approved DOCX package; the publication controls can additionally build print PDF, full-wrap cover PDF, and EPUB. `Final DOCX'i Masaüstüne Kopyala` copies the approved final DOCX to the selected destination. Export must pass:
 
 - export approval
 - reader-facing cleanliness checks
 - DOCX integrity validation
 - DOCX layout/profile validation
 - DOCX content match validation
+- embedded-font and publication-profile checks for print PDF
+- official EPUBCheck validation when EPUB is requested
+- ISBN/EAN-13, bleed, cover completeness, and cover-DPI checks
 
-The final output can be copied to the Desktop or another selected output folder.
+The final output can be copied to the Desktop or another selected output folder. `READY` means file-level checks passed; a physical proof and the distributor upload preview are still required. IngramSpark keeps `PDF/X + CMYK` as an explicit external review until a compliant conversion tool is configured.
 
 ### 8. Normal local files
 Studio may create runtime log files while it is open:
@@ -134,10 +155,10 @@ This project is based on the upstream architecture (`MJbae/awesome-novel-studio`
 | Criteria | Upstream (`awesome-novel-studio`) | This Repo (`kit_hub`) |
 |---|---|---|
 | Primary role | Novel production pipeline | Complete Turkish book production pipeline |
-| Turkish quality layer | Limited | Extended (`tdk-polisher`, optional dictionary check, exception governance) |
+| Turkish quality layer | Limited | Extended (`tdk-polisher`, default dictionary check, exception governance) |
 | Book layout gate | Present | Present + mandatory gate contract in create/polish/rewrite flows |
 | Export safety | Basic export flow | Approval gate + validator + DOCX integrity checks |
-| Runner/orchestration | Phase-oriented | Phase-oriented + artifact gates + optional dictionary check integration |
+| Runner/orchestration | Phase-oriented | Phase-oriented + artifact gates + default dictionary check integration |
 | Local preview | Minimal technical page | Turkish reading preview page (`index.html`) |
 
 Summary: `kit_hub` is not only a content panel. It is an extended production engine with stronger quality controls.
@@ -204,7 +225,7 @@ Long-form AI fiction commonly fails in four areas. This repository addresses eac
 | Layer | Source | Role |
 |---|---|---|
 | 1 | Official TDK rule set (7 references) | Primary writing and punctuation authority |
-| 2 | `tdk-py` dictionary check (optional) | Detect probable misspellings and unknown forms |
+| 2 | `tdk-py` dictionary check | Runs by default; manual mode reports `skipped` when the provider is unavailable, while provider/API mode can fail closed |
 | 3 | Project exception list | Prevent false positives on names, voice, and style |
 | 4 | Regression fixtures | Keep repeated correctness over time |
 | 5 | Human editorial pass | Final publication-grade decision |
@@ -218,7 +239,7 @@ Reference documents:
 - Git
 - PowerShell 7+ (recommended on Windows)
 - IDE/runtime that supports plugin command execution
-- Python 3.10+ (recommended for optional dictionary-check layer)
+- Python 3.10+ (used by the dictionary-check layer when the provider is available)
 
 ## Installation
 1. Clone repository:
@@ -344,7 +365,16 @@ The runner rejects a fake brief approval. The brief must contain structured `req
 | Skill eval contracts | `powershell -ExecutionPolicy Bypass -File scripts/ci/validate_skill_evals.ps1` |
 | External IDE smoke test (Windows) | `powershell -ExecutionPolicy Bypass -File scripts/ci/external_smoke_test.ps1 -WorkspaceRoot <repo-path> -TestRunPath test-run` |
 | DOCX structural integrity | `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_docx_integrity.ps1 -DocxPath <absolute-path-to-docx>` |
-| Optional dictionary verification | `powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot . -Phase polish -RunId RUN-LOCAL` |
+| Dictionary verification | `powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot . -Phase polish -RunId RUN-LOCAL` (a skipped/provider-unavailable result fails closed) |
+| 36-agent fixture validation | `powershell -ExecutionPolicy Bypass -File scripts/ci/fixture_agent_runner.ps1` (reports `fixture_validation`, not autonomous provider execution) |
+| Existing-project config migration | `powershell -ExecutionPolicy Bypass -File scripts/ci/migrate_project.ps1 -ProjectRoot <project-path>` |
+| State consistency validation | `powershell -ExecutionPolicy Bypass -File scripts/ci/validate_state_consistency.ps1 -ProjectRoot <project-path>` |
+| Run integrity validation | `powershell -ExecutionPolicy Bypass -File scripts/ci/verify_run_integrity.ps1 -ProjectRoot <project-path>` |
+| Real local provider fixture execution | `powershell -ExecutionPolicy Bypass -File scripts/ci/provider_agent_runner.ps1 -Provider ollama -Model qwen2.5:3b` (optional local-only 36-agent test; this does not configure Studio to use Ollama, and external providers require explicit data-transfer approval) |
+| Browser DOM + interaction E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/browser_e2e_test.ps1` (editor dirty/recovery shortcuts, chapter-manager and professional-tool dialogs, desktop and 390x844 mobile computed audits, contrast, overflow, and reduced-motion checks; manual WCAG testing still required) |
+| Studio security + final export E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/studio_bridge_security_export_test.ps1` (origin allowlist, session-header preflight, endpoint/key fail-closed behavior, selected output directory, and collision-safe DOCX copy) |
+| Studio chapter manager + atomic save E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/studio_bridge_chapter_manager_test.ps1` (professional state, atomic cover upload/replace, entity CRUD, autosave cleanup, chapter create/rename/duplicate/order, and recoverable delete) |
+| Print/EPUB publication E2E | `powershell -ExecutionPolicy Bypass -File scripts/ci/publication_typesetting_test.ps1` (A5 pagination, front/back matter, full-wrap cover, 79-page spine rule, EAN-13, embedded fonts, and official EPUBCheck) |
 
 ## Local Preview Policy
 - Studio is the local preview and control surface.
@@ -359,7 +389,7 @@ The runner rejects a fake brief approval. The brief must contain structured `req
   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -ConfigPath runtime/runner-config.ide-manual.json -FromPhase intake -ToPhase export`
 - One-time bootstrap + run:
   - `/run`
-- Run with optional dictionary check enabled:
+- Run with the dictionary check explicitly enabled:
   - `powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1 -ProjectRoot . -FromPhase create -ToPhase rewrite -EnableDictionaryCheck`
 - Runner writes a live pointer file:
   - `runtime/current-run.json`
@@ -407,9 +437,9 @@ The runner rejects a fake brief approval. The brief must contain structured `req
 ## Agent Architecture
 | Metric | Value |
 |---|---|
-| Base architecture | 18 specialist agents |
-| Added project-specific agents/layers | `tdk-polisher`, `tdk-layout-agent`, export approval/validator/exporter set, and related gates |
-| Current total | 32 agent definitions |
+| Registry-governed agents | 36 (canonical source: `runtime/agent-registry.json`) |
+| Added project-specific agents/layers | `tdk-polisher`, `tdk-layout-agent`, `layout-profile-planner`, `research-citation-auditor`, export approval/validator/exporter set, front-matter/cover/publication gates, and `final-proofreader` |
+| Golden agent fixtures | 36 (one `input.md`/`expected.md` pair per registered agent under `tests/golden/agents/`) |
 
 For complete mapping see `docs/ARCHITECTURE_MAP.md`.
 

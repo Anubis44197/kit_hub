@@ -64,7 +64,7 @@ if (-not $pythonExe) {
     throw "Python runtime not found while RequireProvider is enabled."
   }
   New-SkippedReport -Root $ProjectRoot -PhaseName $Phase -Run $RunId -Reason "Python runtime not found."
-  exit 0
+  throw "Dictionary check cannot be skipped: Python runtime not found."
 }
 
 $scriptPath = Join-Path (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)) "ci/tdk_dict_check.py"
@@ -82,12 +82,17 @@ if ($RequireProvider) {
 
 Write-Host "[tdk-dict-check] exec: $pythonExe $($argsList -join ' ')"
 & $pythonExe @argsList
+$reportPath = Join-Path $ProjectRoot ("revision/_workspace/10_tdk-dictionary-check_" + $Phase + ".json")
+if (Test-Path -LiteralPath $reportPath -PathType Leaf) {
+  $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
+  if ([string]$report.status -eq "skipped") { throw "Dictionary check cannot be skipped: $($report.notes -join "; ")" }
+}
 if ($LASTEXITCODE -ne 0) {
   if ($RequireProvider) {
     throw "Dictionary check failed (exit=$LASTEXITCODE)."
   }
   New-SkippedReport -Root $ProjectRoot -PhaseName $Phase -Run $RunId -Reason "Provider unavailable or check failed."
-  exit 0
+  throw "Dictionary check cannot be skipped: provider unavailable or check failed."
 }
 
 exit 0

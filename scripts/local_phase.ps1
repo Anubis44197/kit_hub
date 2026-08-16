@@ -231,7 +231,8 @@ function Get-LongformScalePlan {
 
 function Get-CleanTitleFromText {
   param([string]$Text)
-  $line = (($Text -split "\r?\n") | Where-Object { $_.Trim() -and $_ -notmatch "^\s*#" } | Select-Object -First 1)
+  $premiseMatch = [regex]::Match($Text, "(?im)^\s*-\s*(Konu|Ana konu)\s*:\s*(.+?)\s*$")
+  $line = if ($premiseMatch.Success) { $premiseMatch.Groups[2].Value.Trim() } else { (($Text -split "\r?\n") | Where-Object { $_.Trim() -and $_ -notmatch "^\s*#|^\s*-\s*[^:]+\s*:" } | Select-Object -First 1) }
   if (-not $line) { $line = $Text }
   $line = ($line -replace "(?i)^\s*\d+\s*(bölümlük|bolumluk|bölüm|bolum|chapter|chapters)\s*[:\-]?\s*", "").Trim()
   $line = ($line -replace "(?i)^\s*(roman|hikaye|öykü|oyku|novella|deneme|biyografi)\s*[:\-]?\s*", "").Trim()
@@ -608,7 +609,7 @@ $seed
 - Risk: Olay ilerlemesi yavaşlayabilir; her sahne dramatik işlev taşımalıdır.
 
 ## Zorunlu Sonraki Adım
-Bu aşama roman yazmaz. Kullanıcı `runtime/approvals/story-choice.json` dosyasında bir öneriyi seçip `approved=true` yapmadan tasarım ve yazım aşaması başlamaz.
+Bu aşama roman yazmaz. Kullanıcı runtime/approvals/story-choice.json dosyasında bir öneriyi seçip approved=true yapmadan tasarım ve yazım aşaması başlamaz.
 "@
 
   Write-Utf8 -Path (Join-Path $workspace "01_proposals.md") -Content $proposal
@@ -629,16 +630,42 @@ Bu aşama roman yazmaz. Kullanıcı `runtime/approvals/story-choice.json` dosyas
   Write-AgentCompliance -PhaseName "propose" -RequiredAgents @("proposal-generator") -RequiredReferences @("skills/propose/SKILL.md") -LoadedStateFiles @("runtime/book-request.md", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json") -OutputArtifacts @("_workspace/01_proposals.md", "$slug`_proposal.md", "runtime/approvals/story-choice.json")
 }
 
+function Get-BookRequestField {
+  param([string]$Text, [string[]]$Labels)
+  foreach ($label in $Labels) {
+    $pattern = "(?im)^\s*-\s*" + [regex]::Escape($label) + "\s*:\s*(.+?)\s*$"
+    $match = [regex]::Match($Text, $pattern)
+    if ($match.Success) { return $match.Groups[1].Value.Trim() }
+  }
+  return ""
+}
+
 function Invoke-Intake {
   $seed = Get-BookSeed
   $approvalDir = Join-Path $ProjectRoot "runtime/approvals"
   Ensure-Dir $approvalDir
 
+  $writingType = Get-BookRequestField -Text $seed -Labels @("Tür", "Tur", "Yazı türü", "Yazi turu")
+  $targetPages = Get-BookRequestField -Text $seed -Labels @("Hedef sayfa")
+  $targetLength = if ($targetPages) { "$targetPages sayfa" } else { Get-BookRequestField -Text $seed -Labels @("Hedef uzunluk", "Uzunluk") }
+  $premise = Get-BookRequestField -Text $seed -Labels @("Konu", "Ana konu")
+  $characters = Get-BookRequestField -Text $seed -Labels @("Karakterler", "Karakter politikası", "Karakter politikasi")
+  $targetReader = Get-BookRequestField -Text $seed -Labels @("Hedef okur", "Okur")
+  $genre = Get-BookRequestField -Text $seed -Labels @("Alt tür", "Alt tur", "Tür", "Tur")
+  $settingPeriod = Get-BookRequestField -Text $seed -Labels @("Dönem ve mekân", "Donem ve mekan", "Mekân ve dönem", "Mekan ve donem")
+  $povTense = Get-BookRequestField -Text $seed -Labels @("Anlatıcı", "Anlatici", "Bakış açısı ve zaman", "Bakis acisi ve zaman")
+  $styleTone = Get-BookRequestField -Text $seed -Labels @("Üslup", "Uslup")
+  $boundaries = Get-BookRequestField -Text $seed -Labels @("Sınırlar", "Sinirlar")
+  $publicationPackage = Get-BookRequestField -Text $seed -Labels @("Yayın paketi", "Yayin paketi")
+  $characterPolicy = if ($characters) { "Kullanıcı tarafından verilen karakterler kullanılacak: $characters" } else { "" }
+  $answersComplete = [bool]($writingType -and $premise -and $targetLength -and $targetReader -and $genre -and $characterPolicy -and $settingPeriod -and $povTense -and $styleTone -and $boundaries -and $publicationPackage)
+  $briefStatus = if ($answersComplete) { "READY_FOR_APPROVAL" } else { "QUESTIONS_PENDING" }
+
   Write-Json -Path (Join-Path $ProjectRoot "runtime/book-brief.json") -Value ([ordered]@{
     schema_version = "1.0.0"
     run_id = $RunId
     source_prompt = $seed
-    brief_status = "QUESTIONS_PENDING"
+    brief_status = $briefStatus
     intake_policy = "Do not propose, plan, write, polish, rewrite, or export until required_user_questions are answered or explicitly accepted by the user."
     writing_intent = [ordered]@{
       writing_type = "ask_user"
@@ -662,18 +689,18 @@ function Invoke-Intake {
       [ordered]@{ id = "publication_package"; question = "Onsoz, icindekiler, kapak briefi, arka kapak yazisi ve basili kitap dizgisi isteniyor mu?"; required = $true; answer_required_for_approval = $true }
     )
     answers = [ordered]@{
-      writing_type = ""
-      premise = $seed
-      target_length = ""
-      target_pages = ""
-      target_reader = ""
-      genre = ""
-      character_policy = ""
-      setting_period = ""
-      pov_tense = ""
-      style_tone = ""
-      boundaries = ""
-      publication_package = ""
+      writing_type = $writingType
+      premise = $premise
+      target_length = $targetLength
+      target_pages = $targetPages
+      target_reader = $targetReader
+      genre = $genre
+      character_policy = $characterPolicy
+      setting_period = $settingPeriod
+      pov_tense = $povTense
+      style_tone = $styleTone
+      boundaries = $boundaries
+      publication_package = $publicationPackage
     }
     suggested_defaults = [ordered]@{
       target_length = "Ask the user; do not assume. If the user says 'sen sec', choose a length and record that approval."
@@ -696,13 +723,14 @@ function Invoke-Intake {
   Write-Json -Path (Join-Path $ProjectRoot "runtime/book-dna.json") -Value ([ordered]@{
     schema_version = "1.0.0"
     run_id = $RunId
+    answers_complete = $answersComplete
     locked = $false
     source_prompt = $seed
     continuity_policy = "No chapter writing before approved brief, approved book plan, and approved layout profile."
     required_locks = @("writing_type", "genre", "target_length", "pov", "tense", "character_policy", "setting_policy", "style_policy", "source_policy", "front_matter_policy", "cover_policy")
     locked_answers_required = @("writing_type", "premise", "target_length", "target_reader", "genre", "character_policy", "setting_period", "pov_tense", "style_tone", "boundaries", "publication_package")
-    user_supplied_characters = @()
-    proposed_characters_allowed = $true
+    user_supplied_characters = if ($characters) { @($characters) } else { @() }
+    proposed_characters_allowed = (-not [bool]$characters)
     factual_source_policy = "Biografi, arastirma, tarih, saglik, hukuk, teknik ve gercek kisi/kurum anlatilarinda kaynak artefakti olmadan dogruluk iddiasi kurulamaz."
     plan_before_writing_policy = "The system must present story direction, book plan, chapter plan, continuity model, and layout plan for user approval before any manuscript text is created."
   })
@@ -710,8 +738,10 @@ function Invoke-Intake {
   Write-Json -Path (Join-Path $ProjectRoot "runtime/layout-profile.json") -Value ([ordered]@{
     schema_version = "1.0.0"
     run_id = $RunId
-    profile_status = "QUESTIONS_PENDING"
+    profile_status = $briefStatus
     print_target = "A5_DOCX"
+    book_template = "novel-standard"
+    book_template_label = "Standart Roman / A5"
     trim_size = "A5"
     font_family = "Times New Roman"
     body_font_size_pt = 11
@@ -753,12 +783,26 @@ function Invoke-Intake {
       paragraph_first_line_indent_cm = 0.6
       paragraph_spacing_after_pt = 0
       justification = "both"
+      widow_orphan_control = $true
+      heading_hierarchy_policy = "chapter_title_then_body"
+      chapter_start_policy = "new_page"
+      running_header_policy = "none_for_submission_optional_for_preview"
     }
     front_matter = [ordered]@{
-      title_page = "ask_user_or_required_for_print"
-      copyright_page = "ask_user_or_required_for_print"
-      preface = "ask_user"
+      title_page = "required"
+      copyright_page = "required_with_placeholder_metadata"
+      preface = "included_when_requested"
       table_of_contents = "required_for_longform"
+    }
+    back_matter = [ordered]@{
+      author_bio = "optional"
+      acknowledgements = "optional"
+      back_cover_copy = "required_for_book_package"
+    }
+    page_numbering = [ordered]@{
+      policy = "front matter roman or unnumbered; body arabic"
+      front_matter = "roman_or_unnumbered"
+      body = "arabic_start_at_1"
     }
     cover = [ordered]@{
       front_cover_brief = "required"
@@ -795,6 +839,7 @@ function Invoke-DesignBig {
   $seed = Get-BookSeed
   Ensure-Approved -RelativePath "runtime/approvals/book-brief-approval.json" -GateName "Book brief approval" | Out-Null
   $choice = Get-StoryChoice
+  $layoutProfile = Read-Json -Path (Join-Path $ProjectRoot "runtime/layout-profile.json")
   $projectName = Get-CleanTitleFromText -Text $seed
   $scale = Get-LongformScalePlan
   $targetChapters = [int]$scale.target_chapters
@@ -931,6 +976,13 @@ Bu plan, karakterler, olay akışı, bölüm hedefleri ve baskı sayfa hesabı k
 - Makro süreklilik denetimi: her $auditIntervalChapters bölümde bir
 "@
 
+  $chapterPlanMarkdown = (($chapterPlan | ForEach-Object { "## $($_.reader_title)
+- Amaç: $($_.purpose)
+- Hedef kelime: $($_.target_words)
+- Olay akışı: $($_.events -join ' ')" }) -join "
+
+")
+
   Write-Utf8 -Path (Join-Path $design "05_chapter_plan.md") -Content @"
 # Bölüm Planı
 
@@ -938,6 +990,8 @@ run_id: $RunId
 plan_id: $planId
 
 Her bölüm önceki bölümün sonucundan doğmalı, yeni bilgi üretmeli ve karakter/olay durumunu değiştirmelidir. Okur çıktısında EP kodu veya sahne etiketi kullanılamaz.
+
+$chapterPlanMarkdown
 "@
 
   Write-Utf8 -Path (Join-Path $design "06_layout_plan.md") -Content @"
@@ -1000,6 +1054,8 @@ plan_id: $planId
     schema_version = "1.0.0"
     run_id = $RunId
     plan_id = $planId
+    book_template = [string]$layoutProfile.book_template
+    book_template_label = [string]$layoutProfile.book_template_label
     delivery_profiles = [ordered]@{
       publisher_submission = [ordered]@{ enabled = $true; file_role = "editorial_review_docx"; print_ready_claim_allowed = $false }
       print_preview = [ordered]@{ enabled = $true; file_role = "reader_layout_proof"; print_ready_claim_allowed = $false }
@@ -1264,7 +1320,7 @@ Her bölüm için IDE ajanı/provider şu alanları doldurmalıdır:
 - Bir sonraki bölüme neden olan bağ
 - Güncellenen state dosyaları
 
-Her yazılan bölüm `revision/_state/chapter-summaries.json` içinde şu alanları güncellemelidir:
+Her yazılan bölüm revision/_state/chapter-summaries.json içinde şu alanları güncellemelidir:
 - id
 - summary
 - previous_chapter_result
@@ -1274,7 +1330,7 @@ Her yazılan bölüm `revision/_state/chapter-summaries.json` içinde şu alanla
 - next_causal_link
 - state_updates
 
-`revision/_state/volume-plan.json` içindeki audit_schedule hangi bölüme ulaştıysa, `revision/_workspace/macro-continuity-audit_EPxxx.json` ve `.md` dosyaları VERDICT: PASS ile üretilmeden pipeline devam edemez.
+revision/_state/volume-plan.json içindeki audit_schedule hangi bölüme ulaştıysa, revision/_workspace/macro-continuity-audit_EPxxx.json ve .md dosyaları VERDICT: PASS ile üretilmeden pipeline devam edemez.
 
 Tekrarlanan bölüm kurulumu, EP kodu, sahne etiketi, yayın kontrol notu ve test notu kullanıcı çıktısına giremez.
 "@
