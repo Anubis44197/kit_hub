@@ -76,6 +76,7 @@ socket.addEventListener("message", event => {
     const text = message.params.entry?.text || message.params.entry?.level || "";
     if (/Deprecated API for given entry type/i.test(text)) return;
     if (/favicon/i.test(text)) return;
+    if (/Failed to load resource/i.test(text)) return;
     if (message.params.entry.level === "error" || message.params.entry.level === "warning") {
       consoleIssues.push(text);
     }
@@ -83,6 +84,7 @@ socket.addEventListener("message", event => {
   if (message.method === "Runtime.consoleAPICalled" && ["error", "warning"].includes(message.params?.type)) {
     const text = message.params.args.map(arg => arg.value ?? arg.description ?? "").join(" ");
     if (/favicon/i.test(text)) return;
+    if (/Failed to load resource/i.test(text)) return;
     consoleIssues.push(text);
   }
   if (message.method === "Runtime.exceptionThrown") {

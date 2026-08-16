@@ -59,6 +59,10 @@ jobs:
         shell: powershell
         run: .\scripts\ci\studio_bridge_chapter_manager_test.ps1
 
+      - name: Test version diff bridge
+        shell: powershell
+        run: .\scripts\ci\studio_bridge_version_diff_test.ps1
+
       - name: Test print PDF, EPUB, EAN-13, and EPUBCheck
         shell: powershell
         run: .\scripts\ci\publication_typesetting_test.ps1
@@ -82,3 +86,28 @@ jobs:
       - name: Validate agent fixtures
         shell: powershell
         run: .\scripts\ci\fixture_agent_runner.ps1
+
+      - name: Validate agent governance
+        shell: powershell
+        run: .\scripts\ci\validate_agent_governance.ps1
+
+      - name: Validate skill standard
+        shell: powershell
+        run: .\scripts\ci\validate_skill_standard.ps1
+
+      - name: Validate skill evals
+        shell: powershell
+        run: .\scripts\ci\validate_skill_evals.ps1
+
+      - name: Run browser e2e (DOM, interaction, accessibility, performance)
+        shell: powershell
+        run: |
+          $studioPort = 8765
+          Start-Process -FilePath python -ArgumentList @('-m','http.server',$studioPort) -WorkingDirectory $env:GITHUB_WORKSPACE -WindowStyle Hidden | Out-Null
+          $bridgeLog = Join-Path $env:RUNNER_TEMP 'studio-bridge-e2e.log'
+          $bridgeErr = Join-Path $env:RUNNER_TEMP 'studio-bridge-e2e-err.log'
+          Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $env:GITHUB_WORKSPACE 'scripts\studio_bridge.ps1'),'-RepoRoot',$env:GITHUB_WORKSPACE,'-Port',$studioPort) -RedirectStandardOutput $bridgeLog -RedirectStandardError $bridgeErr -WindowStyle Hidden | Out-Null
+          Start-Sleep -Seconds 4
+          .\scripts\ci\browser_e2e_test.ps1
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
