@@ -649,6 +649,99 @@ await delay(80);
 chapterManagerDialog.focused = await evaluate(`document.activeElement?.id`);
 await evaluate(`closeChapterDialog()`);
 
+const chapterPlanUi = await evaluate(`(() => {
+  const realBridgeFetch = window.bridgeFetch;
+  window.__kithubRealBridgeFetch = realBridgeFetch;
+  let lastSavePayload = null;
+  window.bridgeFetch = async (url, init) => {
+    if (String(url).endsWith('/api/chapter-plan/save')) {
+      lastSavePayload = JSON.parse(init.body || '{}');
+      return { ok: true, json: async () => ({ ok: true }) };
+    }
+    if (String(url).endsWith('/api/manage-chapter')) {
+      return { ok: true, json: async () => ({ ok: true }) };
+    }
+    return realBridgeFetch ? realBridgeFetch(url, init) : ({ ok: false, json: async () => ({ ok: false }) });
+  };
+  const active = chapters[0];
+  active.plan = {
+    status: 'draft', target_words: 1200, pov: '3. kişi', setting: 'Eski ev',
+    summary: 'Defne içeri girer', scene_goal: 'Karakteri tanıt', conflict: 'Kapı kilitli', outcome: 'İçeri girer'
+  };
+  renderChapters();
+  const chip = document.querySelector('#chapterList li:first-child .chapter-plan-status-chip');
+  const chipBefore = {
+    present: Boolean(chip),
+    status: chip ? chip.dataset.status : null,
+    label: chip ? chip.textContent.trim() : null
+  };
+  document.getElementById('chapterPlanBtn').click();
+  const dialogOpen = document.getElementById('chapterPlanDialog').open;
+  const prefill = {
+    status: document.getElementById('chapterPlanStatus').value,
+    target: document.getElementById('chapterPlanTarget').value,
+    pov: document.getElementById('chapterPlanPov').value,
+    setting: document.getElementById('chapterPlanSetting').value,
+    summary: document.getElementById('chapterPlanSummary').value,
+    goal: document.getElementById('chapterPlanGoal').value,
+    conflict: document.getElementById('chapterPlanConflict').value,
+    outcome: document.getElementById('chapterPlanOutcome').value,
+    subtitle: document.getElementById('chapterPlanSubtitle').textContent.trim()
+  };
+  document.getElementById('chapterPlanStatus').value = 'editing';
+  document.getElementById('chapterPlanTarget').value = '1800';
+  document.getElementById('chapterPlanSummary').value = 'Güncellenen özet';
+  document.getElementById('chapterPlanForm').requestSubmit();
+  return new Promise(resolve => setTimeout(() => resolve({
+    dialogOpen,
+    chipPresent: chipBefore.present,
+    chipStatus: chipBefore.status,
+    chipLabel: chipBefore.label,
+    prefill,
+    savePayload: lastSavePayload,
+    saveStatus: lastSavePayload ? lastSavePayload.status : null,
+    saveTarget: lastSavePayload ? lastSavePayload.target_words : null,
+    closedAfterSave: !document.getElementById('chapterPlanDialog').open,
+    activePlanUpdated: Boolean(chapters[0].plan) && chapters[0].plan.status === 'editing'
+  }), 0));
+})()`);
+await delay(120);
+
+const chapterArchiveUi = await evaluate(`(() => {
+  const realBridgeFetch = window.__kithubRealBridgeFetch || null;
+  const originalShowChoice = window.showChoiceDialog;
+  let lastAction = null;
+  let dialogOptionsSeen = null;
+  window.showChoiceDialog = ({ options }) => {
+    dialogOptionsSeen = (options || []).map(option => option.label);
+    return Promise.resolve(options.find(option => option.label === 'Arşivle'));
+  };
+  window.bridgeFetch = async (url, init) => {
+    if (String(url).endsWith('/api/manage-chapter')) {
+      const body = JSON.parse(init.body || '{}');
+      if (body.action === 'archive') lastAction = body;
+      return { ok: true, json: async () => ({ ok: true }) };
+    }
+    return realBridgeFetch ? realBridgeFetch(url, init) : ({ ok: false, json: async () => ({ ok: false }) });
+  };
+  window.refreshProject = async () => {
+    chapters.splice(0, 1);
+    currentChapterIndex = 0;
+    renderChapters();
+  };
+  const active = chapters[0];
+  active.filename = 'ep001.md';
+  document.getElementById('archiveChapterBtn').click();
+  return new Promise(resolve => setTimeout(() => resolve({
+    dialogOptionsSeen,
+    archivePayload: lastAction,
+    rowsAfter: document.querySelectorAll('#chapterList li').length,
+    archiveRemoved: !chapters.some(chapter => chapter.filename === 'ep001.md')
+  }), 0));
+})()`);
+await delay(120);
+await evaluate(`window.bridgeFetch = window.__kithubRealBridgeFetch || null; window.showChoiceDialog = window.__kithubShowChoiceOriginal || null;`);
+
 await call("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
 await evaluate(`(() => {
   document.documentElement.style.setProperty('--page-zoom', '1');
@@ -746,6 +839,8 @@ const result = {
     paginationFlow,
     chapterSwitchGuard,
     chapterManagerDialog,
+    chapterPlanUi,
+    chapterArchiveUi,
     mobileLayout: mobileEditorLayout,
     mobileProfessionalLayout
   },

@@ -2377,6 +2377,63 @@
       padding: 0 10px;
     }
 
+    .chapter-plan-dialog .chapter-plan-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 12px;
+      margin-top: 4px;
+    }
+
+    .chapter-plan-dialog .chapter-plan-wide {
+      grid-column: 1 / -1;
+    }
+
+    .chapter-plan-dialog textarea {
+      width: 100%;
+      min-height: 54px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #0c171a;
+      color: var(--text);
+      font: 13px/1.5 var(--book);
+      padding: 8px 10px;
+    }
+
+    .chapter-plan-dialog select {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #0c171a;
+      color: var(--text);
+      padding: 0 10px;
+    }
+
+    .chapter-plan-status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+
+    .chapter-plan-status-chip .plan-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .chapter-plan-status-chip[data-status="idea"] .plan-dot { background: #8a93a6; }
+    .chapter-plan-status-chip[data-status="draft"] .plan-dot { background: #d9a441; }
+    .chapter-plan-status-chip[data-status="editing"] .plan-dot { background: #34c6c1; }
+    .chapter-plan-status-chip[data-status="completed"] .plan-dot { background: #6f9b4f; }
+    .chapter-plan-status-chip[data-status="ready"] .plan-dot { background: #3f8cff; }
+
     .quick-jump-results {
       max-height: 240px;
       overflow-y: auto;
@@ -3197,6 +3254,8 @@
 <div class="chapter-actions" aria-label="Bölüm yönetimi">
             <button type="button" id="addChapterBtn" title="Yeni bölüm" aria-label="Yeni bölüm">＋</button>
             <button type="button" id="sceneManagerBtn" title="Sahne yönetimi" aria-label="Sahne yönetimi">◧</button>
+            <button type="button" id="chapterPlanBtn" title="Bölüm planı" aria-label="Bölüm planı">☰</button>
+            <button type="button" id="archiveChapterBtn" title="Bölümü arşivle" aria-label="Bölümü arşivle">▣</button>
             <button type="button" id="renameChapterBtn" title="Bölümü yeniden adlandır" aria-label="Bölümü yeniden adlandır">✎</button>
             <button type="button" id="duplicateChapterBtn" title="Bölümü çoğalt" aria-label="Bölümü çoğalt">⧉</button>
             <button type="button" id="moveChapterUpBtn" title="Bölümü yukarı taşı" aria-label="Bölümü yukarı taşı">↑</button>
@@ -3667,6 +3726,58 @@
     </form>
   </dialog>
 
+  <dialog class="chapter-dialog chapter-plan-dialog" id="chapterPlanDialog" aria-labelledby="chapterPlanTitle">
+    <form id="chapterPlanForm">
+      <header>
+        <div>
+          <h2 id="chapterPlanTitle">Bölüm Planı</h2>
+          <span class="book-meta" id="chapterPlanSubtitle">Plan alanları seçili bölüme atanır</span>
+        </div>
+        <button type="button" class="ghost" id="closeChapterPlanBtn" aria-label="Bölüm planını kapat">×</button>
+      </header>
+      <div class="chapter-plan-grid">
+        <label class="chapter-plan-status">Durum
+          <select id="chapterPlanStatus">
+            <option value="idea">Fikir</option>
+            <option value="draft">Taslak</option>
+            <option value="editing">Düzenleniyor</option>
+            <option value="completed">Tamamlandı</option>
+            <option value="ready">Yayına hazır</option>
+          </select>
+        </label>
+        <label>Hedef kelime
+          <input id="chapterPlanTarget" type="number" min="0" step="50" value="0" placeholder="örn. 1800">
+        </label>
+        <label>POV
+          <input id="chapterPlanPov" maxlength="200" autocomplete="off" placeholder="örn. 3. kişi, Defne">
+        </label>
+        <label>Tarih
+          <input id="chapterPlanDate" maxlength="80" autocomplete="off" placeholder="örn. Kış 1989">
+        </label>
+        <label>Mekân
+          <input id="chapterPlanSetting" maxlength="200" autocomplete="off" placeholder="örn. Eski ev, mutfak">
+        </label>
+        <label class="chapter-plan-wide">Özet
+          <textarea id="chapterPlanSummary" maxlength="2000" rows="3" placeholder="Bu bölümde neler olur?"></textarea>
+        </label>
+        <label class="chapter-plan-wide">Sahne amacı
+          <textarea id="chapterPlanGoal" maxlength="1000" rows="2" placeholder="Sahnenin hikâyeye katkısı..."></textarea>
+        </label>
+        <label class="chapter-plan-wide">Çatışma
+          <textarea id="chapterPlanConflict" maxlength="1000" rows="2" placeholder="Karakterin önündeki engel..."></textarea>
+        </label>
+        <label class="chapter-plan-wide">Sonuç
+          <textarea id="chapterPlanOutcome" maxlength="1000" rows="2" placeholder="Sahnenin sonunda ne değişir?"></textarea>
+        </label>
+      </div>
+      <div class="chapter-dialog-actions">
+        <button type="button" class="ghost" id="cancelChapterPlanBtn">Vazgeç</button>
+<button type="submit" class="primary" id="saveChapterPlanBtn">Planı Kaydet</button>
+      </div>
+    </form>
+  </dialog>
+
+
   <dialog class="chapter-dialog" id="quickJumpDialog" aria-labelledby="quickJumpTitle">
     <form id="quickJumpForm">
       <header>
@@ -3776,6 +3887,24 @@
     const closeChapterDialogBtn = document.getElementById("closeChapterDialogBtn");
     const cancelChapterDialogBtn = document.getElementById("cancelChapterDialogBtn");
     const confirmChapterDialogBtn = document.getElementById("confirmChapterDialogBtn");
+    const chapterPlanBtn = document.getElementById("chapterPlanBtn");
+    const archiveChapterBtn = document.getElementById("archiveChapterBtn");
+    const chapterPlanDialog = document.getElementById("chapterPlanDialog");
+    const chapterPlanForm = document.getElementById("chapterPlanForm");
+    const chapterPlanTitle = document.getElementById("chapterPlanTitle");
+    const chapterPlanSubtitle = document.getElementById("chapterPlanSubtitle");
+    const chapterPlanStatus = document.getElementById("chapterPlanStatus");
+    const chapterPlanTarget = document.getElementById("chapterPlanTarget");
+    const chapterPlanPov = document.getElementById("chapterPlanPov");
+    const chapterPlanDate = document.getElementById("chapterPlanDate");
+    const chapterPlanSetting = document.getElementById("chapterPlanSetting");
+    const chapterPlanSummary = document.getElementById("chapterPlanSummary");
+    const chapterPlanGoal = document.getElementById("chapterPlanGoal");
+    const chapterPlanConflict = document.getElementById("chapterPlanConflict");
+    const chapterPlanOutcome = document.getElementById("chapterPlanOutcome");
+    const closeChapterPlanBtn = document.getElementById("closeChapterPlanBtn");
+    const cancelChapterPlanBtn = document.getElementById("cancelChapterPlanBtn");
+    const saveChapterPlanBtn = document.getElementById("saveChapterPlanBtn");
     const quickJumpDialog = document.getElementById("quickJumpDialog");
     const quickJumpForm = document.getElementById("quickJumpForm");
     const quickJumpInput = document.getElementById("quickJumpInput");
@@ -4754,6 +4883,11 @@ function replaceAllLiteral(text, query, replacement, options = findOptions) {
     let liveEditSuggestion = null;
     const writingCardBoundaryContract = "plan-context-boundary";
 
+    function planStatusLabel(status) {
+      const labels = { idea: "Fikir", draft: "Taslak", editing: "Düzenleniyor", completed: "Tamamlandı", ready: "Yayına hazır" };
+      return labels[status] || status || "";
+    }
+
     function renderChapters() {
       if (!chapters.length) {
         chapterList.innerHTML = `
@@ -4776,6 +4910,7 @@ function replaceAllLiteral(text, query, replacement, options = findOptions) {
             <span>${escapeHtml(`${chapter.id} - ${chapter.title}`)}</span>
             <small>${chapter.words ? chapter.words.toLocaleString("tr-TR") : "Plan"}</small>
             <b class="risk-chip ${chapter.heat?.level || "ok"}" title="${escapeHtml((chapter.heat?.reasons || ["Risk yok"]).join(" "))}">${chapter.heat ? `${chapter.heat.risk}%` : "-"}</b>
+            ${chapter.plan?.status ? `<span class="chapter-plan-status-chip" data-status="${escapeHtml(chapter.plan.status)}" title="${escapeHtml(chapter.plan.summary || "Plan alanı")}"><i class="plan-dot"></i>${escapeHtml(planStatusLabel(chapter.plan.status))}</span>` : ""}
             <i class="dot ${chapter.state === "done" ? "done" : chapter.state === "wait" ? "wait" : ""}"></i>
           </button>
         </li>
@@ -4783,15 +4918,112 @@ function replaceAllLiteral(text, query, replacement, options = findOptions) {
       syncChapterManagerButtons();
     }
 
-    function syncChapterManagerButtons() {
+function syncChapterManagerButtons() {
       const active = chapters[currentChapterIndex];
       const canManage = bridgeOnline && bridgeProjectActive && Boolean(currentProjectPathHint);
       addChapterBtn.disabled = !canManage;
       [renameChapterBtn, duplicateChapterBtn, deleteChapterBtn].forEach(button => {
         button.disabled = !canManage || !active?.filename;
       });
+      chapterPlanBtn.disabled = !canManage || !active?.filename;
+      archiveChapterBtn.disabled = !canManage || !active?.filename;
       moveChapterUpBtn.disabled = !canManage || !active?.filename || currentChapterIndex <= 0;
       moveChapterDownBtn.disabled = !canManage || !active?.filename || currentChapterIndex >= chapters.length - 1;
+    }
+
+    function openChapterPlanDialog() {
+      const active = chapters[currentChapterIndex];
+      if (!bridgeOnline || !bridgeProjectActive || !active?.filename) {
+        setStatus("Motor olayı: bölüm planı için gerçek Bridge projesi gerekli");
+        return;
+      }
+      const plan = active.plan || {};
+      chapterPlanTitle.textContent = `Bölüm Planı — ${active.title || active.id}`;
+      chapterPlanSubtitle.textContent = active.filename;
+      chapterPlanStatus.value = plan.status || "idea";
+      chapterPlanTarget.value = Number(plan.target_words || 0);
+      chapterPlanPov.value = plan.pov || "";
+      chapterPlanDate.value = plan.date || "";
+      chapterPlanSetting.value = plan.setting || "";
+      chapterPlanSummary.value = plan.summary || "";
+      chapterPlanGoal.value = plan.scene_goal || "";
+      chapterPlanConflict.value = plan.conflict || "";
+      chapterPlanOutcome.value = plan.outcome || "";
+      chapterPlanDialog.showModal();
+      window.setTimeout(() => chapterPlanStatus.focus(), 0);
+    }
+
+    function closeChapterPlanDialog() {
+      if (chapterPlanDialog.open) chapterPlanDialog.close();
+    }
+
+    async function saveChapterPlanViaBridge() {
+      const active = chapters[currentChapterIndex];
+      if (!bridgeOnline || !bridgeProjectActive || !active?.filename || !currentProjectPathHint) {
+        setStatus("Motor olayı: bölüm planı için gerçek Bridge projesi gerekli");
+        return;
+      }
+      const payload = {
+        projectRoot: currentProjectPathHint,
+        filename: active.filename,
+        id: active.id,
+        status: chapterPlanStatus.value,
+        target_words: Number(chapterPlanTarget.value || 0),
+        pov: chapterPlanPov.value,
+        date: chapterPlanDate.value,
+        setting: chapterPlanSetting.value,
+        summary: chapterPlanSummary.value,
+        scene_goal: chapterPlanGoal.value,
+        conflict: chapterPlanConflict.value,
+        outcome: chapterPlanOutcome.value
+      };
+      try {
+        setStatus(`Motor olayı: bölüm planı kaydediliyor...`);
+        const response = await bridgeFetch(`${bridgeUrl}/api/chapter-plan/save`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error("chapter-plan/save başarısız");
+        if (active) active.plan = { ...active.plan, ...payload, updated_at: new Date().toISOString() };
+        renderChapters();
+        closeChapterPlanDialog();
+        setStatus(`Bölüm planı kaydedildi: ${planStatusLabel(payload.status)}`);
+      }
+      catch (err) {
+        setStatus(`Motor olayı: bölüm planı kaydedilemedi — ${err.message}`);
+      }
+    }
+
+    async function archiveActiveChapter() {
+      const active = chapters[currentChapterIndex];
+      if (!bridgeOnline || !bridgeProjectActive || !active?.filename || !currentProjectPathHint) {
+        setStatus("Motor olayı: bölüm arşivlemek için gerçek Bridge projesi gerekli");
+        return;
+      }
+      const ok = await showChoiceDialog({
+        title: "Bölümü arşivle",
+        message: `<p><b>${escapeHtml(active.title)}</b> çalışma listesinden arşive taşınacak. İçerik korunur ve istendiğinde geri yüklenebilir.</p>`,
+        options: [{ label: "Arşivle", className: "primary" }, { label: "Vazgeç" }],
+        focusIndex: 1
+      });
+      if (ok?.label !== "Arşivle") return;
+      if (!(await ensureEditorSaved("bölüm arşivleme"))) return;
+      try {
+        setStatus("Motor olayı: bölüm arşivleniyor...");
+        const response = await bridgeFetch(`${bridgeUrl}/api/manage-chapter`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ projectRoot: currentProjectPathHint, action: "archive", filename: active.filename })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.error || "arşivleme başarısız");
+        await refreshProject();
+        setStatus(`Bölüm arşivlendi: ${active.title}`);
+      }
+      catch (err) {
+        setStatus(`Motor olayı: bölüm arşivlenemedi — ${err.message}`);
+      }
     }
 
 function closeChapterDialog() {
@@ -8516,6 +8748,7 @@ setEditorText(chapter.text || "");
         filename: chapter.filename,
         text: chapter.text || "",
         heat: heatByFile[chapter.filename] || null,
+        plan: chapter.plan || null,
         bridgeBacked: true
       }));
       currentChapterIndex = 0;
@@ -9679,10 +9912,19 @@ if (shortcut && key === "h") {
     renameChapterBtn.addEventListener("click", () => openChapterDialog("rename"));
     duplicateChapterBtn.addEventListener("click", () => openChapterDialog("duplicate"));
     deleteChapterBtn.addEventListener("click", () => openChapterDialog("delete"));
+    chapterPlanBtn.addEventListener("click", openChapterPlanDialog);
+    archiveChapterBtn.addEventListener("click", archiveActiveChapter);
     moveChapterUpBtn.addEventListener("click", () => reorderChapter(currentChapterIndex, currentChapterIndex - 1));
     moveChapterDownBtn.addEventListener("click", () => reorderChapter(currentChapterIndex, currentChapterIndex + 1));
-closeChapterDialogBtn.addEventListener("click", closeChapterDialog);
+ closeChapterDialogBtn.addEventListener("click", closeChapterDialog);
     cancelChapterDialogBtn.addEventListener("click", closeChapterDialog);
+    closeChapterPlanBtn.addEventListener("click", closeChapterPlanDialog);
+    cancelChapterPlanBtn.addEventListener("click", closeChapterPlanDialog);
+    chapterPlanDialog.addEventListener("cancel", closeChapterPlanDialog);
+    chapterPlanForm.addEventListener("submit", event => {
+      event.preventDefault();
+      saveChapterPlanViaBridge();
+    });
     closeQuickJumpBtn.addEventListener("click", closeQuickJump);
     cancelQuickJumpBtn.addEventListener("click", closeQuickJump);
     closeVersionDiffBtn.addEventListener("click", closeVersionDiff);

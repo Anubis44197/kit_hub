@@ -152,7 +152,23 @@ try {
   $trashPath = Join-Path $projectRoot $trashRelative
   if (-not $deleted.trashRelativePath -or -not (Test-Path -LiteralPath $trashPath -PathType Leaf)) { throw "Deleted chapter was not moved to recoverable trash." }
 
-  Write-Host "[studio-bridge-chapter-manager] PASS publication/preflight; professional-state; cover upload/read; entity CRUD; atomic-save; chapter CRUD/reorder/recoverable-delete"
+  $planSave = (Invoke-StudioRequest -Path "/api/chapter-plan/save" -Method "POST" -SessionToken $session.token -Body @{projectRoot=$projectRoot;filename="ep001.md";id="Bölüm 1";status="editing";summary="Defne'nin girişi";pov="3. kişi";date="Kış 1989";setting="Eski ev";target_words=1800;scene_goal="Karakteri tanıt";conflict="Kapı kilitli";outcome="İçeri girer"}).Content | ConvertFrom-Json
+  if (-not $planSave.ok -or $planSave.record.status -ne "editing" -or $planSave.record.target_words -ne 1800 -or $planSave.record.filename -ne "ep001.md") { throw "Chapter plan save did not persist expected fields." }
+  $planGet = (Invoke-StudioRequest -Path "/api/chapter-plan" -Method "POST" -SessionToken $session.token -Body @{projectRoot=$projectRoot}).Content | ConvertFrom-Json
+  if (-not $planGet.ok -or @($planGet.chapters).Count -ne 1 -or $planGet.chapters[0].setting -ne "Eski ev") { throw "Chapter plan get did not return the saved plan." }
+  $planFile = Join-Path $stateDir "chapter-plan.json"
+  if (-not (Test-Path -LiteralPath $planFile -PathType Leaf)) { throw "Chapter plan was not written to revision/_state/chapter-plan.json." }
+  $planSummary = (Invoke-StudioRequest -Path "/api/project-summary" -Method "POST" -SessionToken $session.token -Body @{projectRoot=$projectRoot}).Content | ConvertFrom-Json
+  $summPlan = @($planSummary.chapters | Where-Object { $_.filename -eq "ep001.md" })
+  if (@($summPlan).Count -ne 1 -or $summPlan[0].plan.status -ne "editing" -or $summPlan[0].plan.target_words -ne 1800) { throw "Chapter plan was not merged into the project summary." }
+
+  $archived = Invoke-ChapterAction -SessionToken $session.token -Body @{projectRoot=$projectRoot;action="archive";filename="ep001.md"}
+  if (-not $archived.ok -or $archived.trashRelativePath -notmatch "^revision/_archive/chapters/ep001\.md$") { throw "Chapter archive did not move the episode to revision/_archive/chapters." }
+  if (Test-Path -LiteralPath (Join-Path $episodeDir "ep001.md") -PathType Leaf) { throw "Archived episode still exists in the working episode folder." }
+  $restored = Invoke-ChapterAction -SessionToken $session.token -Body @{projectRoot=$projectRoot;action="restore";filename="ep001.md"}
+  if (-not $restored.ok -or -not (Test-Path -LiteralPath (Join-Path $episodeDir "ep001.md") -PathType Leaf)) { throw "Chapter restore did not move the episode back to the working folder." }
+
+  Write-Host "[studio-bridge-chapter-manager] PASS publication/preflight; professional-state; cover upload/read; entity CRUD; atomic-save; chapter CRUD/reorder/recoverable-delete; chapter-plan save/get/summary-merge; archive/restore"
 }
 finally {
   if ($bridgeProcess -and -not $bridgeProcess.HasExited) { Stop-Process -Id $bridgeProcess.Id -Force -ErrorAction SilentlyContinue; $bridgeProcess.WaitForExit(5000) | Out-Null }

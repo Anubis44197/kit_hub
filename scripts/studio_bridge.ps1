@@ -1648,12 +1648,22 @@ function Get-ProjectSummary {
   $complianceDir = Join-Path $projectRoot "runtime/agent-compliance"
   $workspaceDir = Join-Path $projectRoot "revision/_workspace"
 
-  $chapters = @()
+$chapters = @()
+  $chapterPlan = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "chapter-plan.json")
+  $planByFilename = @{}
+  if ($null -ne $chapterPlan -and $chapterPlan.PSObject.Properties.Name -contains "chapters") {
+    foreach ($entry in @($chapterPlan.chapters)) {
+      $key = ([string]$entry.filename).Trim()
+      if (-not $key) { $key = ([string]$entry.id).Trim() }
+      if ($key) { $planByFilename[$key.ToLowerInvariant()] = $entry }
+    }
+  }
   if (Test-Path -LiteralPath $episodeDir -PathType Container) {
     foreach ($file in @(Get-OrderedChapterFiles -ProjectRoot $projectRoot)) {
       $text = Read-Utf8TextIfExists -Path $file.FullName
       $number = [regex]::Match($file.BaseName, "\d+").Value
       $chapterNo = if ($number) { [int]$number } else { $chapters.Count + 1 }
+      $planned = $planByFilename[[string]$file.Name.ToLowerInvariant()]
       $chapters += [ordered]@{
         id = "Bölüm $chapterNo"
         title = Get-ReaderTitle -Text $text -Fallback $file.BaseName
@@ -1661,6 +1671,7 @@ function Get-ProjectSummary {
         relativePath = "episode/$($file.Name)"
         words = Get-WordCount -Text $text
         text = $text
+        plan = if ($planned) { $planned } else { $null }
       }
     }
   }
@@ -2189,7 +2200,7 @@ function Manage-Chapter {
       }
       else { $selectedFilename = "" }
     }
-    "reorder" {
+"reorder" {
       $requested = @($Payload.order | ForEach-Object { [string]$_ })
       $existing = @(Get-ChildItem -LiteralPath $episodeDir -Filter "ep*.md" -File | ForEach-Object { $_.Name })
       if ($requested.Count -ne $existing.Count -or @($requested | Where-Object { $_ -notin $existing }).Count -gt 0 -or @($requested | Select-Object -Unique).Count -ne $requested.Count) {
@@ -2197,6 +2208,30 @@ function Manage-Chapter {
       }
       $order.Clear()
       foreach ($name in $requested) { $order.Add($name) }
+    }
+    "archive" {
+      if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Episode not found: $filename" }
+      $sourceIndex = $order.IndexOf($filename)
+      $archiveDir = Join-Path $projectRoot "revision/_archive/chapters"
+      if (-not (Test-Path -LiteralPath $archiveDir -PathType Container)) { New-Item -ItemType Directory -Path $archiveDir -Force | Out-Null }
+      $archivePath = Join-Path $archiveDir $filename
+      Move-Item -LiteralPath $path -Destination $archivePath -Force
+      [void]$order.Remove($filename)
+      $trashRelativePath = Get-RelativeProjectPath -ProjectRoot $projectRoot -Path $archivePath
+      if ($order.Count) {
+        $nextIndex = [Math]::Min([Math]::Max(0, $sourceIndex), $order.Count - 1)
+        $selectedFilename = $order[$nextIndex]
+      }
+      else { $selectedFilename = "" }
+    }
+    "restore" {
+      if (-not $filename) { throw "Episode filename is required for restore." }
+      $archiveDir = Join-Path $projectRoot "revision/_archive/chapters"
+      $archivePath = Join-Path $archiveDir $filename
+      if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf)) { throw "Archived episode not found: $filename" }
+      Move-Item -LiteralPath $archivePath -Destination $path -Force
+      $order.Add($filename)
+      $selectedFilename = $filename
     }
     default { throw "Unsupported chapter action: $action" }
   }
@@ -2214,6 +2249,79 @@ function Manage-Chapter {
     trashRelativePath = $trashRelativePath
     version = $snapshot
   }
+}
+
+function Get-ChapterPlans {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $stateDir = Join-Path $projectRoot "revision/_state"
+  $plans = Read-Utf8JsonIfExists -Path (Join-Path $stateDir "chapter-plan.json")
+  $byFilename = @{}
+  foreach ($entry in @($plans.chapters)) {
+    $key = ([string]$entry.filename).Trim()
+    if (-not $key) { $key = ([string]$entry.id).Trim() }
+    if ($key) { $byFilename[$key.ToLowerInvariant()] = $entry }
+  }
+  return [ordered]@{
+    ok = $true
+    chapters = [object[]]@($byFilename.Values)
+    byFilename = [ordered]@{}
+  }
+}
+
+function Save-ChapterPlan {
+  param([object]$Payload)
+  $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
+  $stateDir = Join-Path $projectRoot "revision/_state"
+  $planPath = Join-Path $stateDir "chapter-plan.json"
+  $stored = Read-Utf8JsonIfExists -Path $planPath
+  $items = [System.Collections.Generic.List[object]]::new()
+  foreach ($entry in @($stored.chapters)) { $items.Add($entry) }
+
+  $filename = [string]$Payload.filename
+  if ($filename -notmatch "^ep\d+\.md$") { throw "Invalid episode filename: $filename" }
+  $id = [string]$Payload.id
+  if (-not $id) { $id = $filename -replace "\.md$", "" }
+
+  $allowedStatus = @("idea","draft","editing","completed","ready")
+  $status = [string]$Payload.status
+  if ($status -and $status -notin $allowedStatus) { throw "Unsupported chapter status: $status" }
+
+  function Limit-Text([string]$Value, [int]$Max) {
+    if ([string]::IsNullOrEmpty($Value)) { return "" }
+    return $Value.Trim().Substring(0, [Math]::Min($Value.Trim().Length, $Max))
+  }
+  $record = [ordered]@{
+    id = Get-SafeRecordId -Value $id -Prefix "chapter"
+    filename = $filename
+    status = if ($status) { $status } else { "idea" }
+    summary = Limit-Text ([string]$Payload.summary) 2000
+    pov = Limit-Text ([string]$Payload.pov) 200
+    date = Limit-Text ([string]$Payload.date) 80
+    setting = Limit-Text ([string]$Payload.setting) 200
+    target_words = [int]$Payload.target_words
+    scene_goal = Limit-Text ([string]$Payload.scene_goal) 1000
+    conflict = Limit-Text ([string]$Payload.conflict) 1000
+    outcome = Limit-Text ([string]$Payload.outcome) 1000
+    updated_at = (Get-Date).ToString("o")
+  }
+
+  $foundIndex = -1
+  for ($i = 0; $i -lt $items.Count; $i++) {
+    $existing = $items[$i]
+    $existingKey = ([string]$existing.filename).Trim()
+    if (-not $existingKey) { $existingKey = ([string]$existing.id).Trim() }
+    if ($existingKey -and $existingKey.ToLowerInvariant() -eq $filename.ToLowerInvariant()) { $foundIndex = $i; break }
+  }
+  if ($foundIndex -ge 0) { $items[$foundIndex] = $record } else { $items.Add($record) }
+
+  $next = [ordered]@{
+    schema_version = "1.0.0"
+    updated_at = (Get-Date).ToString("o")
+    chapters = [object[]]$items.ToArray()
+  }
+  Write-Utf8Json -Path $planPath -Value $next
+  return [ordered]@{ ok = $true; filename = $filename; record = $record }
 }
 
 function Save-Episode {
@@ -3107,9 +3215,21 @@ try {
           Write-JsonHttpResponse -Stream $stream -Value (Save-Episode -Payload $payload)
           continue
         }
-        if ($method -eq "POST" -and $path -eq "/api/manage-chapter") {
+if ($method -eq "POST" -and $path -eq "/api/manage-chapter") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           Write-JsonHttpResponse -Stream $stream -Value (Manage-Chapter -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/chapter-plan/save") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Save-ChapterPlan -Payload $payload)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/chapter-plan") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Get-ChapterPlans -Payload $payload)
           continue
         }
 

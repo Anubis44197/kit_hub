@@ -175,11 +175,30 @@ $interaction.editorCore.chapterSwitchGuard.dialogSeen -eq $true -and
   $interaction.editorCore.chapterSwitchGuard.cancelBlocked -eq $true -and
   $interaction.editorCore.chapterSwitchGuard.discardSwitched -eq $true -and
   $interaction.editorCore.chapterSwitchGuard.discardTextPreserved -eq $true -and
-  $interaction.editorCore.chapterManagerDialog.open -eq $true -and
+$interaction.editorCore.chapterManagerDialog.open -eq $true -and
   $interaction.editorCore.chapterManagerDialog.title -eq "Yeni bölüm" -and
   $interaction.editorCore.chapterManagerDialog.addEnabled -eq $true -and
   [int]$interaction.editorCore.chapterManagerDialog.draggableRows -eq 2 -and
   $interaction.editorCore.chapterManagerDialog.focused -eq "chapterTitleInput" -and
+  $interaction.editorCore.chapterPlanUi.dialogOpen -eq $true -and
+  $interaction.editorCore.chapterPlanUi.chipPresent -eq $true -and
+  $interaction.editorCore.chapterPlanUi.chipStatus -eq "draft" -and
+  $interaction.editorCore.chapterPlanUi.chipLabel -eq "Taslak" -and
+  $interaction.editorCore.chapterPlanUi.prefill.status -eq "draft" -and
+  [int]$interaction.editorCore.chapterPlanUi.prefill.target -eq 1200 -and
+  $interaction.editorCore.chapterPlanUi.prefill.pov -eq "3. kişi" -and
+  $interaction.editorCore.chapterPlanUi.prefill.setting -eq "Eski ev" -and
+  $interaction.editorCore.chapterPlanUi.prefill.summary -eq "Defne içeri girer" -and
+  $interaction.editorCore.chapterPlanUi.prefill.subtitle -eq "ep001.md" -and
+  $interaction.editorCore.chapterPlanUi.savePayload.filename -eq "ep001.md" -and
+  $interaction.editorCore.chapterPlanUi.saveStatus -eq "editing" -and
+  [int]$interaction.editorCore.chapterPlanUi.saveTarget -eq 1800 -and
+  $interaction.editorCore.chapterPlanUi.closedAfterSave -eq $true -and
+  $interaction.editorCore.chapterPlanUi.activePlanUpdated -eq $true -and
+  $interaction.editorCore.chapterArchiveUi.dialogOptionsSeen -contains "Arşivle" -and
+  $interaction.editorCore.chapterArchiveUi.archivePayload.filename -eq "ep001.md" -and
+  $interaction.editorCore.chapterArchiveUi.archivePayload.action -eq "archive" -and
+  $interaction.editorCore.chapterArchiveUi.archiveRemoved -eq $true -and
   $interaction.editorCore.mobileLayout.toolbarOverflow -ne $true -and
   $interaction.editorCore.mobileLayout.settingsVisible -eq $true -and
   $interaction.editorCore.mobileProfessionalLayout.open -eq $true -and
