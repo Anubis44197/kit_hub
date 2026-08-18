@@ -220,6 +220,16 @@ $interactionPass = (
   @($interaction.editorCore.typographyVariety.ornamentOptions).Count -eq 5 -and
   $interaction.editorCore.typographyVariety.ornamentApplied -eq $true -and
   $interaction.editorCore.typographyVariety.presetSynced -eq $true -and
+  @($interaction.editorCore.writingFeatures.dropCapOptions) -contains "classic" -and
+  @($interaction.editorCore.writingFeatures.sceneBreakOptions) -contains "asterism" -and
+  @($interaction.editorCore.writingFeatures.deviceOptions) -contains "kindle" -and
+  $interaction.editorCore.writingFeatures.wordFreqTogglePresent -eq $true -and
+  $interaction.editorCore.writingFeatures.hasDropCap -eq $true -and
+  $interaction.editorCore.writingFeatures.sceneBreakRendered -eq $true -and
+  $interaction.editorCore.writingFeatures.wordFreqMarked -eq $true -and
+  [int]$interaction.editorCore.writingFeatures.pacingCount -ge 2 -and
+  [int]$interaction.editorCore.writingFeatures.overusedCount -ge 1 -and
+  $interaction.editorCore.writingFeatures.deviceApplied -eq $true -and
   [int]$interaction.editorCore.publicationUx.workflowCount -eq 6 -and
   $interaction.editorCore.publicationUx.publishStepActive -eq $true -and
   [double]$interaction.editorCore.publicationUx.promptMinHeight -ge 190 -and
@@ -331,7 +341,7 @@ accessibility_probe=if($accessibilityPass){"PASS"}else{"FAIL"}
   desktop_accessibility=if($desktopAccessibilityPass){"PASS"}else{"FAIL"}
   mobile_accessibility=if($mobileAccessibilityPass){"PASS"}else{"FAIL"}
   wcag_conformance="AUTOMATED_AA_SUBSET_ONLY"
-  notes=@("Headless Edge DOM render and computed accessibility audits were executed at desktop and 390x844 mobile viewport sizes.","Edge DevTools interaction automation verified the structured editor, workflow rail, expanded AI prompt, front/back matter manager, cover studio, preflight access, Turkish editorial rules and spelling engine, find search options, quick chapter jump, measured pagination, dirty-state recovery, Ctrl+S/F/H/K, version diff rendering, scene management, mobile toolbar fit, settings access, focus restoration, Escape handling, and preview zoom state.","The automated subset checks language, landmarks, live status semantics, heading order, control names, duplicate IDs, 24px targets, computed text contrast, horizontal overflow, and reduced-motion support.","The performance subset measures FCP/LCP, DOM node budget, layout/reflow/script duration, long-task count and console errors under 4x CPU throttling; reduced-motion and main landmark are also enforced.","Manual screen-reader, cognitive, and complete WCAG conformance testing remains required.")
+  notes=@("Headless Edge DOM render and computed accessibility audits were executed at desktop and 390x844 mobile viewport sizes.","Edge DevTools interaction automation verified the structured editor, workflow rail, expanded AI prompt, front/back matter manager, cover studio, preflight access, Turkish editorial rules and spelling engine, word-frequency highlighting, drop caps, scene-break ornaments, device mockups, pacing meter, find search options, quick chapter jump, measured pagination, dirty-state recovery, Ctrl+S/F/H/K, version diff rendering, scene management, mobile toolbar fit, settings access, focus restoration, Escape handling, and preview zoom state.","The automated subset checks language, landmarks, live status semantics, heading order, control names, duplicate IDs, 24px targets, computed text contrast, horizontal overflow, and reduced-motion support.","The performance subset measures FCP/LCP, DOM node budget, layout/reflow/script duration, long-task count and console errors under 4x CPU throttling; reduced-motion and main landmark are also enforced.","Manual screen-reader, cognitive, and complete WCAG conformance testing remains required.")
   interaction=$interaction
   performance=$performance
   cases=$results

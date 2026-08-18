@@ -2366,6 +2366,8 @@ function Save-LayoutPlan {
   $pageSize = [string]$Payload.page_size
   $pageDesign = if ($Payload.page_design) { [string]$Payload.page_design } else { "classicFrame" }
   $ornamentStyle = if ($Payload.ornament_style) { [string]$Payload.ornament_style } else { "diamond" }
+  $dropCap = if ($Payload.drop_cap) { [string]$Payload.drop_cap } else { "none" }
+  $sceneBreak = if ($Payload.scene_break_ornament) { [string]$Payload.scene_break_ornament } else { "fleuron" }
   $printMode = [string]$Payload.print_mode
   $frontMatterSelection = [string]$Payload.front_matter
   $chapterStartPolicy = if ($Payload.chapter_start_policy) { [string]$Payload.chapter_start_policy } else { "new_page" }
@@ -2465,6 +2467,8 @@ $printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_s
 
   if ($pageDesign -notin @("classicFrame", "minimalEditorial", "artDeco", "botanical", "vintagePrint")) { throw "Unsupported page_design: $pageDesign" }
   if ($ornamentStyle -notin @("diamond", "fleuron", "flower", "asterism", "star")) { throw "Unsupported ornament_style: $ornamentStyle" }
+  if ($dropCap -notin @("none", "large", "classic")) { throw "Unsupported drop_cap: $dropCap" }
+  if ($sceneBreak -notin @("fleuron", "flower", "asterism", "dash", "none")) { throw "Unsupported scene_break_ornament: $sceneBreak" }
   if ($printMode -notin @("Tek taraf", "Karşılıklı sayfa")) { throw "Unsupported print_mode: $printMode" }
   if ($frontMatterSelection -notin @("Künye + İçindekiler", "Yalnız metin")) { throw "Unsupported front_matter: $frontMatterSelection" }
   if ($font -notin @("Garamond", "Times New Roman", "Georgia", "Palatino Linotype", "Courier New", "Book Antiqua", "Constantia", "Cambria", "Perpetua")) {
@@ -2503,6 +2507,8 @@ $printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_s
   $layout["page_size"] = $pageSize
   $layout["page_design"] = $pageDesign
   $layout["ornament_style"] = $ornamentStyle
+  $layout["drop_cap"] = $dropCap
+  $layout["scene_break_ornament"] = $sceneBreak
   $layout["print_mode"] = $printMode
   $layout["print_mode_key"] = $printModeKey
   $layout["front_matter_selection"] = $frontMatterSelection
@@ -2578,6 +2584,8 @@ $printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_s
     trim_size = $trimSize
     page_design = $pageDesign
     ornament_style = $ornamentStyle
+    drop_cap = $dropCap
+    scene_break_ornament = $sceneBreak
     font_family = $font
     body_font_size_pt = $fontSize
     line_spacing = $lineSpacing

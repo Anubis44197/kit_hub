@@ -629,6 +629,56 @@ const typographyVariety = await evaluate(`(() => {
     linePresets, presetSynced
   };
 })()`);
+const writingFeatures = await evaluate(`(() => {
+  const dropCap = document.getElementById('dropCapStyle');
+  const sceneBreak = document.getElementById('sceneBreakStyle');
+  const device = document.getElementById('deviceMockup');
+  const wordFreqToggle = document.getElementById('editorialWordFreqToggle');
+  const options = select => select ? [...select.options].map(option => option.value) : [];
+  const setValue = (id, value) => {
+    const element = document.getElementById(id);
+    if (!element) return;
+    element.value = value;
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  const originalText = manuscriptText.value;
+  const setEd = typeof window.setEditorText === 'function' ? window.setEditorText : (typeof setEditorText === 'function' ? setEditorText : null);
+  setEd('ilk sahne metni güzel güzel güzel güzel tekrar eden sözcükler\\n\\n<!-- scene: İkinci Sahne -->\\n\\nİkinci sahne metni güzel güzel güzel güzel\\n');
+  if (typeof editorContentChanged === 'function') editorContentChanged();
+  setValue('dropCapStyle', 'large');
+  setValue('sceneBreakStyle', 'fleuron');
+  if (wordFreqToggle && !wordFreqToggle.checked) {
+    wordFreqToggle.checked = true;
+    wordFreqToggle.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  if (typeof renderPreview === 'function') renderPreview();
+  const firstParagraph = bookPage.querySelector('p.first');
+  const hasDropCap = firstParagraph ? firstParagraph.classList.contains('drop-cap') : false;
+  const sceneBreakRendered = pageBody.innerHTML.includes('scene-break') && !pageBody.innerHTML.includes('&lt;!-- scene');
+  const wordFreqMarked = pageBody.innerHTML.includes('word-freq');
+  const pacing = typeof analyzePacing === 'function' ? analyzePacing(manuscriptText.value) : [];
+  const overused = typeof analyzeOverusedWords === 'function' ? analyzeOverusedWords(manuscriptText.value) : [];
+  setValue('dropCapStyle', 'none');
+  setValue('sceneBreakStyle', 'fleuron');
+  setValue('deviceMockup', 'kindle');
+  const deviceApplied = document.getElementById('previewShell')?.dataset.device === 'kindle';
+  setValue('deviceMockup', 'none');
+  setEd(originalText);
+  if (typeof editorContentChanged === 'function') editorContentChanged();
+  return {
+    dropCapOptions: options(dropCap),
+    sceneBreakOptions: options(sceneBreak),
+    deviceOptions: options(device),
+    wordFreqTogglePresent: Boolean(wordFreqToggle),
+    hasDropCap,
+    sceneBreakRendered,
+    wordFreqMarked,
+    pacingCount: pacing.length,
+    pacingLevels: pacing.map(scene => scene.level),
+    overusedCount: overused.length,
+    deviceApplied
+  };
+})()`);
 const publicationUx = await evaluate(`(() => {
   const workflow = [...document.querySelectorAll('[data-workflow-step]')];
   document.querySelector('[data-workflow-step="publish"]')?.click();
@@ -1061,6 +1111,7 @@ const result = {
     sceneManagerUi,
     publishingCompatibility,
     typographyVariety,
+    writingFeatures,
     publicationUx,
     professionalUx,
     controlContracts,

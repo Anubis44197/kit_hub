@@ -1502,6 +1502,52 @@
       font-size: 12px;
     }
 
+    .pace-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 64px;
+      gap: 10px;
+      align-items: center;
+      padding: 8px 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      background: rgba(255,255,255,0.025);
+    }
+
+    .pace-row b {
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pace-bar {
+      position: relative;
+      height: 8px;
+      border-radius: 5px;
+      background: rgba(255,255,255,0.07);
+      overflow: hidden;
+    }
+
+    .pace-bar > i {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 50%;
+      border-radius: 5px;
+      background: linear-gradient(90deg, #5a86a3, #7fc7c0);
+    }
+
+    .pace-row[data-level="Hızlı"] .pace-bar > i { background: linear-gradient(90deg, #7fc7c0, #9fe0a0); }
+    .pace-row[data-level="Durağan"] .pace-bar > i { background: linear-gradient(90deg, #5a86a3, #8f9bb8); }
+
+    .pace-label {
+      color: var(--gold);
+      font-size: 11px;
+      text-align: right;
+      white-space: nowrap;
+    }
+
     textarea {
       width: 100%;
       height: 100%;
@@ -1762,6 +1808,87 @@
     .page[data-ornament="flower"] .ornament::after { content: "❦"; }
     .page[data-ornament="asterism"] .ornament::after { content: "⁂"; }
     .page[data-ornament="star"] .ornament::after { content: "✶"; }
+
+    .page .scene-break {
+      text-align: center;
+      margin: 1.6em 0 1.5em;
+      color: #5a4c38;
+      font-size: 15px;
+      line-height: 1;
+      letter-spacing: 0.2em;
+      user-select: none;
+    }
+
+    .page .scene-break.scene-dash {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #5a4c38 20%, #5a4c38 80%, transparent);
+      margin: 2em 5em;
+      font-size: 0;
+    }
+
+    .page p .word-freq {
+      background: rgba(255, 219, 87, 0.5);
+      color: inherit;
+      padding: 0 1px;
+      border-radius: 2px;
+      box-shadow: 0 0 0 1px rgba(255, 200, 40, 0.45);
+    }
+
+    .page p.first.drop-cap::first-letter {
+      font-size: 64px;
+      line-height: 0.78;
+      padding: 6px 8px 0 0;
+    }
+
+    .page p.first.drop-cap.drop-classic::first-letter {
+      font-size: 96px;
+      line-height: 0.72;
+      padding: 10px 10px 0 0;
+      color: #5a4c38;
+      font-weight: 600;
+    }
+
+    .preview-shell[data-device] .page-stage {
+      padding: 28px 36px 32px;
+      background:
+        radial-gradient(120% 90% at 50% 0%, #161b1f 0%, #0c1013 55%, #080b0d 100%);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 26px;
+      box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.5),
+        inset 0 0 0 1px #1b2227,
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .preview-shell[data-device] .page {
+      border-radius: 4px;
+    }
+
+    .preview-shell[data-device="kindle"] .page,
+    .preview-shell[data-device="kobo"] .page {
+      filter: grayscale(0.92) contrast(1.06) brightness(1.02);
+      box-shadow:
+        inset 0 0 22px rgba(0, 0, 0, 0.26),
+        0 18px 44px rgba(0, 0, 0, 0.55);
+    }
+
+    .preview-shell[data-device="phone"] .page {
+      width: min(100%, calc(300px * var(--page-zoom))) !important;
+      aspect-ratio: 9 / 19 !important;
+      border-radius: 18px;
+      filter: grayscale(0.96) contrast(1.05);
+    }
+
+    .preview-shell[data-device] .page-stage::after {
+      content: attr(data-device-label);
+      display: block;
+      margin-top: 10px;
+      color: rgba(255, 255, 255, 0.42);
+      font: 600 10px/1 var(--book);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      text-align: center;
+    }
 
     .page p {
       margin: 0 0 10px;
@@ -3684,7 +3811,7 @@
           </div>
           <div class="notes-content" id="notesContent"></div>
         </aside>
-        <div class="preview-shell">
+        <div class="preview-shell" id="previewShell">
           <div class="page-stage">
             <article class="page" id="bookPage">
               <div class="chapter-kicker" id="pageKicker">BÖLÜM 7</div>
@@ -3697,6 +3824,12 @@
           <div class="preview-controls">
             <span id="previewMeta">A5 · 148 x 210 mm · Garamond</span>
             <span>
+              <select id="deviceMockup" aria-label="Cihaz önizleme çerçevesi">
+                <option value="none">Kağıt</option>
+                <option value="kindle">Kindle Paperwhite</option>
+                <option value="kobo">Kobo Clara HD</option>
+                <option value="phone">Telefon</option>
+              </select>
               <select id="zoomSelect" aria-label="Ön izleme zoom">
                 <option value="0.9">%90</option>
                 <option value="1" selected>%100</option>
@@ -3815,6 +3948,22 @@
               <option value="flower">Çiçek ❦</option>
               <option value="asterism">Asterism ⁂</option>
               <option value="star">Yıldız ✶</option>
+            </select>
+          </label>
+          <label class="field">Drop Cap (bölüm başı)
+            <select id="dropCapStyle">
+              <option value="none">Yok</option>
+              <option value="large">Tek harf (büyük)</option>
+              <option value="classic">Klasik büyük harf</option>
+            </select>
+          </label>
+          <label class="field">Sahne Arası Süs
+            <select id="sceneBreakStyle">
+              <option value="fleuron">Fleuron ❧</option>
+              <option value="flower">Çiçek ❦</option>
+              <option value="asterism">Asterism ⁂</option>
+              <option value="dash">Kısa çizgi</option>
+              <option value="none">Yok</option>
             </select>
           </label>
         </div>
@@ -4345,6 +4494,9 @@ const findCount = document.getElementById("findCount");
     let autosaveTimer = null;
     let previewTimer = null;
     let previewIdleHandle = 0;
+    let activeHotWords = new Set();
+    let activeSceneBreakStyle = "fleuron";
+    let activeDropCapVariant = "";
     let editorDirty = false;
     let editorSaving = false;
     let lastSavedContent = "";
@@ -5585,6 +5737,22 @@ function closeChapterDialog() {
         .replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, "<u>$1</u>");
     }
 
+    function escapeAndHighlight(value, hotWords) {
+      if (!hotWords || !hotWords.size) return renderInlineMarkup(value);
+      const pattern = /[\p{L}]{4,}/gu;
+      let out = "";
+      let last = 0;
+      for (const match of value.matchAll(pattern)) {
+        const word = match[0];
+        if (hotWords.has(word.toLocaleLowerCase("tr-TR"))) {
+          out += renderInlineMarkup(value.slice(last, match.index));
+          out += `<mark class="word-freq">${escapeHtml(word)}</mark>`;
+          last = match.index + word.length;
+        }
+      }
+      return out + renderInlineMarkup(value.slice(last));
+    }
+
     function buildStoryCards() {
       if (chapters.length) {
         return chapters.map((chapter, index) => ({
@@ -6075,6 +6243,28 @@ if (style.dialogueStyle === "emDash") {
         addTurkishSpellFindings(findings, text);
         addNameVariantFindings(findings, text);
       }
+      if (wordFreqEnabled()) {
+        const overused = analyzeOverusedWords(text);
+        const seen = new Set();
+        for (const match of String(text).matchAll(/[\p{L}]{4,}/gu)) {
+          const word = match[0].toLocaleLowerCase("tr-TR");
+          if (turkishOverusedStopWords.has(word) || seen.has(word)) continue;
+          const entry = overused.find(item => item.word === word);
+          if (!entry) continue;
+          seen.add(word);
+          findings.push({
+            id: `overused-word-${match.index}`,
+            rule: "overused-word",
+            kind: "info",
+            label: "Aşırı kullanılan sözcük",
+            message: `“${match[0]}” sözcüğü ${entry.count} kez geçiyor ve 500 kelimelik pencerede tekrar eşiğini (3) aşıyor. Çeşitlendirmeyi düşünün.`,
+            start: match.index,
+            end: match.index + match[0].length,
+            original: match[0],
+            replacement: null
+          });
+        }
+      }
       return findings.sort((a, b) => a.start - b.start || a.end - b.end);
     }
 
@@ -6112,6 +6302,7 @@ if (style.dialogueStyle === "emDash") {
               <textarea id="editorialStyleNotes" placeholder="Örn. Kurum adları, özel yazımlar, karakter hitapları...">${escapeHtml(style.notes || "")}</textarea>
             </label>
             <label class="inline-toggle"><input id="editorialSpellcheckToggle" type="checkbox"${spellcheckEnabled() ? " checked" : ""}> Yazım denetimi (sözlük + isim varyantı)</label>
+            <label class="inline-toggle"><input id="editorialWordFreqToggle" type="checkbox"${wordFreqEnabled() ? " checked" : ""}> Kelime frekansı vurgusu (500 kelimede >3)</label>
           </div>
           <div class="support-actions">
             <button type="button" data-editorial-save>Stil Rehberini Kaydet</button>
@@ -6125,7 +6316,7 @@ if (style.dialogueStyle === "emDash") {
                 <code>${escapeHtml(finding.original)} → ${escapeHtml(finding.replacement)}</code>
                 <div class="support-actions">
                   <button type="button" data-editorial-find="${index}">Bul</button>
-                  <button type="button" data-editorial-apply="${index}">Uygula</button>
+                  ${finding.replacement != null ? `<button type="button" data-editorial-apply="${index}">Uygula</button>` : ""}
                   ${finding.rule === "spell" || finding.rule === "name-variant" ? `<button type="button" class="ghost" data-editorial-ignore="${index}">Yoksay</button>` : ""}
                 </div>
               </article>
@@ -6152,7 +6343,7 @@ if (style.dialogueStyle === "emDash") {
 
 function applyEditorialFinding(index) {
       const finding = editorialFindings[Number(index)];
-      if (!finding) return;
+      if (!finding || finding.replacement == null) return;
       const value = manuscriptText.value || "";
       if (value.slice(finding.start, finding.end) !== finding.original) {
         renderEditorialPanel();
@@ -6197,6 +6388,7 @@ function applyEditorialFinding(index) {
       let value = manuscriptText.value || "";
       let applied = 0;
       [...editorialFindings].sort((a, b) => b.start - a.start).forEach(finding => {
+        if (finding.replacement == null) return;
         if (value.slice(finding.start, finding.end) !== finding.original) return;
         value = value.slice(0, finding.start) + finding.replacement + value.slice(finding.end);
         applied += 1;
@@ -6878,6 +7070,54 @@ function applyEditorialFinding(index) {
       setStatus("Motor olayı: bağlam defteri açıldı");
     }
 
+    const turkishOverusedStopWords = new Set("ve bir bu da de ile için gibi ama fakat çok daha en olan olarak sonra önce her hiç mi mu mü mı diye kadar içinde üzerine ancak çünkü ki ne ben sen o biz siz onlar şey artık hala hep herkes kim neden nasıl nerede ne zaman dahi eğer yine böyle şöyle öyle ya ise değil hem hem de lakin zira dolayısıyla madem oysa üstelik yalnız hâlâ kendi kendine bütün bütünüyle yoksa başka özellikle genellikle".split(" "));
+
+    const sceneBreakGlyphs = { fleuron: "❧", flower: "❦", asterism: "⁂" };
+
+    function wordFreqEnabled() {
+      try { return localStorage.getItem("kithub-wordfreq-enabled") !== "off"; }
+      catch { return true; }
+    }
+
+    function findHotWords(text, windowSize = 500, threshold = 3) {
+      const tokens = [];
+      for (const match of String(text).matchAll(/[\p{L}]{4,}/gu)) {
+        const word = match[0].toLocaleLowerCase("tr-TR");
+        if (turkishOverusedStopWords.has(word)) continue;
+        tokens.push(word);
+      }
+      const hot = new Set();
+      const counts = new Map();
+      let tail = 0;
+      for (let head = 0; head < tokens.length; head += 1) {
+        const word = tokens[head];
+        counts.set(word, (counts.get(word) || 0) + 1);
+        if (head - tail >= windowSize) {
+          const old = tokens[tail];
+          const c = counts.get(old);
+          if (c === 1) counts.delete(old); else counts.set(old, c - 1);
+          tail += 1;
+        }
+        if ((counts.get(word) || 0) > threshold) hot.add(word);
+      }
+      return hot;
+    }
+
+    function analyzeOverusedWords(text) {
+      const counts = new Map();
+      for (const match of String(text).matchAll(/[\p{L}]{4,}/gu)) {
+        const word = match[0].toLocaleLowerCase("tr-TR");
+        if (turkishOverusedStopWords.has(word)) continue;
+        counts.set(word, (counts.get(word) || 0) + 1);
+      }
+      const hot = findHotWords(text);
+      return [...counts.entries()]
+        .filter(([word]) => hot.has(word))
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12)
+        .map(([word, count]) => ({ word, count }));
+    }
+
     function analyzeRepetition(text) {
       const stop = new Set("ve bir bu da de ile için gibi ama fakat çok daha en olan olarak sonra önce her hiç mi mu mü mı diye kadar içinde üzerine ancak çünkü".split(" "));
       const words = (text.toLocaleLowerCase("tr-TR").match(/[a-zçğıöşüâîû]{4,}/gi) || [])
@@ -6902,21 +7142,68 @@ function applyEditorialFinding(index) {
     function renderTextAnalysis() {
       const raw = manuscriptText.value || "";
       const repeated = analyzeRepetition(raw);
+      const overused = analyzeOverusedWords(raw);
+      const pacing = analyzePacing(raw);
       const paragraphs = cleanParagraphs(raw);
       const longParagraphs = paragraphs.filter(paragraph => countWords(paragraph) > 95).length;
-      notesTitle.textContent = "Tekrar Analizi";
+      const overall = pacing.length ? pacing.reduce((sum, scene) => sum + scene.bar, 0) / pacing.length : 50;
+      notesTitle.textContent = "Tekrar ve Tempo Analizi";
       notesContent.innerHTML = `
+        <div class="writing-brief">
+          <b>Kullanım ve tempo raporu</b>
+          <p>Sözcük tekrarları 500 kelimelik pencerede; tempo AutoCrit tarzı metriklerle (cümle uzunluğu, diyalog oranı) ölçülür. Hiçbir şey metni değiştirmez.</p>
+        </div>
         <div class="analysis-list">
           <div class="analysis-row"><b>Paragraf sayısı:</b><span>${paragraphs.length}</span></div>
           <div class="analysis-row"><b>Uzun paragraf riski:</b><span>${longParagraphs}</span></div>
+          <div class="analysis-row"><b>Genel tempo:</b><span>${overall >= 60 ? "Hızlı" : overall <= 40 ? "Durağan" : "Dengeli"}</span></div>
           ${repeated.length ? repeated.map(([word, count]) => `
             <div class="analysis-row"><b>${escapeHtml(word)}:</b><span>${count} kez</span></div>
           `).join("") : `<div class="analysis-row"><b>Tekrar riski:</b><span>Düşük</span></div>`}
+          ${overused.length ? `<div class="analysis-row"><b>Aşırı kullanılan (500 kelimede &gt;3):</b><span>${overused.map(item => `${escapeHtml(item.word)} (${item.count})`).join(", ")}</span></div>` : ""}
         </div>
+        ${pacing.length ? `
+          <div class="analysis-list" style="margin-top:14px">
+            <div class="pace-row"><b>Sahne</b><span class="pace-bar" aria-hidden="true"></span><span class="pace-label"></span></div>
+            ${pacing.map(scene => `
+              <div class="pace-row" data-level="${escapeHtml(scene.level)}">
+                <b title="${escapeHtml(scene.title)}">${escapeHtml(scene.title)} · ${scene.words} kelime</b>
+                <span class="pace-bar" aria-hidden="true"><i style="width:${scene.bar}%"></i></span>
+                <span class="pace-label">${escapeHtml(scene.level)} · ${scene.avg.toFixed(0)} kel/cümle</span>
+              </div>
+            `).join("")}
+          </div>` : ""}
       `;
       notesPanel.classList.add("open");
       notesPanel.setAttribute("aria-hidden", "false");
-      setStatus("Motor olayı: tekrar ve frekans analizi açıldı");
+      setStatus("Motor olayı: tekrar, frekans ve tempo analizi açıldı");
+    }
+
+    function analyzePacing(text) {
+      return parseScenes(text).map((scene, index) => {
+        const body = (scene.body || "").trim();
+        const sentences = (body.match(/[^.!?…]+[.!?…]+[\s"”»']*|[^.!?…]+$/g) || []).filter(sentence => sentence.trim());
+        const sentenceLengths = sentences.map(sentence => countWords(sentence)).filter(length => length > 0);
+        const totalWords = countWords(body);
+        const dialogueWords = (body.match(/^\s*(?:[-—–])\s+.+$/gm) || []).join(" ").split(/\s+/).filter(Boolean).length;
+        const dialogueRatio = totalWords ? dialogueWords / totalWords : 0;
+        const shortRatio = sentenceLengths.length ? sentenceLengths.filter(length => length <= 8).length / sentenceLengths.length : 0;
+        const longRatio = sentenceLengths.length ? sentenceLengths.filter(length => length >= 22).length / sentenceLengths.length : 0;
+        const average = sentenceLengths.length ? sentenceLengths.reduce((sum, length) => sum + length, 0) / sentenceLengths.length : 0;
+        const bar = Math.round(Math.max(0, Math.min(100, 50 + (shortRatio - longRatio) * 130 + dialogueRatio * 55)));
+        const level = bar >= 60 ? "Hızlı" : bar <= 40 ? "Durağan" : "Dengeli";
+        return {
+          index,
+          title: scene.title || `Sahne ${index + 1}`,
+          words: totalWords,
+          avg: average,
+          shortRatio,
+          longRatio,
+          dialogueRatio,
+          bar,
+          level
+        };
+      });
     }
 
     function renderRevisionPanel() {
@@ -7443,7 +7730,7 @@ function applyEditorialFinding(index) {
     function buildPreviewBlocks(paragraphs) {
       const expanded = paragraphs.flatMap(paragraph => {
         const lines = paragraph.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-        const lineBlocks = lines.length > 1 && lines.every(line => /^(?:[-*+]\s+|#{1,3}\s+|>\s+|<!--\s*(?:page|section)-break\s*-->$)/i.test(line));
+        const lineBlocks = lines.length > 1 && lines.every(line => /^(?:[-*+]\s+|#{1,3}\s+|>\s+|<!--\s*(?:page|section|scene(?:[^>]*)?)-break\s*-->$)/i.test(line));
         return lineBlocks ? lines : [paragraph];
       });
       let firstBodyParagraph = true;
@@ -7451,33 +7738,45 @@ function applyEditorialFinding(index) {
         if (/^<!--\s*(?:page|section)-break\s*-->$/i.test(paragraph)) {
           return { explicitBreak: true, html: "" };
         }
+        if (/^<!--\s*scene(?:\s*:\s*[^-->]*?)?\s*-->$/i.test(paragraph)) {
+          const glyph = activeSceneBreakStyle === "dash" ? "" : sceneBreakGlyphs[activeSceneBreakStyle] || "";
+          return {
+            kind: "scene-break",
+            keepWithNext: true,
+            html: activeSceneBreakStyle === "none"
+              ? ""
+              : activeSceneBreakStyle === "dash"
+                ? `<div class="scene-break scene-dash" aria-hidden="true"></div>`
+                : `<div class="scene-break" aria-hidden="true">${glyph}</div>`
+          };
+        }
         const heading = paragraph.match(/^\s*(#{1,3})\s+(.+)$/);
         if (heading) {
           return {
             kind: "heading",
             keepWithNext: true,
-            html: `<h3 class="preview-subhead">${renderInlineMarkup(heading[2])}</h3>`
+            html: `<h3 class="preview-subhead">${escapeAndHighlight(heading[2], activeHotWords)}</h3>`
           };
         }
         const quote = paragraph.match(/^\s*>\s*(.+)$/s);
         if (quote) {
           return {
             kind: "quote",
-            html: `<blockquote class="preview-quote">${renderInlineMarkup(quote[1])}</blockquote>`
+            html: `<blockquote class="preview-quote">${escapeAndHighlight(quote[1], activeHotWords)}</blockquote>`
           };
         }
         const list = paragraph.match(/^\s*[-*+]\s+(.+)$/s);
         if (list) {
           return {
             kind: "list",
-            html: `<p class="preview-list">${renderInlineMarkup(list[1])}</p>`
+            html: `<p class="preview-list">${escapeAndHighlight(list[1], activeHotWords)}</p>`
           };
         }
-        const firstClass = firstBodyParagraph ? "first" : "";
+        const firstClass = firstBodyParagraph ? `first${activeDropCapVariant ? ` drop-cap ${activeDropCapVariant}` : ""}` : "";
         firstBodyParagraph = false;
         return {
           kind: "paragraph",
-          html: `<p class="${firstClass}">${renderInlineMarkup(paragraph)}</p>`
+          html: `<p class="${firstClass}">${escapeAndHighlight(paragraph, activeHotWords)}</p>`
         };
       });
     }
@@ -7765,6 +8064,10 @@ function applyEditorialFinding(index) {
       const chapter = chapters[currentChapterIndex] || chapters[0] || { id: "KitHub", title: "Proje Bekleniyor" };
       const chapterTitle = readerTitleFromMarkdown(raw, chapter.title);
       const bodyParagraphs = paragraphs.filter((paragraph, index) => !(index === 0 && /^#\s+/.test(paragraph)));
+      activeHotWords = wordFreqEnabled() ? findHotWords(raw) : new Set();
+      activeSceneBreakStyle = document.getElementById("sceneBreakStyle")?.value || "fleuron";
+      const dropCapValue = document.getElementById("dropCapStyle")?.value || "none";
+      activeDropCapVariant = dropCapValue === "none" ? "" : dropCapValue;
       const pagination = measurePreviewPages(bodyParagraphs, chapter, chapterTitle);
       const previewPages = pagination.pages || [];
       const visibleLimit = previewShowAll ? previewPages.length : previewPageLimit;
@@ -8952,6 +9255,8 @@ setEditorText(chapter.text || "");
       setSelectIfPresent("pageSize", layoutPlan?.page_size);
       setSelectIfPresent("pageDesign", layoutPlan?.page_design);
       setSelectIfPresent("ornamentStyle", layoutPlan?.ornament_style);
+      setSelectIfPresent("dropCapStyle", layoutPlan?.drop_cap);
+      setSelectIfPresent("sceneBreakStyle", layoutPlan?.scene_break_ornament);
       setSelectIfPresent("layoutProfile", layoutPlan?.layout_profile);
       setSelectIfPresent("printMode", layoutPlan?.print_mode);
       setSelectIfPresent("frontMatter", layoutPlan?.front_matter);
@@ -9844,6 +10149,21 @@ function getPageDimensions(pageSizeValue) {
       renderPreview();
     }
 
+    function applyDeviceMockup() {
+      const value = document.getElementById("deviceMockup")?.value || "none";
+      const previewShell = document.getElementById("previewShell");
+      if (!previewShell) return;
+      try { localStorage.setItem("kithub-device-mockup", value); } catch {}
+      if (value === "none") {
+        delete previewShell.dataset.device;
+        delete previewShell.dataset.deviceLabel;
+        return;
+      }
+      const labels = { kindle: "Kindle Paperwhite", kobo: "Kobo Clara HD", phone: "Telefon" };
+      previewShell.dataset.device = value;
+      previewShell.dataset.deviceLabel = labels[value] || value;
+    }
+
     function setControlValue(id, value) {
       const control = document.getElementById(id);
       if (!control || value === undefined || value === null) return;
@@ -9891,6 +10211,8 @@ function collectLayoutPlanFromUi() {
         front_matter: document.getElementById("frontMatter").value,
         page_design: document.getElementById("pageDesign")?.value || "classicFrame",
         ornament_style: document.getElementById("ornamentStyle")?.value || "diamond",
+        drop_cap: document.getElementById("dropCapStyle")?.value || "none",
+        scene_break_ornament: document.getElementById("sceneBreakStyle")?.value || "fleuron",
         chapter_start_policy: document.getElementById("chapterStartPolicy")?.value || profile.chapterStart,
         heading_hierarchy_policy: document.getElementById("headingHierarchyPolicy")?.value || profile.headingHierarchy || "chapter_only",
         running_header_policy: document.getElementById("runningHeaderPolicy")?.value || profile.runningHeader || "none",
@@ -10593,11 +10915,26 @@ closeNotesBtn.addEventListener("click", () => renderSupportTab("manuscript"));
       control.addEventListener("input", applyTypography);
       control.addEventListener("change", applyTypography);
     });
-    ["pageSize", "pageDesign", "ornamentStyle", "printMode", "frontMatter", "typeFont", "typeSize", "lineHeight", "marginTop", "marginInside", "marginOutside", "indent", "after", "chapterStartPolicy", "headingHierarchyPolicy", "runningHeaderPolicy", "pageNumberPosition", "tocDepth", "frontMatterNumbering", "widowOrphanControl"].forEach(id => {
+    ["pageSize", "pageDesign", "ornamentStyle", "dropCapStyle", "sceneBreakStyle", "printMode", "frontMatter", "typeFont", "typeSize", "lineHeight", "marginTop", "marginInside", "marginOutside", "indent", "after", "chapterStartPolicy", "headingHierarchyPolicy", "runningHeaderPolicy", "pageNumberPosition", "tocDepth", "frontMatterNumbering", "widowOrphanControl"].forEach(id => {
       const control = document.getElementById(id);
       if (!control) return;
       control.addEventListener("input", applyTypography);
       control.addEventListener("change", applyTypography);
+    });
+    const deviceMockupSelect = document.getElementById("deviceMockup");
+    if (deviceMockupSelect) {
+      deviceMockupSelect.value = (() => {
+        try { return localStorage.getItem("kithub-device-mockup") || "none"; }
+        catch { return "none"; }
+      })();
+      deviceMockupSelect.addEventListener("change", applyDeviceMockup);
+      applyDeviceMockup();
+    }
+    document.getElementById("editorialWordFreqToggle")?.addEventListener("change", event => {
+      try { localStorage.setItem("kithub-wordfreq-enabled", event.target.checked ? "on" : "off"); } catch {}
+      renderEditorialPanel();
+      renderPreview();
+      setStatus(event.target.checked ? "Motor olayı: kelime frekansı vurgusu açıldı" : "Motor olayı: kelime frekansı vurgusu kapatıldı");
     });
     document.getElementById("lineHeightPreset")?.addEventListener("change", event => {
       const preset = document.getElementById("lineHeight");

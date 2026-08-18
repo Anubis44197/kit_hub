@@ -152,6 +152,15 @@ $indent = if ($layout.paragraph_first_line_indent_cm -ne $null) { [double]$layou
 $after = if ($layout.paragraph_spacing_after_pt -ne $null) { [double]$layout.paragraph_spacing_after_pt } else { 0 }
 $pageDesign = if ($layout.page_design) { [string]$layout.page_design } else { "classicFrame" }
 $ornamentStyle = if ($layout.ornament_style) { [string]$layout.ornament_style } else { "diamond" }
+$dropCap = if ($layout.drop_cap) { [string]$layout.drop_cap } else { "none" }
+$sceneBreak = if ($layout.scene_break_ornament) { [string]$layout.scene_break_ornament } else { "fleuron" }
+$sceneBreakGlyph = switch ($sceneBreak) {
+  "flower" { "❦" }
+  "asterism" { "⁂" }
+  "dash" { "" }
+  "none" { $null }
+  default { "❧" }
+}
 $widowOrphanPolicy = if ($layout.widow_orphan_control) { [string]$layout.widow_orphan_control } else { "strict" }
 $widowOrphanLines = switch ($widowOrphanPolicy) {
   "off" { 1 }
@@ -220,6 +229,47 @@ h1::after {
 }
 "@
 
+$dropCapCss = switch ($dropCap) {
+  "large" {
+    @"
+h1 + p::first-letter {
+  float: left;
+  font-size: 3.1em;
+  line-height: 0.82;
+  padding: 0.04em 0.08em 0 0;
+}
+"@
+  }
+  "classic" {
+    @"
+h1 + p::first-letter {
+  float: left;
+  font-size: 4.4em;
+  line-height: 0.78;
+  padding: 0.05em 0.1em 0 0;
+  color: #5a4c38;
+  font-weight: 600;
+}
+"@
+  }
+  default { "" }
+}
+
+$sceneBreakCss = @"
+.scene-break {
+  text-align: center;
+  margin: 1.5em 0;
+  color: #5a4c38;
+  font-size: 12pt;
+  line-height: 1;
+}
+.scene-break.scene-dash {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #5a4c38 20%, #5a4c38 80%, transparent);
+  margin: 2em 3em;
+}
+"@
+
 $workspace = Join-Path $ProjectRoot "revision/_workspace/publication"
 $exportDir = Join-Path $ProjectRoot "revision/export"
 New-Item -ItemType Directory -Path $workspace,$exportDir -Force | Out-Null
@@ -258,6 +308,8 @@ html { font-family: "$font", Garamond, "Times New Roman", serif; color: #17130f;
 body { font-size: ${fontSize}pt; line-height: $lineSpacing; text-rendering: optimizeLegibility; }
 h1 { string-set: chapter-title content(text); break-before: $chapterBreak; page-break-before: $(if ($chapterBreak -eq "auto") { "auto" } else { "always" }); break-after: avoid; page-break-after: avoid; $decoration }
 $ornamentCss
+$dropCapCss
+$sceneBreakCss
 h2, h3 { break-after: avoid; page-break-after: avoid; break-inside: avoid; }
 p, li { widows: $widowOrphanLines; orphans: $widowOrphanLines; }
 p { margin: 0 0 ${after}pt; text-align: justify; text-indent: ${indent}cm; hyphens: auto; }
@@ -276,7 +328,20 @@ th, td { border: 1px solid #999; padding: 0.35em; }
 [IO.File]::WriteAllText($cssPath, $css, [Text.UTF8Encoding]::new($false))
 
 $common = @("--from=commonmark_x","--standalone","--toc","--section-divs","--metadata","lang=tr-TR","--metadata","title=$title")
-$chapterInputs = @($chapters | ForEach-Object { $_.FullName })
+$sceneBreakWorkspace = Join-Path $workspace "chapters"
+New-Item -ItemType Directory -Path $sceneBreakWorkspace -Force | Out-Null
+$chapterInputs = @($chapters | ForEach-Object {
+  $content = Get-Content -LiteralPath $_.FullName -Raw -Encoding UTF8
+  if ($sceneBreakGlyph -eq $null) {
+    $content = [regex]::Replace($content, '(?m)^<!--\s*scene(?:\s*:\s*[^-->]*?)?\s*-->$', '')
+  } else {
+    $markup = if ($sceneBreak -eq "dash") { '<div class="scene-break scene-dash"></div>' } else { '<div class="scene-break">' + $sceneBreakGlyph + '</div>' }
+    $content = [regex]::Replace($content, '(?m)^<!--\s*scene(?:\s*:\s*[^-->]*?)?\s*-->$', $markup)
+  }
+  $copyPath = Join-Path $sceneBreakWorkspace $_.Name
+  [IO.File]::WriteAllText($copyPath, $content, [Text.UTF8Encoding]::new($false))
+  $copyPath
+})
 $printInputs = @(@($frontPrintPath) + $chapterInputs + @($backPrintPath) | Where-Object { $_ })
 $epubInputs = @(@($frontEpubPath) + $chapterInputs + @($backEpubPath) | Where-Object { $_ })
 $results = @()
@@ -505,6 +570,8 @@ $report = [ordered]@{
   cover = $layout.cover_spec
   page_design = $pageDesign
   ornament_style = $ornamentStyle
+  drop_cap = $dropCap
+  scene_break_ornament = $sceneBreak
   typography = [ordered]@{ font_family = $font; font_size_pt = $fontSize; line_spacing = $lineSpacing }
   font_embedding = $pdfFontStatus
   pdf_x = $pdfXStatus
