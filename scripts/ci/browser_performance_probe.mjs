@@ -156,7 +156,7 @@ const value = await evaluate(`(() => {
     load: nav.loadEventEnd || null,
     transferSize: nav.transferSize || 0,
     reducedMotion,
-    mainArea: !!(document.querySelector('main') || document.querySelector('[role="main"]') || document.querySelector('.studio-layout') || document.body)
+    mainArea: !!(document.querySelector('main') || document.querySelector('[role="main"]') || document.querySelector('.studio-layout'))
   };
 })()`);
 
