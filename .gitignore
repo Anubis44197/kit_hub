@@ -24,6 +24,10 @@ runtime/approvals/*.json
 runtime/agent-compliance/*.json
 !runtime/agent-compliance.schema.json
 runtime/browser-e2e-report.json
+runtime/browser-e2e-report-manual.json
+runtime/browser-e2e-report-deepcheck.json
+runtime/probe_stdout.json
+runtime/test-interaction*.png
 runtime/fixture-reports/
 runtime/provider-fixture-reports/
 studio-stdout.log

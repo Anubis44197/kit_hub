@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$ProjectRoot = (Get-Location).Path,
   [string]$Formats = "pdf,epub",
   [switch]$PreflightOnly
@@ -151,6 +151,7 @@ $outside = if ($layout.margin_outside_mm) { [double]$layout.margin_outside_mm } 
 $indent = if ($layout.paragraph_first_line_indent_cm -ne $null) { [double]$layout.paragraph_first_line_indent_cm } else { 0.55 }
 $after = if ($layout.paragraph_spacing_after_pt -ne $null) { [double]$layout.paragraph_spacing_after_pt } else { 0 }
 $pageDesign = if ($layout.page_design) { [string]$layout.page_design } else { "classicFrame" }
+$ornamentStyle = if ($layout.ornament_style) { [string]$layout.ornament_style } else { "diamond" }
 $widowOrphanPolicy = if ($layout.widow_orphan_control) { [string]$layout.widow_orphan_control } else { "strict" }
 $widowOrphanLines = switch ($widowOrphanPolicy) {
   "off" { 1 }
@@ -197,8 +198,27 @@ $decoration = switch ($pageDesign) {
   "minimalEditorial" { "border-bottom: 1px solid #777; text-align: left; padding-bottom: 0.35em;" }
   "artDeco" { "border: 3px double #8a6a38; padding: 0.55em; letter-spacing: 0.08em;" }
   "botanical" { "border-bottom: 1px solid #68734e; color: #435033; padding-bottom: 0.4em;" }
+  "vintagePrint" { "border-top: 1px solid #5a4c38; border-bottom: 1px solid #5a4c38; text-align: center; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.45em 0;" }
   default { "text-align: center; border-bottom: 1px solid #8a7a62; padding-bottom: 0.35em;" }
 }
+$ornamentGlyph = switch ($ornamentStyle) {
+  "fleuron" { "❧" }
+  "flower" { "❦" }
+  "asterism" { "⁂" }
+  "star" { "✶" }
+  default { "◆" }
+}
+$ornamentCss = @"
+h1::after {
+  content: "$ornamentGlyph";
+  display: block;
+  text-align: center;
+  margin-top: 0.5em;
+  font-size: 11pt;
+  line-height: 1;
+  color: #5a4c38;
+}
+"@
 
 $workspace = Join-Path $ProjectRoot "revision/_workspace/publication"
 $exportDir = Join-Path $ProjectRoot "revision/export"
@@ -237,6 +257,7 @@ $pageNumberCss
 html { font-family: "$font", Garamond, "Times New Roman", serif; color: #17130f; background: white; }
 body { font-size: ${fontSize}pt; line-height: $lineSpacing; text-rendering: optimizeLegibility; }
 h1 { string-set: chapter-title content(text); break-before: $chapterBreak; page-break-before: $(if ($chapterBreak -eq "auto") { "auto" } else { "always" }); break-after: avoid; page-break-after: avoid; $decoration }
+$ornamentCss
 h2, h3 { break-after: avoid; page-break-after: avoid; break-inside: avoid; }
 p, li { widows: $widowOrphanLines; orphans: $widowOrphanLines; }
 p { margin: 0 0 ${after}pt; text-align: justify; text-indent: ${indent}cm; hyphens: auto; }
@@ -483,6 +504,7 @@ $report = [ordered]@{
   matter = [ordered]@{ front_count = $frontItems.Count; back_count = $backItems.Count; empty_enabled_count = $emptyMatter.Count }
   cover = $layout.cover_spec
   page_design = $pageDesign
+  ornament_style = $ornamentStyle
   typography = [ordered]@{ font_family = $font; font_size_pt = $fontSize; line_spacing = $lineSpacing }
   font_embedding = $pdfFontStatus
   pdf_x = $pdfXStatus

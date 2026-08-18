@@ -213,6 +213,13 @@ $interactionPass = (
   $interaction.editorCore.publishingCompatibility.classicRestored -eq $true -and
   @($interaction.editorCore.publishingCompatibility.outputProfiles).Count -eq 4 -and
   $interaction.editorCore.publishingCompatibility.defaultOutputProfile -eq "docx" -and
+  @($interaction.editorCore.typographyVariety.addedFonts).Count -eq 4 -and
+  $interaction.editorCore.typographyVariety.fontSync -eq $true -and
+  @($interaction.editorCore.typographyVariety.designValues) -contains "vintagePrint" -and
+  $interaction.editorCore.typographyVariety.vintageApplied -eq $true -and
+  @($interaction.editorCore.typographyVariety.ornamentOptions).Count -eq 5 -and
+  $interaction.editorCore.typographyVariety.ornamentApplied -eq $true -and
+  $interaction.editorCore.typographyVariety.presetSynced -eq $true -and
   [int]$interaction.editorCore.publicationUx.workflowCount -eq 6 -and
   $interaction.editorCore.publicationUx.publishStepActive -eq $true -and
   [double]$interaction.editorCore.publicationUx.promptMinHeight -ge 190 -and

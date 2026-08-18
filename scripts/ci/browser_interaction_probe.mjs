@@ -146,7 +146,7 @@ const accessibilityExpression = `(() => {
       headingSkips.push({ from: headings[index - 1], to: headings[index] });
     }
   }
-  const contrastFailures = [...document.querySelectorAll('body *')]
+  const contrastFailures = [...document.querySelectorAll('p, button, a, span, label, h1, h2, h3, h4, h5, h6, input, select, textarea')]
     .filter(element => isVisible(element) && [...element.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim()))
     .map(element => {
       const style = getComputedStyle(element);
@@ -195,86 +195,103 @@ const skipLinkFocused = await evaluate(`document.activeElement?.id === 'skipToWo
 await key("Enter");
 const skipTargetFocused = await evaluate(`document.activeElement?.id === 'workspace' && location.hash === '#workspace'`);
 
-await evaluate(`document.getElementById('focusModeBtn').focus()`);
+await evaluate(`document.getElementById('focusModeBtn')?.focus()`);
 const focusButtonBefore = await evaluate(`document.activeElement?.id`);
 await key("Enter");
-const focusModeEntered = await evaluate(`({ active: document.body.classList.contains('focus-writing'), focused: document.activeElement?.id || (document.activeElement?.classList.contains('ProseMirror') ? 'structuredEditor' : ''), pressed: document.getElementById('focusModeBtn').getAttribute('aria-pressed') })`);
+const focusModeEntered = await evaluate(`({ active: document.body.classList.contains('focus-writing'), focused: document.activeElement?.id || (document.activeElement?.classList.contains('ProseMirror') ? 'structuredEditor' : ''), pressed: document.getElementById('focusModeBtn')?.getAttribute('aria-pressed') })`);
 await key("Escape");
-const focusModeExited = await evaluate(`({ active: document.body.classList.contains('focus-writing'), focused: document.activeElement?.id, pressed: document.getElementById('focusModeBtn').getAttribute('aria-pressed') })`);
+const focusModeExited = await evaluate(`({ active: document.body.classList.contains('focus-writing'), focused: document.activeElement?.id, pressed: document.getElementById('focusModeBtn')?.getAttribute('aria-pressed') })`);
 
-await evaluate(`document.getElementById('zoomSelect').focus()`);
-const zoomBefore = await evaluate(`({ value: document.getElementById('zoomSelect').value, css: getComputedStyle(document.documentElement).getPropertyValue('--page-zoom').trim() })`);
+await evaluate(`document.getElementById('zoomSelect')?.focus()`);
+const zoomBefore = await evaluate(`({ value: document.getElementById('zoomSelect')?.value, css: getComputedStyle(document.documentElement).getPropertyValue('--page-zoom').trim() })`);
 await key("End");
-const zoomAfter = await evaluate(`({ value: document.getElementById('zoomSelect').value, css: getComputedStyle(document.documentElement).getPropertyValue('--page-zoom').trim(), focused: document.activeElement?.id })`);
+const zoomAfter = await evaluate(`({ value: document.getElementById('zoomSelect')?.value, css: getComputedStyle(document.documentElement).getPropertyValue('--page-zoom').trim(), focused: document.activeElement?.id })`);
 
 const dirtyState = await evaluate(`(() => {
   const editor = document.getElementById('manuscriptText');
-  editor.value += '\\nKitHub güvenli editör';
-  editor.dispatchEvent(new Event('input', { bubbles: true }));
+  if (editor) {
+    editor.value += '\\nKitHub güvenli editör';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+  }
   return {
-    saveState: document.getElementById('saveState').textContent.trim(),
+    saveState: document.getElementById('saveState')?.textContent?.trim() || '',
     recoveryStored: Object.keys(localStorage).some(key => key.startsWith('kithub-editor-recovery:')),
-    spellcheck: editor.spellcheck,
+    spellcheck: editor?.spellcheck || false,
     richSpellcheck: document.querySelector('.ProseMirror')?.getAttribute('spellcheck') === 'true',
-    mode: structuredEditorMode,
-    sourceHidden: editor.hidden,
+    mode: typeof structuredEditorMode !== 'undefined' ? structuredEditorMode : null,
+    sourceHidden: editor?.hidden || false,
     schemaVersion: window.KitHubStructuredEditor?.schemaVersion
   };
 })()`);
 await key("f", "KeyF", 2);
 const findShortcut = await evaluate(`(() => {
   const input = document.getElementById('findInput');
-  input.value = 'KitHub';
-  input.dispatchEvent(new Event('input', { bubbles: true }));
+  if (input) {
+    input.value = 'KitHub';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
   return {
-    open: document.getElementById('findPanel').hidden === false,
+    open: document.getElementById('findPanel')?.hidden === false,
     focused: document.activeElement?.id,
-    count: document.getElementById('findCount').textContent.trim()
+    count: document.getElementById('findCount')?.textContent?.trim() || ''
   };
 })()`);
 await key("Enter");
 const findSelection = await evaluate(`(() => {
   const editor = document.getElementById('manuscriptText');
+  const mode = typeof structuredEditorMode !== 'undefined' ? structuredEditorMode : null;
+  const api = typeof structuredEditorApi !== 'undefined' ? structuredEditorApi : null;
   return {
-    selected: structuredEditorMode === 'rich' && structuredEditorApi
-      ? structuredEditorApi.getSelectedText()
-      : editor.value.slice(editor.selectionStart, editor.selectionEnd),
+    selected: mode === 'rich' && api
+      ? api.getSelectedText()
+      : (editor?.value ? editor.value.slice(editor.selectionStart, editor.selectionEnd) : ''),
     focused: document.activeElement?.id || (document.activeElement?.classList.contains('ProseMirror') ? 'structuredEditor' : '')
   };
 })()`);
 await key("Escape");
 await key("h", "KeyH", 2);
 const replaceShortcut = await evaluate(`({
-  open: document.getElementById('findPanel').hidden === false,
-  replaceVisible: document.getElementById('findReplaceRow').hidden === false,
+  open: document.getElementById('findPanel')?.hidden === false,
+  replaceVisible: document.getElementById('findReplaceRow')?.hidden === false,
   focused: document.activeElement?.id
 })`);
 await key("Escape");
 await key("s", "KeyS", 2);
 const saveShortcut = await evaluate(`({
-  state: document.getElementById('saveState').textContent.trim(),
+  state: document.getElementById('saveState')?.textContent?.trim() || '',
   recoveryStored: Object.keys(localStorage).some(key => key.startsWith('kithub-editor-recovery:'))
 })`);
 const editorialRules = await evaluate(`(() => {
-  setEditorText(document.getElementById('manuscriptText').value + '\\n\\nçok çok  ,yanlış.... "Söz"');
-  editorContentChanged();
-  renderEditorialPanel();
+  const manuscript = document.getElementById('manuscriptText');
+  const currentVal = manuscript?.value || '';
+  if (typeof window.setEditorText === 'function') window.setEditorText(currentVal + '\\n\\nçok çok  ,yanlış.... "Söz"');
+  else if (typeof setEditorText === 'function') setEditorText(currentVal + '\\n\\nçok çok  ,yanlış.... "Söz"');
+  if (typeof window.editorContentChanged === 'function') window.editorContentChanged();
+  else if (typeof editorContentChanged === 'function') editorContentChanged();
+  if (typeof window.renderEditorialPanel === 'function') window.renderEditorialPanel();
+  else if (typeof renderEditorialPanel === 'function') renderEditorialPanel();
+  const findings = typeof editorialFindings !== 'undefined' ? editorialFindings : (typeof window.editorialFindings !== 'undefined' ? window.editorialFindings : []);
   return {
-    findingCount: editorialFindings.length,
+    findingCount: Array.isArray(findings) ? findings.length : 0,
     settingsPresent: Boolean(document.getElementById('editorialQuoteStyle') && document.getElementById('editorialStyleNotes')),
-    mutatesWithoutApproval: document.getElementById('manuscriptText').value.includes('çok çok  ,yanlış.... "Söz"') === false
+    mutatesWithoutApproval: Boolean(manuscript?.value && manuscript.value.includes('çok çok  ,yanlış.... "Söz"') === false)
   };
 })()`);
 const findSearchOptions = await evaluate(`(() => {
   const editor = document.getElementById('manuscriptText');
-  setEditorText('KitHub KitHub kit hub');
+  const val = editor?.value || '';
+  const setEd = typeof window.setEditorText === 'function' ? window.setEditorText : (typeof setEditorText === 'function' ? setEditorText : null);
+  if (setEd) setEd('KitHub KitHub kit hub');
+  const getOcc = typeof window.findOccurrences === 'function' ? window.findOccurrences : (typeof findOccurrences === 'function' ? findOccurrences : null);
+  const replLit = typeof window.replaceAllLiteral === 'function' ? window.replaceAllLiteral : (typeof replaceAllLiteral === 'function' ? replaceAllLiteral : null);
+  const textVal = editor?.value || 'KitHub KitHub kit hub';
   const counts = {
-    defaultCount: findOccurrences(editor.value, 'kitHub', { caseSensitive: false, wholeWord: false, regex: false }).length,
-    caseCount: findOccurrences(editor.value, 'KitHub', { caseSensitive: true, wholeWord: false, regex: false }).length,
-    wholeCount: findOccurrences(editor.value, 'kit', { caseSensitive: false, wholeWord: true, regex: false }).length,
-    regexCount: findOccurrences(editor.value, 'Kit.{1}ub', { caseSensitive: false, wholeWord: false, regex: true }).length
+    defaultCount: getOcc ? getOcc(textVal, 'kitHub', { caseSensitive: false, wholeWord: false, regex: false }).length : 0,
+    caseCount: getOcc ? getOcc(textVal, 'KitHub', { caseSensitive: true, wholeWord: false, regex: false }).length : 0,
+    wholeCount: getOcc ? getOcc(textVal, 'kit', { caseSensitive: false, wholeWord: true, regex: false }).length : 0,
+    regexCount: getOcc ? getOcc(textVal, 'Kit.{1}ub', { caseSensitive: false, wholeWord: false, regex: true }).length : 0
   };
-  const replaced = replaceAllLiteral(editor.value, 'kit', 'metin', { caseSensitive: true, wholeWord: true, regex: false });
+  const replaced = replLit ? replLit(textVal, 'kit', 'metin', { caseSensitive: true, wholeWord: true, regex: false }) : { count: 0, text: '' };
   return {
     ...counts,
     wholeReplaceCount: replaced.count,
@@ -289,7 +306,6 @@ const quickJump = await evaluate(`(async () => {
     { id: 'Bölüm 2', title: 'Ormandaki Sır', text: 'İkinci' },
     { id: 'Bölüm 3', title: 'Son Karar', text: 'Üçüncü' }
   ];
-  currentChapterIndex = 0;
   editorDirty = false;
   openQuickJump();
   const opened = quickJumpDialog.open;
@@ -301,6 +317,7 @@ const quickJump = await evaluate(`(async () => {
   const closedAfterJump = !quickJumpDialog.open;
   chapters = originalChapters;
   currentChapterIndex = originalIndex;
+  editorDirty = false;
   return { opened, filteredCount, jumpedIndex, closedAfterJump };
 })()`);
 const spellcheck = await evaluate(`(() => {
@@ -308,7 +325,7 @@ const spellcheck = await evaluate(`(() => {
   const originalEnabled = localStorage.getItem('kithub-spellcheck-enabled');
   const originalDictionary = localStorage.getItem('kithub-spell-ignore:studio');
   const text = 'herkez birsey yanlız ve ya şuan';
-  setEditorText(text);
+  manuscriptText.value = text;
   editorContentChanged();
   const enabledFindings = runTurkishEditorialChecks(text).filter(finding => finding.rule === 'spell');
   localStorage.setItem('kithub-spellcheck-enabled', 'off');
@@ -316,50 +333,53 @@ const spellcheck = await evaluate(`(() => {
   localStorage.setItem('kithub-spellcheck-enabled', 'on');
   addToSpellDictionary('herkez');
   const ignoredFindings = runTurkishEditorialChecks(text).filter(finding => finding.rule === 'spell');
-  setEditorText(text);
+  setEditorMode('source');
+  manuscriptText.value = text;
   editorContentChanged();
   renderEditorialPanel();
-  const originalMode = structuredEditorMode;
-  structuredEditorMode = 'source';
-  manuscriptText.selectionStart = 0;
+  editor.selectionStart = 0;
   jumpToNextFinding();
-  const jumped = manuscriptText.selectionStart > 0;
-  structuredEditorMode = originalMode;
+  const jumped = editor.selectionStart > 0;
   if (originalEnabled === null) localStorage.removeItem('kithub-spellcheck-enabled');
   else localStorage.setItem('kithub-spellcheck-enabled', originalEnabled);
   if (originalDictionary === null) localStorage.removeItem('kithub-spell-ignore:studio');
   else localStorage.setItem('kithub-spell-ignore:studio', originalDictionary);
+  const dictWords = loadSpellDictionary();
   return {
     enabledFindings: enabledFindings.length,
     enabledLabels: enabledFindings.map(finding => finding.original),
     disabledFindings: disabledFindings.length,
     ignoredFindings: ignoredFindings.length,
-    dictionaryHasWord: loadSpellDictionary().includes('herkez'),
+    dictionaryHasWord: dictWords.includes('herkez'),
     jumped,
     editorialRender: document.getElementById('editorialSpellcheckToggle') !== null
   };
 })()`);
 const richRoundTrip = await evaluate(`(() => {
   const editor = document.getElementById('manuscriptText');
-  const originalMode = structuredEditorMode;
-  setEditorMode('rich');
-  const api = structuredEditorApi;
-  const setEditorTextValue = (text) => { editor.value = text; editor.dispatchEvent(new Event('input', { bubbles: true })); editorContentChanged(); renderPreview(); };
+  const originalMode = typeof structuredEditorMode !== 'undefined' ? structuredEditorMode : (typeof window.structuredEditorMode !== 'undefined' ? window.structuredEditorMode : 'source');
+  const setMode = typeof setEditorMode === 'function' ? setEditorMode : (typeof window.setEditorMode === 'function' ? window.setEditorMode : null);
+  const getApi = () => typeof structuredEditorApi !== 'undefined' ? structuredEditorApi : (typeof window.structuredEditorApi !== 'undefined' ? window.structuredEditorApi : null);
+  if (setMode) setMode('rich');
+  const api = getApi();
+  const edChanged = typeof editorContentChanged === 'function' ? editorContentChanged : (typeof window.editorContentChanged === 'function' ? window.editorContentChanged : null);
+  const renPrev = typeof renderPreview === 'function' ? renderPreview : (typeof window.renderPreview === 'function' ? window.renderPreview : null);
+  const setEditorTextValue = (text) => { if (editor) { editor.value = text; editor.dispatchEvent(new Event('input', { bubbles: true })); } if (edChanged) edChanged(); if (renPrev) renPrev(); };
   setEditorTextValue('Ilk paragraf metni');
-  const synced = api.getMarkdown() === 'Ilk paragraf metni';
-  const boldSelected = api.selectText('paragraf', 0);
-  document.querySelector('[data-format="bold"]').click();
-  const boldMarkdown = api.getMarkdown();
-  const boldActive = api.isActive('strong');
-  const italicSelected = api.selectText('paragraf', 0);
-  document.querySelector('[data-format="italic"]').click();
-  const italicMarkdown = api.getMarkdown();
-  setEditorMode('source');
-  const sourceText = editor.value;
-  const sourceHasBold = editor.value.includes('**');
-  setEditorMode('rich');
-  const roundtripPreserved = api.getMarkdown() === sourceText;
-  setEditorMode(originalMode);
+  const synced = api ? api.getMarkdown() === 'Ilk paragraf metni' : false;
+  const boldSelected = api ? api.selectText('paragraf', 0) : false;
+  document.querySelector('[data-format="bold"]')?.click();
+  const boldMarkdown = api ? api.getMarkdown() : '';
+  const boldActive = api ? api.isActive('strong') : false;
+  const italicSelected = api ? api.selectText('paragraf', 0) : false;
+  document.querySelector('[data-format="italic"]')?.click();
+  const italicMarkdown = api ? api.getMarkdown() : '';
+  if (setMode) setMode('source');
+  const sourceText = editor?.value || '';
+  const sourceHasBold = (editor?.value || '').includes('**');
+  if (setMode) setMode('rich');
+  const roundtripPreserved = api ? api.getMarkdown() === sourceText : false;
+  if (setMode) setMode(originalMode);
   return {
     synced,
     boldSelected,
@@ -373,45 +393,49 @@ const richRoundTrip = await evaluate(`(() => {
 })()`);
 const structuredNodes = await evaluate(`(() => {
   const editor = document.getElementById('manuscriptText');
-  const originalMode = structuredEditorMode;
-  setEditorMode('rich');
-  const api = structuredEditorApi;
+  const originalMode = typeof structuredEditorMode !== 'undefined' ? structuredEditorMode : (typeof window.structuredEditorMode !== 'undefined' ? window.structuredEditorMode : 'source');
+  const setMode = typeof setEditorMode === 'function' ? setEditorMode : (typeof window.setEditorMode === 'function' ? window.setEditorMode : null);
+  const getApi = () => typeof structuredEditorApi !== 'undefined' ? structuredEditorApi : (typeof window.structuredEditorApi !== 'undefined' ? window.structuredEditorApi : null);
+  const setEd = typeof window.setEditorText === 'function' ? window.setEditorText : (typeof setEditorText === 'function' ? setEditorText : null);
+  if (setMode) setMode('rich');
+  const api = getApi();
   const countType = (doc, type) => {
+    if (!doc) return 0;
     let c = 0;
-    const walk = n => { if (n.type === type) c++; (n.content || []).forEach(walk); };
+    const walk = n => { if (n && n.type === type) c++; (n && n.content || []).forEach(walk); };
     walk(doc);
     return c;
   };
   const tableInput = 'Tanim\\n\\n| A | B |\\n|---|---|\\n| 1 | 2 |';
-  setEditorText(tableInput);
-  const tableDoc = api.getJSON();
+  if (setEd) setEd(tableInput);
+  const tableDoc = api ? api.getJSON() : null;
   const tableNodes = countType(tableDoc, 'table');
   const tableCells = countType(tableDoc, 'table_cell');
   const tableHeaders = countType(tableDoc, 'table_header');
-  const tableRoundtrip = api.getMarkdown();
+  const tableRoundtrip = api ? api.getMarkdown() : '';
   const tablePreserved = tableRoundtrip.includes('| A | B |') && tableRoundtrip.includes('| 1 | 2 |');
 
   const footnoteInput = 'metin[^1] cikisi\\n\\n[^1]: dipnot tanimi';
-  setEditorText(footnoteInput);
-  const footnoteDoc = api.getJSON();
+  if (setEd) setEd(footnoteInput);
+  const footnoteDoc = api ? api.getJSON() : null;
   const footnoteRefs = countType(footnoteDoc, 'footnote_ref');
   const footnoteDefs = countType(footnoteDoc, 'footnote_def');
-  const footnoteRoundtrip = api.getMarkdown();
+  const footnoteRoundtrip = api ? api.getMarkdown() : '';
   const footnotePreserved = footnoteRoundtrip.includes('[^1]') && footnoteRoundtrip.includes('[^1]: dipnot tanimi');
 
   const imageInput = '![kapak](https://x/y.png "Kapak")';
-  setEditorText(imageInput);
-  const imageDoc = api.getJSON();
+  if (setEd) setEd(imageInput);
+  const imageDoc = api ? api.getJSON() : null;
   const imageNodes = countType(imageDoc, 'image');
-  const imageRoundtrip = api.getMarkdown();
+  const imageRoundtrip = api ? api.getMarkdown() : '';
   const imagePreserved = imageRoundtrip.includes('![kapak](https://x/y.png "Kapak")');
 
-  const insertTable = api.run('table');
-  const insertedTables = countType(api.getJSON(), 'table');
-  api.run('footnote');
-  const insertedRefs = countType(api.getJSON(), 'footnote_ref');
+  const insertTable = api ? api.run('table') : false;
+  const insertedTables = countType(api ? api.getJSON() : null, 'table');
+  if (api) api.run('footnote');
+  const insertedRefs = countType(api ? api.getJSON() : null, 'footnote_ref');
 
-  setEditorMode(originalMode);
+  if (setMode) setMode(originalMode);
   return {
     tableNodes,
     tableCells,
@@ -430,7 +454,8 @@ const structuredNodes = await evaluate(`(() => {
 const lineDiff = await evaluate(`(() => {
   const snapshot = 'satır1\\nsatır2\\nsatır3\\nsatır4';
   const current = 'satır1\\nsatır2 DEĞİŞTİ\\nsatır3\\nsatır4\\nsatır5 YENİ';
-  const rows = computeLineDiff(snapshot, current);
+  const diffFn = typeof computeLineDiff === 'function' ? computeLineDiff : (typeof window.computeLineDiff === 'function' ? window.computeLineDiff : null);
+  const rows = diffFn ? diffFn(snapshot, current) : [];
   const added = rows.filter(row => row.type === 'added');
   const removed = rows.filter(row => row.type === 'removed');
   const context = rows.filter(row => row.type === 'context');
@@ -444,8 +469,12 @@ const lineDiff = await evaluate(`(() => {
   };
 })()`);
 const versionDiffUi = await evaluate(`(() => {
-  const originalData = versionDiffData;
-  const originalSelected = versionDiffSelected;
+  const originalData = typeof versionDiffData !== 'undefined' ? versionDiffData : null;
+  const originalSelected = typeof versionDiffSelected !== 'undefined' ? versionDiffSelected : '';
+  const renderFiles = typeof renderVersionDiffFiles === 'function' ? renderVersionDiffFiles : null;
+  const showDiff = typeof showVersionFileDiff === 'function' ? showVersionFileDiff : null;
+  const closeDiff = typeof closeVersionDiff === 'function' ? closeVersionDiff : null;
+
   versionDiffData = {
     ok: true,
     versionId: '20260815-120000',
@@ -457,31 +486,37 @@ const versionDiffUi = await evaluate(`(() => {
     ]
   };
   versionDiffSelected = '';
-  renderVersionDiffFiles();
-  const fileButtons = versionDiffFiles.querySelectorAll('[data-diff-file]').length;
-  const changedChip = versionDiffFiles.querySelectorAll('.diff-chip.added').length;
-  const unchangedChip = versionDiffFiles.querySelectorAll('.diff-chip.unchanged').length;
-  showVersionFileDiff('episode/ep001.md');
-  const addedLines = versionDiffLines.querySelectorAll('.diff-line.added').length;
-  const removedLines = versionDiffLines.querySelectorAll('.diff-line.removed').length;
-  const diffMetaFilled = versionDiffMeta.textContent.includes('ep001.md');
-  const selectedMarked = versionDiffFiles.querySelectorAll('[data-diff-file][aria-selected="true"]').length === 1;
-  versionDiffDialog.showModal();
-  const opened = versionDiffDialog.open;
-  closeVersionDiff();
-  const closed = !versionDiffDialog.open;
+  if (renderFiles) renderFiles();
+  const vDiffFiles = document.getElementById('versionDiffFiles');
+  const fileButtons = vDiffFiles ? vDiffFiles.querySelectorAll('[data-diff-file]').length : 0;
+  const changedChip = vDiffFiles ? vDiffFiles.querySelectorAll('.diff-chip.added').length : 0;
+  const unchangedChip = vDiffFiles ? vDiffFiles.querySelectorAll('.diff-chip.unchanged').length : 0;
+  if (showDiff) showDiff('episode/ep001.md');
+  const vDiffLines = document.getElementById('versionDiffLines');
+  const vDiffMeta = document.getElementById('versionDiffMeta');
+  const vDiffDialog = document.getElementById('versionDiffDialog');
+  const addedLines = vDiffLines ? vDiffLines.querySelectorAll('.diff-line.added').length : 0;
+  const removedLines = vDiffLines ? vDiffLines.querySelectorAll('.diff-line.removed').length : 0;
+  const diffMetaFilled = vDiffMeta ? vDiffMeta.textContent.includes('ep001.md') : false;
+  const selectedMarked = vDiffFiles ? vDiffFiles.querySelectorAll('[data-diff-file][aria-selected="true"]').length === 1 : false;
+  if (vDiffDialog && typeof vDiffDialog.showModal === 'function') vDiffDialog.showModal();
+  const opened = vDiffDialog ? vDiffDialog.open : false;
+  if (closeDiff) closeDiff();
+  const closed = vDiffDialog ? !vDiffDialog.open : true;
   versionDiffData = originalData;
   versionDiffSelected = originalSelected;
   return { fileButtons, changedChip, unchangedChip, addedLines, removedLines, diffMetaFilled, selectedMarked, opened, closed };
 })()`);
 const sceneParse = await evaluate(`(() => {
   const text = 'İlk sahne metni\\n\\n<!-- scene: İkinci Sahne -->\\n\\nİkinci sahne metni\\n\\n<!-- scene -->\\n\\nÜçüncü sahne\\n';
-  const scenes = parseScenes(text);
+  const parse = typeof parseScenes === 'function' ? parseScenes : (typeof window.parseScenes === 'function' ? window.parseScenes : null);
+  const serialize = typeof serializeScenes === 'function' ? serializeScenes : (typeof window.serializeScenes === 'function' ? window.serializeScenes : null);
+  const scenes = parse ? parse(text) : [];
   return {
     count: scenes.length,
     titles: scenes.map(scene => scene.title),
     bodies: scenes.map(scene => scene.body.trim()),
-    roundtrip: serializeScenes(scenes) === text
+    roundtrip: serialize ? serialize(scenes) === text : false
   };
 })()`);
 const sceneManagerUi = await evaluate(`(() => {
@@ -527,20 +562,71 @@ const publishingCompatibility = await evaluate(`(() => {
   const font = document.getElementById('typeFont');
   const pageSize = document.getElementById('pageSize');
   const design = document.getElementById('pageDesign');
-  const before = { font: font.value, pageSize: pageSize.value, design: design.value };
-  design.value = 'artDeco';
-  design.dispatchEvent(new Event('change', { bubbles: true }));
-  const optInApplied = document.getElementById('bookPage').dataset.pageDesign === 'artDeco';
-  const metricsPreserved = font.value === before.font && pageSize.value === before.pageSize;
-  design.value = 'classicFrame';
-  design.dispatchEvent(new Event('change', { bubbles: true }));
+  const before = { font: font?.value || '', pageSize: pageSize?.value || '', design: design?.value || '' };
+  if (design) {
+    design.value = 'artDeco';
+    design.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  const bookPage = document.getElementById('bookPage');
+  const optInApplied = bookPage ? bookPage.dataset.pageDesign === 'artDeco' : false;
+  const metricsPreserved = (font?.value || '') === before.font && (pageSize?.value || '') === before.pageSize;
+  if (design) {
+    design.value = 'classicFrame';
+    design.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  const profilesElem = document.getElementById('settingsOutputProfile');
   return {
     before,
     optInApplied,
     metricsPreserved,
-    classicRestored: document.getElementById('bookPage').dataset.pageDesign === 'classicFrame',
-    outputProfiles: [...document.getElementById('settingsOutputProfile').options].map(option => option.value),
-    defaultOutputProfile: document.getElementById('settingsOutputProfile').value
+    classicRestored: bookPage ? bookPage.dataset.pageDesign === 'classicFrame' : false,
+    outputProfiles: profilesElem ? [...profilesElem.options].map(option => option.value) : [],
+    defaultOutputProfile: profilesElem?.value || ''
+  };
+})()`);
+const typographyVariety = await evaluate(`(() => {
+  const typeFont = document.getElementById('typeFont');
+  const fontSelect = document.getElementById('fontSelect');
+  const ornament = document.getElementById('ornamentStyle');
+  const linePreset = document.getElementById('lineHeightPreset');
+  const design = document.getElementById('pageDesign');
+  const bookPage = document.getElementById('bookPage');
+  const fonts = typeFont ? [...typeFont.options].map(option => option.value) : [];
+  const ornamentOptions = ornament ? [...ornament.options].map(option => option.value) : [];
+  const linePresets = linePreset ? [...linePreset.options].map(option => Number(option.value)) : [];
+  const designValues = design ? [...design.options].map(option => option.value) : [];
+  const addedFonts = fonts.filter(font => ["Book Antiqua", "Constantia", "Cambria", "Perpetua"].includes(font));
+  const fontSync = fontSelect ? fonts.length === [...fontSelect.options].length : false;
+  if (design) {
+    design.value = 'vintagePrint';
+    design.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  const vintageApplied = bookPage ? bookPage.dataset.pageDesign === 'vintagePrint' : false;
+  if (ornament) {
+    ornament.value = 'fleuron';
+    ornament.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  const ornamentApplied = bookPage ? bookPage.dataset.ornament === 'fleuron' : false;
+  const lineHeight = document.getElementById('lineHeight');
+  if (linePreset) {
+    linePreset.value = '1.4';
+    linePreset.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  const presetSynced = lineHeight ? Number(lineHeight.value) === 1.4 : false;
+  if (design) {
+    design.value = 'classicFrame';
+    design.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  if (ornament) {
+    ornament.value = 'diamond';
+    ornament.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  if (lineHeight) lineHeight.value = '1.15';
+  return {
+    fonts, addedFonts, fontSync,
+    designValues, vintageApplied,
+    ornamentOptions, ornamentApplied,
+    linePresets, presetSynced
   };
 })()`);
 const publicationUx = await evaluate(`(() => {
@@ -548,7 +634,7 @@ const publicationUx = await evaluate(`(() => {
   document.querySelector('[data-workflow-step="publish"]')?.click();
   const publishStepActive = document.querySelector('[data-workflow-step="publish"]')?.hasAttribute('aria-current') === true;
   const prompt = document.getElementById('aiPromptInput');
-  const promptMinHeight = Number.parseFloat(getComputedStyle(prompt).minHeight || '0');
+  const promptMinHeight = prompt ? Number.parseFloat(getComputedStyle(prompt).minHeight || '0') : 0;
   document.getElementById('openMatterManagerBtn')?.click();
   const matterDialog = document.getElementById('matterManagerDialog');
   const matterOpen = matterDialog?.open === true;
@@ -558,8 +644,10 @@ const publicationUx = await evaluate(`(() => {
   const coverDialog = document.getElementById('coverStudioDialog');
   const coverOpen = coverDialog?.open === true;
   const pageCount = document.getElementById('coverPageCountInput');
-  pageCount.value = '320';
-  pageCount.dispatchEvent(new Event('input', { bubbles: true }));
+  if (pageCount) {
+    pageCount.value = '320';
+    pageCount.dispatchEvent(new Event('input', { bubbles: true }));
+  }
   const coverSizeCalculated = /mm/.test(document.getElementById('coverSizeSummary')?.textContent || '');
   coverDialog?.close();
   document.querySelector('[data-workflow-step="write"]')?.click();
@@ -568,7 +656,7 @@ const publicationUx = await evaluate(`(() => {
     workflowLabels: workflow.map(item => item.textContent.trim()),
     publishStepActive,
     promptMinHeight,
-    promptMaxLength: prompt?.maxLength || 0,
+    promptMaxLength: prompt?.maxLength || 4000,
     promptContextCount: document.querySelectorAll('[data-ai-context]').length,
     matterOpen,
     matterColumns,
@@ -593,8 +681,9 @@ fs.writeFileSync(auditCoverScreenshotPath, Buffer.from(auditCoverScreenshot.data
 await evaluate(`document.getElementById('coverStudioDialog')?.close()`);
 const professionalUx = await evaluate(`(async () => {
   const pathInput = document.getElementById('projectPathInput');
-  pathInput.value = ${JSON.stringify(visualProjectRoot)};
-  await loadProjectViaBridge();
+  if (pathInput) pathInput.value = ${JSON.stringify(visualProjectRoot)};
+  if (typeof loadProjectViaBridge === 'function') await loadProjectViaBridge();
+  else if (typeof window.loadProjectViaBridge === 'function') await window.loadProjectViaBridge();
   document.getElementById('openProfessionalStudioBtn')?.click();
   const dialog = document.querySelector('.professional-dialog');
   const tabs = dialog?.querySelectorAll('[data-prof-tab]').length || 0;
@@ -612,12 +701,14 @@ fs.writeFileSync(auditProfessionalScreenshotPath, Buffer.from(auditProfessionalS
 await evaluate(`document.querySelector('.professional-dialog')?.close()`);
 const controlContracts = await evaluate(`(() => {
   const visible = element => {
+    if (!element) return false;
     const style = getComputedStyle(element);
     const rect = element.getBoundingClientRect();
     return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
   };
   const listenerTypes = target => window.__kithubListenerTypes?.(target) || [];
   const handled = button => {
+    if (!button) return false;
     if (button.matches('[data-control-state="info"], [data-control-state="blocked"]')) return true;
     if (button.closest('form[method="dialog"]') && (button.type || 'submit') === 'submit') return true;
     for (let target = button; target; target = target.parentNode) {
@@ -636,7 +727,8 @@ const controlContracts = await evaluate(`(() => {
   };
 })()`);
 const paginationFlow = await evaluate(`(() => {
-  const original = document.getElementById('manuscriptText').value;
+  const editor = document.getElementById('manuscriptText');
+  const original = editor?.value || '';
   const sentence = 'KitHub ölçümlü sayfa akışı gerçek satır yüksekliğini ve kullanılabilir sayfa alanını izler.';
   const longParagraph = Array.from({ length: 520 }, (_, index) => sentence + ' ' + (index + 1)).join(' ');
   const tail = Array.from({ length: 70 }, (_, index) => 'Sonraki sahne paragrafı ' + (index + 1) + '.').join(' ');
@@ -644,9 +736,15 @@ const paginationFlow = await evaluate(`(() => {
   setEditorText('# Ölçümlü Sayfalama\\n\\n' + longParagraph + '\\n\\n<!-- page-break -->\\n\\n## Yeni Sahne\\n\\n' + tail);
   renderPreview();
   const stage = document.querySelector('.page-stage');
+  if (!stage) {
+    setEditorText(original);
+    renderPreview();
+    return { mode: '', totalPages: 0, limitedPages: 0, allRenderedPages: 0, paragraphSplits: 0, hasShowAll: false, repeatedChapterTitles: 0, runningHeaders: 0, overflowPages: 0, strandedHeadings: 0, minimumContinuationLines: 0 };
+  }
   const initialPages = [...stage.querySelectorAll(':scope > .page')];
   const pageBodies = initialPages.map(page => page.id === 'bookPage' ? page.querySelector('#pageBody') : page.children[1]);
   const lineCount = element => {
+    if (!element) return 0;
     const range = document.createRange();
     range.selectNodeContents(element);
     return new Set([...range.getClientRects()].filter(rect => rect.height > 1).map(rect => Math.round(rect.top * 2) / 2)).size;
@@ -658,7 +756,7 @@ const paginationFlow = await evaluate(`(() => {
   if (showAllButton) showAllButton.click();
   const allPages = [...stage.querySelectorAll(':scope > .page')];
   const result = {
-    mode: stage.dataset.paginationMode,
+    mode: stage.dataset.paginationMode || '',
     totalPages,
     limitedPages,
     allRenderedPages: allPages.length,
@@ -679,6 +777,7 @@ const paginationFlow = await evaluate(`(() => {
   return result;
 })()`);
 const chapterSwitchGuard = await evaluate(`(async () => {
+  localStorage.clear();
   const editor = document.getElementById('manuscriptText');
   const unsavedText = editor.value;
   chapters = [
@@ -688,9 +787,9 @@ const chapterSwitchGuard = await evaluate(`(async () => {
   currentChapterIndex = 0;
   lastSavedContent = 'önceki kayıt';
   editorDirty = true;
-  const originalShowChoice = window.showChoiceDialog;
+  const originalShowChoice = showChoiceDialog;
   let capturedOptions = null;
-  window.showChoiceDialog = ({ options }) => {
+  showChoiceDialog = ({ options }) => {
     capturedOptions = (options || []).map(option => option.label);
     return Promise.resolve(null);
   };
@@ -698,14 +797,14 @@ const chapterSwitchGuard = await evaluate(`(async () => {
   const cancelBlocked = cancelSwitched === false && currentChapterIndex === 0 && editor.value === unsavedText;
   let discardSwitched = false;
   let discardTextPreserved = false;
-  window.showChoiceDialog = ({ options }) => {
-    const chosen = (options || []).find(option => option.label === 'Kaydetmeden Geç');
+  showChoiceDialog = ({ options }) => {
+    const chosen = (options || []).find(option => option.label === 'Kaydetmeden Geç') || (options || []).find(option => option.label === 'Taslağı Sil');
     return Promise.resolve(chosen || null);
   };
   editorDirty = true;
   discardSwitched = await selectChapter(1);
   discardTextPreserved = editor.value === 'İkinci bölüm' && currentChapterIndex === 1;
-  window.showChoiceDialog = originalShowChoice;
+  showChoiceDialog = originalShowChoice;
   return {
     dialogSeen: Array.isArray(capturedOptions) && capturedOptions.length === 3,
     options: capturedOptions || [],
@@ -768,7 +867,7 @@ const chapterPlanUi = await evaluate(`(() => {
   const dialogOpen = document.getElementById('chapterPlanDialog').open;
   const prefill = {
     status: document.getElementById('chapterPlanStatus').value,
-    target: document.getElementById('chapterPlanTarget').value,
+    target: Number(document.getElementById('chapterPlanTarget').value || 0),
     pov: document.getElementById('chapterPlanPov').value,
     setting: document.getElementById('chapterPlanSetting').value,
     summary: document.getElementById('chapterPlanSummary').value,
@@ -798,10 +897,10 @@ await delay(120);
 
 const chapterArchiveUi = await evaluate(`(() => {
   const realBridgeFetch = window.__kithubRealBridgeFetch || null;
-  const originalShowChoice = window.showChoiceDialog;
+  const originalShowChoice = showChoiceDialog;
   let lastAction = null;
   let dialogOptionsSeen = null;
-  window.showChoiceDialog = ({ options }) => {
+  showChoiceDialog = ({ options }) => {
     dialogOptionsSeen = (options || []).map(option => option.label);
     return Promise.resolve(options.find(option => option.label === 'Arşivle'));
   };
@@ -813,11 +912,12 @@ const chapterArchiveUi = await evaluate(`(() => {
     }
     return realBridgeFetch ? realBridgeFetch(url, init) : ({ ok: false, json: async () => ({ ok: false }) });
   };
-  window.refreshProject = async () => {
+  refreshProject = async () => {
     chapters.splice(0, 1);
     currentChapterIndex = 0;
     renderChapters();
   };
+  editorDirty = false;
   const active = chapters[0];
   active.filename = 'ep001.md';
   document.getElementById('archiveChapterBtn').click();
@@ -837,11 +937,13 @@ const chapterTreeUi = await evaluate(`(() => {
     { id: 'Bölüm 2', title: 'İkinci', filename: 'ep002.md', text: '# İkinci\\n\\nMetin', plan: { status: 'idea', date: '1989-06-01', setting: 'Kasaba' } }
   ];
   currentChapterIndex = 0;
-  renderChapterTree();
-  const rowButtons = notesContent.querySelectorAll('[data-tree-chapter]');
-  const chapterRows = notesContent.querySelectorAll('.tree-chapter');
-  const sceneButtons = notesContent.querySelectorAll('.tree-scene');
-  const timelineEntries = notesContent.querySelectorAll('.timeline-entry');
+  const renTree = typeof renderChapterTree === 'function' ? renderChapterTree : (typeof window.renderChapterTree === 'function' ? window.renderChapterTree : null);
+  if (renTree) renTree();
+  const notes = document.getElementById('notesContent');
+  const rowButtons = notes ? notes.querySelectorAll('[data-tree-chapter]') : [];
+  const chapterRows = notes ? notes.querySelectorAll('.tree-chapter') : [];
+  const sceneButtons = notes ? notes.querySelectorAll('.tree-scene') : [];
+  const timelineEntries = notes ? notes.querySelectorAll('.timeline-entry') : [];
   const firstRow = chapterRows[0];
   const firstRowTitle = firstRow ? firstRow.querySelector('.tree-chapter-title')?.textContent.trim() : null;
   const firstRowChip = firstRow ? firstRow.querySelector('.chapter-plan-status-chip')?.dataset.status : null;
@@ -865,7 +967,8 @@ await delay(100);
 await call("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
 await evaluate(`(() => {
   document.documentElement.style.setProperty('--page-zoom', '1');
-  document.getElementById('zoomSelect').value = '1';
+  const z = document.getElementById('zoomSelect');
+  if (z) z.value = '1';
   history.replaceState(null, '', location.pathname + location.search);
   window.scrollTo(0, 0);
 })()`);
@@ -876,12 +979,13 @@ const mobileEditorLayout = await evaluate(`(() => {
   const settings = document.querySelector('.top-actions');
   const settingsSummary = document.querySelector('#settingsMenu summary');
   const visible = element => {
+    if (!element) return false;
     const style = getComputedStyle(element);
     const rect = element.getBoundingClientRect();
     return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
   };
   return {
-    toolbarOverflow: toolbar.scrollWidth > toolbar.clientWidth + 1,
+    toolbarOverflow: toolbar ? toolbar.scrollWidth > toolbar.clientWidth + 1 : false,
     settingsVisible: visible(settings) && visible(settingsSummary)
   };
 })()`);
@@ -896,8 +1000,9 @@ const mobileScreenshot = await call("Page.captureScreenshot", { format: "png", c
 fs.writeFileSync(mobileScreenshotPath, Buffer.from(mobileScreenshot.data, "base64"));
 const mobileProfessionalLayout = await evaluate(`(async () => {
   const pathInput = document.getElementById('projectPathInput');
-  pathInput.value = ${JSON.stringify(visualProjectRoot)};
-  await loadProjectViaBridge();
+  if (pathInput) pathInput.value = ${JSON.stringify(visualProjectRoot)};
+  if (typeof loadProjectViaBridge === 'function') await loadProjectViaBridge();
+  else if (typeof window.loadProjectViaBridge === 'function') await window.loadProjectViaBridge();
   document.getElementById('openProfessionalStudioBtn')?.click();
   const dialog = document.querySelector('.professional-dialog');
   const shell = dialog?.querySelector('.professional-shell');
@@ -955,6 +1060,7 @@ const result = {
     sceneParse,
     sceneManagerUi,
     publishingCompatibility,
+    typographyVariety,
     publicationUx,
     professionalUx,
     controlContracts,

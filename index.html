@@ -1733,6 +1733,36 @@
       background: var(--paper);
     }
 
+    .page[data-ornament="fleuron"] .ornament,
+    .page[data-ornament="flower"] .ornament,
+    .page[data-ornament="asterism"] .ornament,
+    .page[data-ornament="star"] .ornament {
+      background: transparent;
+    }
+
+    .page[data-ornament="fleuron"] .ornament::after,
+    .page[data-ornament="flower"] .ornament::after,
+    .page[data-ornament="asterism"] .ornament::after,
+    .page[data-ornament="star"] .ornament::after {
+      content: "";
+      position: absolute;
+      width: auto;
+      height: auto;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border: 0;
+      background: transparent;
+      font-size: 16px;
+      line-height: 1;
+      color: #5a4c38;
+    }
+
+    .page[data-ornament="fleuron"] .ornament::after { content: "❧"; }
+    .page[data-ornament="flower"] .ornament::after { content: "❦"; }
+    .page[data-ornament="asterism"] .ornament::after { content: "⁂"; }
+    .page[data-ornament="star"] .ornament::after { content: "✶"; }
+
     .page p {
       margin: 0 0 10px;
       font-size: var(--preview-font-size, 17px);
@@ -1914,6 +1944,34 @@
 
     .page[data-page-design="botanical"] .ornament::after {
       border-color: #68734e;
+    }
+
+    .page[data-page-design="vintagePrint"] {
+      border: 1px solid rgba(83, 70, 49, 0.35);
+      box-shadow: inset 0 0 0 1px var(--paper), inset 0 0 0 3px rgba(83, 70, 49, 0.16);
+    }
+
+    .page[data-page-design="vintagePrint"]::before,
+    .page[data-page-design="vintagePrint"]::after {
+      width: 30px;
+      height: 30px;
+      border-color: rgba(83, 70, 49, 0.45);
+      border-width: 2px;
+    }
+
+    .page[data-page-design="vintagePrint"] .chapter-kicker {
+      letter-spacing: 8px;
+      text-transform: uppercase;
+    }
+
+    .page[data-page-design="vintagePrint"] .ornament {
+      width: 110px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #5a4c38 20%, #5a4c38 80%, transparent);
+    }
+
+    .page[data-page-design="vintagePrint"] .ornament::after {
+      border-color: #5a4c38;
     }
 
     .save-state {
@@ -3543,8 +3601,13 @@
             <option>Georgia</option>
             <option>Palatino Linotype</option>
             <option>Courier New</option>
+            <option>Book Antiqua</option>
+            <option>Constantia</option>
+            <option>Cambria</option>
+            <option>Perpetua</option>
           </select>
           <select id="fontSizeSelect" aria-label="Punto">
+            <option>10.5</option>
             <option>11</option>
             <option selected>11.5</option>
             <option>12</option>
@@ -3696,6 +3759,7 @@
               <option value="minimalEditorial">Editoryal Minimal</option>
               <option value="artDeco">Art Deco Geometri</option>
               <option value="botanical">Botanik Zarif</option>
+              <option value="vintagePrint">Klasik Baskı</option>
             </select>
           </label>
           <label class="field">Sayfa Boyutu
@@ -3727,13 +3791,31 @@
         <div class="type-group" data-type-panel="font">
           <h4>Yazı</h4>
           <label class="field">Yazı Tipi
-            <select id="typeFont"><option>Garamond</option><option>Times New Roman</option><option>Georgia</option><option>Palatino Linotype</option><option>Courier New</option></select>
+            <select id="typeFont"><option>Garamond</option><option>Times New Roman</option><option>Georgia</option><option>Palatino Linotype</option><option>Courier New</option><option>Book Antiqua</option><option>Constantia</option><option>Cambria</option><option>Perpetua</option></select>
           </label>
           <label class="field">Punto
             <input id="typeSize" type="number" min="10" max="13" step="0.5" value="11.5" />
           </label>
           <label class="field">Satır Aralığı
             <input id="lineHeight" type="number" min="1" max="1.8" step="0.05" value="1.15" />
+          </label>
+          <label class="field">Satır Aralığı (kitap standartı)
+            <select id="lineHeightPreset">
+              <option value="1.15">El yazması · 1.15</option>
+              <option value="1.25">Kompakt · 1.25</option>
+              <option value="1.35">Standart · 1.35</option>
+              <option value="1.4">Konforlu · 1.4</option>
+              <option value="1.45">Rahat · 1.45</option>
+            </select>
+          </label>
+          <label class="field">Bölüm Süsü
+            <select id="ornamentStyle">
+              <option value="diamond">Elmas</option>
+              <option value="fleuron">Fleuron ❧</option>
+              <option value="flower">Çiçek ❦</option>
+              <option value="asterism">Asterism ⁂</option>
+              <option value="star">Yıldız ✶</option>
+            </select>
           </label>
         </div>
         <div class="type-group" data-type-panel="margins">
@@ -8869,6 +8951,7 @@ setEditorText(chapter.text || "");
 
       setSelectIfPresent("pageSize", layoutPlan?.page_size);
       setSelectIfPresent("pageDesign", layoutPlan?.page_design);
+      setSelectIfPresent("ornamentStyle", layoutPlan?.ornament_style);
       setSelectIfPresent("layoutProfile", layoutPlan?.layout_profile);
       setSelectIfPresent("printMode", layoutPlan?.print_mode);
       setSelectIfPresent("frontMatter", layoutPlan?.front_matter);
@@ -9729,12 +9812,17 @@ function getPageDimensions(pageSizeValue) {
       const font = document.getElementById("typeFont").value;
       const size = Number(document.getElementById("typeSize").value || 11.5);
       const line = Number(document.getElementById("lineHeight").value || 1.15);
+      const linePreset = document.getElementById("lineHeightPreset");
+      if (linePreset && Number(linePreset.value) !== line) {
+        linePreset.value = [...linePreset.options].some(option => Number(option.value) === line) ? String(line) : "1.35";
+      }
       const top = Number(document.getElementById("marginTop").value || 18);
       const inside = Number(document.getElementById("marginInside").value || 20);
       const outside = Number(document.getElementById("marginOutside").value || 16);
       const pageSizeValue = document.getElementById("pageSize").value;
       const pageNumberPosition = document.getElementById("pageNumberPosition")?.value || "bottom_center";
       const pageDesign = document.getElementById("pageDesign")?.value || "classicFrame";
+      const ornament = document.getElementById("ornamentStyle")?.value || "diamond";
       const dimensions = getPageDimensions(pageSizeValue);
 
       document.documentElement.style.setProperty("--book", `${font}, Garamond, "Times New Roman", serif`);
@@ -9745,6 +9833,7 @@ function getPageDimensions(pageSizeValue) {
       bookPage.style.paddingLeft = `${Math.max(42, inside * 2.55)}px`;
       bookPage.style.paddingRight = `${Math.max(38, outside * 2.55)}px`;
       bookPage.dataset.pageDesign = pageDesign;
+      bookPage.dataset.ornament = ornament;
       pageNo.style.display = pageNumberPosition === "none" ? "none" : "";
       pageNo.style.left = pageNumberPosition.includes("center") ? "50%" : "";
       pageNo.style.right = pageNumberPosition.includes("outer") ? "34px" : "";
@@ -9801,6 +9890,7 @@ function collectLayoutPlanFromUi() {
         print_mode: document.getElementById("printMode").value,
         front_matter: document.getElementById("frontMatter").value,
         page_design: document.getElementById("pageDesign")?.value || "classicFrame",
+        ornament_style: document.getElementById("ornamentStyle")?.value || "diamond",
         chapter_start_policy: document.getElementById("chapterStartPolicy")?.value || profile.chapterStart,
         heading_hierarchy_policy: document.getElementById("headingHierarchyPolicy")?.value || profile.headingHierarchy || "chapter_only",
         running_header_policy: document.getElementById("runningHeaderPolicy")?.value || profile.runningHeader || "none",
@@ -10503,11 +10593,16 @@ closeNotesBtn.addEventListener("click", () => renderSupportTab("manuscript"));
       control.addEventListener("input", applyTypography);
       control.addEventListener("change", applyTypography);
     });
-    ["pageSize", "pageDesign", "printMode", "frontMatter", "typeFont", "typeSize", "lineHeight", "marginTop", "marginInside", "marginOutside", "indent", "after", "chapterStartPolicy", "headingHierarchyPolicy", "runningHeaderPolicy", "pageNumberPosition", "tocDepth", "frontMatterNumbering", "widowOrphanControl"].forEach(id => {
+    ["pageSize", "pageDesign", "ornamentStyle", "printMode", "frontMatter", "typeFont", "typeSize", "lineHeight", "marginTop", "marginInside", "marginOutside", "indent", "after", "chapterStartPolicy", "headingHierarchyPolicy", "runningHeaderPolicy", "pageNumberPosition", "tocDepth", "frontMatterNumbering", "widowOrphanControl"].forEach(id => {
       const control = document.getElementById(id);
       if (!control) return;
       control.addEventListener("input", applyTypography);
       control.addEventListener("change", applyTypography);
+    });
+    document.getElementById("lineHeightPreset")?.addEventListener("change", event => {
+      const preset = document.getElementById("lineHeight");
+      if (preset) preset.value = event.target.value;
+      applyTypography();
     });
     manuscriptText.addEventListener("input", () => {
       if (structuredEditorApi && structuredEditorApi.getMarkdown() !== manuscriptText.value) {

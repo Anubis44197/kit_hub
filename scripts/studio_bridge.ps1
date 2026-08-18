@@ -2365,6 +2365,7 @@ function Save-LayoutPlan {
   $bookTemplateLabel = if ($Payload.book_template_label) { [string]$Payload.book_template_label } else { $bookTemplate }
   $pageSize = [string]$Payload.page_size
   $pageDesign = if ($Payload.page_design) { [string]$Payload.page_design } else { "classicFrame" }
+  $ornamentStyle = if ($Payload.ornament_style) { [string]$Payload.ornament_style } else { "diamond" }
   $printMode = [string]$Payload.print_mode
   $frontMatterSelection = [string]$Payload.front_matter
   $chapterStartPolicy = if ($Payload.chapter_start_policy) { [string]$Payload.chapter_start_policy } else { "new_page" }
@@ -2462,10 +2463,11 @@ $knownPageSizes = @(
   }
 $printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_sided" }
 
-  if ($pageDesign -notin @("classicFrame", "minimalEditorial", "artDeco", "botanical")) { throw "Unsupported page_design: $pageDesign" }
+  if ($pageDesign -notin @("classicFrame", "minimalEditorial", "artDeco", "botanical", "vintagePrint")) { throw "Unsupported page_design: $pageDesign" }
+  if ($ornamentStyle -notin @("diamond", "fleuron", "flower", "asterism", "star")) { throw "Unsupported ornament_style: $ornamentStyle" }
   if ($printMode -notin @("Tek taraf", "Karşılıklı sayfa")) { throw "Unsupported print_mode: $printMode" }
   if ($frontMatterSelection -notin @("Künye + İçindekiler", "Yalnız metin")) { throw "Unsupported front_matter: $frontMatterSelection" }
-  if ($font -notin @("Garamond", "Times New Roman", "Georgia", "Palatino Linotype", "Courier New")) {
+  if ($font -notin @("Garamond", "Times New Roman", "Georgia", "Palatino Linotype", "Courier New", "Book Antiqua", "Constantia", "Cambria", "Perpetua")) {
     throw "Unsupported font_family: $font"
   }
   $fontSize = [double]$Payload.font_size_pt
@@ -2500,6 +2502,7 @@ $printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_s
   $layout["book_template_label"] = $bookTemplateLabel
   $layout["page_size"] = $pageSize
   $layout["page_design"] = $pageDesign
+  $layout["ornament_style"] = $ornamentStyle
   $layout["print_mode"] = $printMode
   $layout["print_mode_key"] = $printModeKey
   $layout["front_matter_selection"] = $frontMatterSelection
@@ -2574,6 +2577,7 @@ $printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_s
     book_template_label = $bookTemplateLabel
     trim_size = $trimSize
     page_design = $pageDesign
+    ornament_style = $ornamentStyle
     font_family = $font
     body_font_size_pt = $fontSize
     line_spacing = $lineSpacing
