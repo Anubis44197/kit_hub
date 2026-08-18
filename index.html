@@ -1826,6 +1826,14 @@
       font-size: 0;
     }
 
+    .page .scene-break.scene-size-small {
+      font-size: 11px;
+    }
+
+    .page .scene-break.scene-size-large {
+      font-size: 21px;
+    }
+
     .page p .word-freq {
       background: rgba(255, 219, 87, 0.5);
       color: inherit;
@@ -1840,12 +1848,77 @@
       padding: 6px 8px 0 0;
     }
 
+    .page p.first.drop-cap.drop-raised::first-letter {
+      float: none;
+      font-size: 46px;
+      line-height: 1.05;
+      padding: 0 4px 0 0;
+      vertical-align: top;
+    }
+
+    .page p.first.drop-cap.drop-baseline::first-letter {
+      float: none;
+      font-size: 58px;
+      line-height: 1;
+      padding: 0 5px 0 0;
+    }
+
+    .page p.first.drop-cap.drop-hanging::first-letter {
+      font-size: 64px;
+      margin-left: -0.52em;
+      padding: 6px 8px 0 0;
+    }
+
+    .page p.first.drop-cap.drop2::first-letter {
+      font-size: 58px;
+      line-height: 0.8;
+      padding: 6px 8px 0 0;
+    }
+
+    .page p.first.drop-cap.drop3::first-letter {
+      font-size: 88px;
+      line-height: 0.76;
+      padding: 8px 10px 0 0;
+    }
+
+    .page p.first.drop-cap.drop4::first-letter {
+      font-size: 118px;
+      line-height: 0.74;
+      padding: 10px 12px 0 0;
+    }
+
     .page p.first.drop-cap.drop-classic::first-letter {
       font-size: 96px;
       line-height: 0.72;
       padding: 10px 10px 0 0;
       color: #5a4c38;
       font-weight: 600;
+    }
+
+    .page p.first.drop-cap.drop-runin::first-line {
+      font-variant: small-caps;
+      letter-spacing: 0.04em;
+    }
+
+    .page p.first.drop-cap.drop-runin-upper::first-line {
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.95em;
+    }
+
+    .page p.first.drop-cap.drop-tint-light::first-letter {
+      opacity: 0.55;
+    }
+
+    .page p.first.drop-cap.drop-tint-strong::first-letter {
+      opacity: 0.8;
+    }
+
+    .page p.first.drop-cap.drop-tint-box::first-letter {
+      background: #5a4c38;
+      color: #f7f2e7;
+      padding: 5px 7px 7px;
+      border-radius: 3px;
     }
 
     .preview-shell[data-device] .page-stage {
@@ -2500,6 +2573,27 @@
       font-size: 12px;
       color: var(--muted);
       font-weight: 600;
+    }
+
+    .suggest-ornament-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin: 0 0 10px;
+    }
+
+    .suggest-ornament-row button {
+      width: 100%;
+      background: #14303a;
+      border-color: #2b5a68;
+      color: #cfe7ee;
+      font-weight: 600;
+    }
+
+    .suggest-ornament-row small {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
     }
 
     .field {
@@ -3923,6 +4017,10 @@
         </div>
         <div class="type-group" data-type-panel="font">
           <h4>Yazı</h4>
+          <div class="suggest-ornament-row">
+            <button type="button" id="suggestOrnament" aria-label="Türe göre süs ve drop cap öner">Süs Öner (türe göre)</button>
+            <small id="suggestOrnamentNote">Kitap türünüze uygun sahne süsü, drop cap ve köprü kombinasyonunu tek tıkla uygular.</small>
+          </div>
           <label class="field">Yazı Tipi
             <select id="typeFont"><option>Garamond</option><option>Times New Roman</option><option>Georgia</option><option>Palatino Linotype</option><option>Courier New</option><option>Book Antiqua</option><option>Constantia</option><option>Cambria</option><option>Perpetua</option></select>
           </label>
@@ -3953,17 +4051,73 @@
           <label class="field">Drop Cap (bölüm başı)
             <select id="dropCapStyle">
               <option value="none">Yok</option>
+              <option value="drop2">2 satır (çağdaş)</option>
+              <option value="drop3">3 satır (klasik roman)</option>
+              <option value="drop4">4 satır (süslü baskı)</option>
+              <option value="drop-hanging">Kenar boşluğunda asılı</option>
+              <option value="drop-raised">Yükseltilmiş</option>
+              <option value="drop-baseline">Taban çizgisi</option>
               <option value="large">Tek harf (büyük)</option>
               <option value="classic">Klasik büyük harf</option>
             </select>
           </label>
+          <label class="field">Drop Cap Köprüsü
+            <select id="dropCapRunIn">
+              <option value="none">Yok</option>
+              <option value="drop-runin">İlk satır küçük büyük harf</option>
+              <option value="drop-runin-upper">İlk satır büyük harf</option>
+            </select>
+          </label>
+          <label class="field">Drop Cap Tonu
+            <select id="dropCapTint">
+              <option value="none">Standart mürekkep</option>
+              <option value="drop-tint-light">Hafif tonlu</option>
+              <option value="drop-tint-strong">Güçlü tonlu</option>
+              <option value="drop-tint-box">Süslü arka plan kutusu</option>
+            </select>
+          </label>
           <label class="field">Sahne Arası Süs
             <select id="sceneBreakStyle">
-              <option value="fleuron">Fleuron ❧</option>
-              <option value="flower">Çiçek ❦</option>
-              <option value="asterism">Asterism ⁂</option>
-              <option value="dash">Kısa çizgi</option>
-              <option value="none">Yok</option>
+              <optgroup label="Klasik">
+                <option value="dinkus">Dinkus * * *</option>
+                <option value="dots">Üç nokta · · ·</option>
+                <option value="bullets">Üç madde • • •</option>
+                <option value="asterism">Asterism ⁂</option>
+                <option value="emdash">Uzun çizgi — — —</option>
+              </optgroup>
+              <optgroup label="Fleuron · Bitki">
+                <option value="fleuron" selected>Fleuron ❧</option>
+                <option value="flower">Çiçek ❦</option>
+                <option value="florette">Floret ❀</option>
+                <option value="rosette">Çiçek rozet ❁</option>
+              </optgroup>
+              <optgroup label="Geometrik">
+                <option value="diamond">Elmas ◆</option>
+                <option value="lozenge">Eşkenar ◇</option>
+                <option value="star">Yıldız ✶</option>
+                <option value="sparkle">Kıvılcım ✦</option>
+                <option value="snowflake">Kar tanesi ❄</option>
+                <option value="fleurdelis">Fleur-de-lis ⚜</option>
+              </optgroup>
+              <optgroup label="Hikaye Sembolü">
+                <option value="crescent">Hilal ☾</option>
+                <option value="dagger">Hançer †</option>
+                <option value="heart">Kalp ♥</option>
+                <option value="crown">Taç ♛</option>
+                <option value="spade">Maça ♠</option>
+                <option value="club">Sinek ♣</option>
+              </optgroup>
+              <optgroup label="Diğer">
+                <option value="dash">Kısa çizgi</option>
+                <option value="none">Yok</option>
+              </optgroup>
+            </select>
+          </label>
+          <label class="field">Süs Boyutu
+            <select id="sceneBreakSize">
+              <option value="small">Küçük</option>
+              <option value="normal" selected>Normal</option>
+              <option value="large">Büyük</option>
             </select>
           </label>
         </div>
@@ -4497,6 +4651,9 @@ const findCount = document.getElementById("findCount");
     let activeHotWords = new Set();
     let activeSceneBreakStyle = "fleuron";
     let activeDropCapVariant = "";
+    let activeDropCapRunIn = "";
+    let activeDropCapTint = "";
+    let activeSceneBreakSize = "normal";
     let editorDirty = false;
     let editorSaving = false;
     let lastSavedContent = "";
@@ -7072,7 +7229,68 @@ function applyEditorialFinding(index) {
 
     const turkishOverusedStopWords = new Set("ve bir bu da de ile için gibi ama fakat çok daha en olan olarak sonra önce her hiç mi mu mü mı diye kadar içinde üzerine ancak çünkü ki ne ben sen o biz siz onlar şey artık hala hep herkes kim neden nasıl nerede ne zaman dahi eğer yine böyle şöyle öyle ya ise değil hem hem de lakin zira dolayısıyla madem oysa üstelik yalnız hâlâ kendi kendine bütün bütünüyle yoksa başka özellikle genellikle".split(" "));
 
-    const sceneBreakGlyphs = { fleuron: "❧", flower: "❦", asterism: "⁂" };
+    const sceneBreakGlyphs = {
+      fleuron: "❧", flower: "❦", asterism: "⁂", dinkus: "* * *", dots: "· · ·",
+      bullets: "• • •", emdash: "— — —", florette: "❀", rosette: "❁",
+      diamond: "◆", lozenge: "◇", star: "✶", sparkle: "✦", snowflake: "❄",
+      fleurdelis: "⚜", crescent: "☾", dagger: "†", heart: "♥", crown: "♛",
+      spade: "♠", club: "♣"
+    };
+
+    function currentBookGenre() {
+      const wizardValue = (document.getElementById("wizardType")?.value || "").trim();
+      if (wizardValue) return wizardValue;
+      const bridgeGenre = currentBridgeSummary?.bookPlan?.genre || currentBridgeSummary?.bookPlan?.writing_type;
+      if (bridgeGenre) return String(bridgeGenre);
+      const metaLabel = document.querySelector(".book-meta")?.firstChild?.textContent || "";
+      return metaLabel.trim();
+    }
+
+    function suggestOrnamentForGenre(genreText) {
+      const g = String(genreText || "").toLocaleLowerCase("tr-TR");
+      if (/(gerilim|gizem|poli|korku|suç|suclu|thriller|mystery)/.test(g)) {
+        return { scene: "dinkus", drop: "drop2", runin: "none", tint: "none", label: "Gizem / Gerilim" };
+      }
+      if (/(romantik|aşk|ask|romance)/.test(g)) {
+        return { scene: "flower", drop: "drop3", runin: "drop-runin", tint: "drop-tint-light", label: "Romantik" };
+      }
+      if (/(fantastik|fantazi|epik|karanlık|dark)/.test(g)) {
+        return { scene: "fleurdelis", drop: "drop4", runin: "drop-runin", tint: "none", label: "Fantastik" };
+      }
+      if (/(bilimkurgu|bilim kurgu|sci|uzay|distopya)/.test(g)) {
+        return { scene: "lozenge", drop: "drop2", runin: "none", tint: "none", label: "Bilimkurgu" };
+      }
+      if (/(tarihi|tarih|dönem|donem)/.test(g)) {
+        return { scene: "fleuron", drop: "drop3", runin: "drop-runin", tint: "none", label: "Tarihi kurgu" };
+      }
+      if (/(çocuk|cocuk|genç yetişkin|genc yetiskin)/.test(g)) {
+        return { scene: "star", drop: "drop3", runin: "none", tint: "drop-tint-light", label: "Çocuk / Genç yetişkin" };
+      }
+      if (/(şiir|siir|deneme|makale|blog|akademik|araştırma|arastirma|kişisel gelişim|kisisel gelisim|iş kitabı|is kitabi|biyografi|anı|ani|gezi)/.test(g)) {
+        return { scene: "dinkus", drop: "none", runin: "none", tint: "none", label: "Kurgu dışı" };
+      }
+      if (/(hikaye|öykü|oyku|novella)/.test(g)) {
+        return { scene: "asterism", drop: "drop2", runin: "none", tint: "none", label: "Hikaye" };
+      }
+      return { scene: "fleuron", drop: "drop3", runin: "drop-runin", tint: "none", label: "Roman" };
+    }
+
+    function applyOrnamentSuggestion() {
+      const genre = currentBookGenre();
+      const suggestion = suggestOrnamentForGenre(genre);
+      const setValue = (id, value) => {
+        const element = document.getElementById(id);
+        if (!element) return;
+        element.value = value;
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      setValue("sceneBreakStyle", suggestion.scene);
+      setValue("dropCapStyle", suggestion.drop);
+      setValue("dropCapRunIn", suggestion.runin);
+      setValue("dropCapTint", suggestion.tint);
+      applyTypography();
+      setStatus(`Motor olayı: ${suggestion.label} türü için süs kombinasyonu uygulandı`);
+    }
 
     function wordFreqEnabled() {
       try { return localStorage.getItem("kithub-wordfreq-enabled") !== "off"; }
@@ -7739,6 +7957,7 @@ function applyEditorialFinding(index) {
           return { explicitBreak: true, html: "" };
         }
         if (/^<!--\s*scene(?:\s*:\s*[^-->]*?)?\s*-->$/i.test(paragraph)) {
+          const sizeClass = activeSceneBreakStyle === "dash" ? "" : ` scene-size-${activeSceneBreakSize}`;
           const glyph = activeSceneBreakStyle === "dash" ? "" : sceneBreakGlyphs[activeSceneBreakStyle] || "";
           return {
             kind: "scene-break",
@@ -7747,7 +7966,7 @@ function applyEditorialFinding(index) {
               ? ""
               : activeSceneBreakStyle === "dash"
                 ? `<div class="scene-break scene-dash" aria-hidden="true"></div>`
-                : `<div class="scene-break" aria-hidden="true">${glyph}</div>`
+                : `<div class="scene-break${sizeClass}" aria-hidden="true">${glyph}</div>`
           };
         }
         const heading = paragraph.match(/^\s*(#{1,3})\s+(.+)$/);
@@ -7772,7 +7991,9 @@ function applyEditorialFinding(index) {
             html: `<p class="preview-list">${escapeAndHighlight(list[1], activeHotWords)}</p>`
           };
         }
-        const firstClass = firstBodyParagraph ? `first${activeDropCapVariant ? ` drop-cap ${activeDropCapVariant}` : ""}` : "";
+        const firstClass = firstBodyParagraph
+          ? `first${activeDropCapVariant ? ` drop-cap ${activeDropCapVariant}` : ""}${activeDropCapRunIn ? ` ${activeDropCapRunIn}` : ""}${activeDropCapTint ? ` ${activeDropCapTint}` : ""}`
+          : "";
         firstBodyParagraph = false;
         return {
           kind: "paragraph",
@@ -8066,8 +8287,11 @@ function applyEditorialFinding(index) {
       const bodyParagraphs = paragraphs.filter((paragraph, index) => !(index === 0 && /^#\s+/.test(paragraph)));
       activeHotWords = wordFreqEnabled() ? findHotWords(raw) : new Set();
       activeSceneBreakStyle = document.getElementById("sceneBreakStyle")?.value || "fleuron";
+      activeSceneBreakSize = document.getElementById("sceneBreakSize")?.value || "normal";
       const dropCapValue = document.getElementById("dropCapStyle")?.value || "none";
       activeDropCapVariant = dropCapValue === "none" ? "" : dropCapValue;
+      activeDropCapRunIn = document.getElementById("dropCapRunIn")?.value || "none";
+      activeDropCapTint = document.getElementById("dropCapTint")?.value || "none";
       const pagination = measurePreviewPages(bodyParagraphs, chapter, chapterTitle);
       const previewPages = pagination.pages || [];
       const visibleLimit = previewShowAll ? previewPages.length : previewPageLimit;
@@ -9256,7 +9480,10 @@ setEditorText(chapter.text || "");
       setSelectIfPresent("pageDesign", layoutPlan?.page_design);
       setSelectIfPresent("ornamentStyle", layoutPlan?.ornament_style);
       setSelectIfPresent("dropCapStyle", layoutPlan?.drop_cap);
+      setSelectIfPresent("dropCapRunIn", layoutPlan?.drop_cap_run_in);
+      setSelectIfPresent("dropCapTint", layoutPlan?.drop_cap_tint);
       setSelectIfPresent("sceneBreakStyle", layoutPlan?.scene_break_ornament);
+      setSelectIfPresent("sceneBreakSize", layoutPlan?.scene_break_size);
       setSelectIfPresent("layoutProfile", layoutPlan?.layout_profile);
       setSelectIfPresent("printMode", layoutPlan?.print_mode);
       setSelectIfPresent("frontMatter", layoutPlan?.front_matter);
@@ -10212,7 +10439,10 @@ function collectLayoutPlanFromUi() {
         page_design: document.getElementById("pageDesign")?.value || "classicFrame",
         ornament_style: document.getElementById("ornamentStyle")?.value || "diamond",
         drop_cap: document.getElementById("dropCapStyle")?.value || "none",
+        drop_cap_run_in: document.getElementById("dropCapRunIn")?.value || "none",
+        drop_cap_tint: document.getElementById("dropCapTint")?.value || "none",
         scene_break_ornament: document.getElementById("sceneBreakStyle")?.value || "fleuron",
+        scene_break_size: document.getElementById("sceneBreakSize")?.value || "normal",
         chapter_start_policy: document.getElementById("chapterStartPolicy")?.value || profile.chapterStart,
         heading_hierarchy_policy: document.getElementById("headingHierarchyPolicy")?.value || profile.headingHierarchy || "chapter_only",
         running_header_policy: document.getElementById("runningHeaderPolicy")?.value || profile.runningHeader || "none",
@@ -10915,7 +11145,7 @@ closeNotesBtn.addEventListener("click", () => renderSupportTab("manuscript"));
       control.addEventListener("input", applyTypography);
       control.addEventListener("change", applyTypography);
     });
-    ["pageSize", "pageDesign", "ornamentStyle", "dropCapStyle", "sceneBreakStyle", "printMode", "frontMatter", "typeFont", "typeSize", "lineHeight", "marginTop", "marginInside", "marginOutside", "indent", "after", "chapterStartPolicy", "headingHierarchyPolicy", "runningHeaderPolicy", "pageNumberPosition", "tocDepth", "frontMatterNumbering", "widowOrphanControl"].forEach(id => {
+    ["pageSize", "pageDesign", "ornamentStyle", "dropCapStyle", "dropCapRunIn", "dropCapTint", "sceneBreakStyle", "sceneBreakSize", "printMode", "frontMatter", "typeFont", "typeSize", "lineHeight", "marginTop", "marginInside", "marginOutside", "indent", "after", "chapterStartPolicy", "headingHierarchyPolicy", "runningHeaderPolicy", "pageNumberPosition", "tocDepth", "frontMatterNumbering", "widowOrphanControl"].forEach(id => {
       const control = document.getElementById(id);
       if (!control) return;
       control.addEventListener("input", applyTypography);
@@ -10936,6 +11166,7 @@ closeNotesBtn.addEventListener("click", () => renderSupportTab("manuscript"));
       renderPreview();
       setStatus(event.target.checked ? "Motor olayı: kelime frekansı vurgusu açıldı" : "Motor olayı: kelime frekansı vurgusu kapatıldı");
     });
+    document.getElementById("suggestOrnament")?.addEventListener("click", applyOrnamentSuggestion);
     document.getElementById("lineHeightPreset")?.addEventListener("change", event => {
       const preset = document.getElementById("lineHeight");
       if (preset) preset.value = event.target.value;

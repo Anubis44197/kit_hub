@@ -631,7 +631,10 @@ const typographyVariety = await evaluate(`(() => {
 })()`);
 const writingFeatures = await evaluate(`(() => {
   const dropCap = document.getElementById('dropCapStyle');
+  const dropCapRunIn = document.getElementById('dropCapRunIn');
+  const dropCapTint = document.getElementById('dropCapTint');
   const sceneBreak = document.getElementById('sceneBreakStyle');
+  const sceneBreakSize = document.getElementById('sceneBreakSize');
   const device = document.getElementById('deviceMockup');
   const wordFreqToggle = document.getElementById('editorialWordFreqToggle');
   const options = select => select ? [...select.options].map(option => option.value) : [];
@@ -645,8 +648,11 @@ const writingFeatures = await evaluate(`(() => {
   const setEd = typeof window.setEditorText === 'function' ? window.setEditorText : (typeof setEditorText === 'function' ? setEditorText : null);
   setEd('ilk sahne metni güzel güzel güzel güzel tekrar eden sözcükler\\n\\n<!-- scene: İkinci Sahne -->\\n\\nİkinci sahne metni güzel güzel güzel güzel\\n');
   if (typeof editorContentChanged === 'function') editorContentChanged();
-  setValue('dropCapStyle', 'large');
-  setValue('sceneBreakStyle', 'fleuron');
+  setValue('dropCapStyle', 'drop3');
+  setValue('dropCapRunIn', 'drop-runin');
+  setValue('dropCapTint', 'drop-tint-light');
+  setValue('sceneBreakStyle', 'star');
+  setValue('sceneBreakSize', 'large');
   if (wordFreqToggle && !wordFreqToggle.checked) {
     wordFreqToggle.checked = true;
     wordFreqToggle.dispatchEvent(new Event('change', { bubbles: true }));
@@ -654,12 +660,20 @@ const writingFeatures = await evaluate(`(() => {
   if (typeof renderPreview === 'function') renderPreview();
   const firstParagraph = bookPage.querySelector('p.first');
   const hasDropCap = firstParagraph ? firstParagraph.classList.contains('drop-cap') : false;
+  const dropCapVariant = firstParagraph ? [...firstParagraph.classList].find(cls => cls.startsWith('drop') && ['drop3', 'drop2', 'drop4', 'drop-hanging', 'drop-raised', 'drop-baseline', 'large', 'classic'].includes(cls)) || '' : '';
+  const runInApplied = firstParagraph ? firstParagraph.classList.contains('drop-runin') : false;
+  const tintApplied = firstParagraph ? firstParagraph.classList.contains('drop-tint-light') : false;
   const sceneBreakRendered = pageBody.innerHTML.includes('scene-break') && !pageBody.innerHTML.includes('&lt;!-- scene');
+  const sceneBreakGlyphRendered = pageBody.innerHTML.includes('✶');
+  const sceneBreakSizeApplied = pageBody.innerHTML.includes('scene-size-large');
   const wordFreqMarked = pageBody.innerHTML.includes('word-freq');
   const pacing = typeof analyzePacing === 'function' ? analyzePacing(manuscriptText.value) : [];
   const overused = typeof analyzeOverusedWords === 'function' ? analyzeOverusedWords(manuscriptText.value) : [];
   setValue('dropCapStyle', 'none');
+  setValue('dropCapRunIn', 'none');
+  setValue('dropCapTint', 'none');
   setValue('sceneBreakStyle', 'fleuron');
+  setValue('sceneBreakSize', 'normal');
   setValue('deviceMockup', 'kindle');
   const deviceApplied = document.getElementById('previewShell')?.dataset.device === 'kindle';
   setValue('deviceMockup', 'none');
@@ -667,11 +681,20 @@ const writingFeatures = await evaluate(`(() => {
   if (typeof editorContentChanged === 'function') editorContentChanged();
   return {
     dropCapOptions: options(dropCap),
+    dropCapRunInOptions: options(dropCapRunIn),
+    dropCapTintOptions: options(dropCapTint),
     sceneBreakOptions: options(sceneBreak),
+    sceneBreakSizeOptions: options(sceneBreakSize),
     deviceOptions: options(device),
     wordFreqTogglePresent: Boolean(wordFreqToggle),
+    suggestOrnamentAvailable: typeof applyOrnamentSuggestion === 'function' && Boolean(document.getElementById('suggestOrnament')),
     hasDropCap,
+    dropCapVariant,
+    runInApplied,
+    tintApplied,
     sceneBreakRendered,
+    sceneBreakGlyphRendered,
+    sceneBreakSizeApplied,
     wordFreqMarked,
     pacingCount: pacing.length,
     pacingLevels: pacing.map(scene => scene.level),

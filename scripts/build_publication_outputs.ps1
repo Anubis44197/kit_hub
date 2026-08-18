@@ -153,10 +153,31 @@ $after = if ($layout.paragraph_spacing_after_pt -ne $null) { [double]$layout.par
 $pageDesign = if ($layout.page_design) { [string]$layout.page_design } else { "classicFrame" }
 $ornamentStyle = if ($layout.ornament_style) { [string]$layout.ornament_style } else { "diamond" }
 $dropCap = if ($layout.drop_cap) { [string]$layout.drop_cap } else { "none" }
+$dropCapRunIn = if ($layout.drop_cap_run_in) { [string]$layout.drop_cap_run_in } else { "none" }
+$dropCapTint = if ($layout.drop_cap_tint) { [string]$layout.drop_cap_tint } else { "none" }
 $sceneBreak = if ($layout.scene_break_ornament) { [string]$layout.scene_break_ornament } else { "fleuron" }
+$sceneBreakSize = if ($layout.scene_break_size) { [string]$layout.scene_break_size } else { "normal" }
 $sceneBreakGlyph = switch ($sceneBreak) {
   "flower" { "❦" }
   "asterism" { "⁂" }
+  "dinkus" { "* * *" }
+  "dots" { "· · ·" }
+  "bullets" { "• • •" }
+  "emdash" { "— — —" }
+  "florette" { "❀" }
+  "rosette" { "❁" }
+  "diamond" { "◆" }
+  "lozenge" { "◇" }
+  "star" { "✶" }
+  "sparkle" { "✦" }
+  "snowflake" { "❄" }
+  "fleurdelis" { "⚜" }
+  "crescent" { "☾" }
+  "dagger" { "†" }
+  "heart" { "♥" }
+  "crown" { "♛" }
+  "spade" { "♠" }
+  "club" { "♣" }
   "dash" { "" }
   "none" { $null }
   default { "❧" }
@@ -229,44 +250,68 @@ h1::after {
 }
 "@
 
-$dropCapCss = switch ($dropCap) {
-  "large" {
-    @"
-h1 + p::first-letter {
-  float: left;
-  font-size: 3.1em;
-  line-height: 0.82;
-  padding: 0.04em 0.08em 0 0;
-}
-"@
-  }
-  "classic" {
-    @"
-h1 + p::first-letter {
-  float: left;
-  font-size: 4.4em;
-  line-height: 0.78;
-  padding: 0.05em 0.1em 0 0;
-  color: #5a4c38;
-  font-weight: 600;
-}
-"@
-  }
+$dropCapBaseCss = switch ($dropCap) {
+  "large" { "font-size: 3.1em; line-height: 0.82; padding: 0.04em 0.08em 0 0;" }
+  "classic" { "font-size: 4.4em; line-height: 0.78; padding: 0.05em 0.1em 0 0; color: #5a4c38; font-weight: 600;" }
+  "drop-raised" { "float: none; font-size: 2.3em; line-height: 1.05; padding: 0 0.1em 0 0; vertical-align: top;" }
+  "drop-baseline" { "float: none; font-size: 2.9em; line-height: 1; padding: 0 0.1em 0 0;" }
+  "drop-hanging" { "font-size: 3.2em; margin-left: -0.52em; padding: 0.04em 0.08em 0 0;" }
+  "drop2" { "font-size: 2.9em; line-height: 0.8; padding: 0.04em 0.08em 0 0;" }
+  "drop3" { "font-size: 4.2em; line-height: 0.76; padding: 0.05em 0.1em 0 0;" }
+  "drop4" { "font-size: 5.6em; line-height: 0.74; padding: 0.06em 0.12em 0 0;" }
   default { "" }
 }
+$dropCapRunInCss = switch ($dropCapRunIn) {
+  "drop-runin" { @"
+h1 + p::first-line {
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+}
+"@ }
+  "drop-runin-upper" { @"
+h1 + p::first-line {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.95em;
+}
+"@ }
+  default { "" }
+}
+$dropCapTintCss = switch ($dropCapTint) {
+  "drop-tint-light" { "h1 + p::first-letter { opacity: 0.55; }" }
+  "drop-tint-strong" { "h1 + p::first-letter { opacity: 0.8; }" }
+  "drop-tint-box" { "h1 + p::first-letter { background: #5a4c38; color: #f7f2e7; padding: 0.05em 0.07em 0.07em; border-radius: 3px; }" }
+  default { "" }
+}
+$dropCapCss = if ($dropCapBaseCss) {
+@"
+h1 + p::first-letter {
+  float: left;
+  $dropCapBaseCss
+}
+$dropCapRunInCss
+$dropCapTintCss
+"@
+} else { "" }
 
+$sceneBreakFontSize = switch ($sceneBreakSize) {
+  "small" { "8pt" }
+  "large" { "14pt" }
+  default { "12pt" }
+}
 $sceneBreakCss = @"
 .scene-break {
   text-align: center;
   margin: 1.5em 0;
   color: #5a4c38;
-  font-size: 12pt;
+  font-size: $sceneBreakFontSize;
   line-height: 1;
 }
 .scene-break.scene-dash {
   height: 1px;
   background: linear-gradient(90deg, transparent, #5a4c38 20%, #5a4c38 80%, transparent);
   margin: 2em 3em;
+  font-size: 0;
 }
 "@
 
@@ -571,7 +616,10 @@ $report = [ordered]@{
   page_design = $pageDesign
   ornament_style = $ornamentStyle
   drop_cap = $dropCap
+  drop_cap_run_in = $dropCapRunIn
+  drop_cap_tint = $dropCapTint
   scene_break_ornament = $sceneBreak
+  scene_break_size = $sceneBreakSize
   typography = [ordered]@{ font_family = $font; font_size_pt = $fontSize; line_spacing = $lineSpacing }
   font_embedding = $pdfFontStatus
   pdf_x = $pdfXStatus

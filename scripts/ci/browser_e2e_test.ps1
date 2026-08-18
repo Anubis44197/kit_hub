@@ -221,11 +221,22 @@ $interactionPass = (
   $interaction.editorCore.typographyVariety.ornamentApplied -eq $true -and
   $interaction.editorCore.typographyVariety.presetSynced -eq $true -and
   @($interaction.editorCore.writingFeatures.dropCapOptions) -contains "classic" -and
+  @($interaction.editorCore.writingFeatures.dropCapOptions) -contains "drop3" -and
+  @($interaction.editorCore.writingFeatures.dropCapRunInOptions) -contains "drop-runin" -and
+  @($interaction.editorCore.writingFeatures.dropCapTintOptions) -contains "drop-tint-box" -and
   @($interaction.editorCore.writingFeatures.sceneBreakOptions) -contains "asterism" -and
+  @($interaction.editorCore.writingFeatures.sceneBreakOptions) -contains "dinkus" -and
+  @($interaction.editorCore.writingFeatures.sceneBreakSizeOptions) -contains "large" -and
   @($interaction.editorCore.writingFeatures.deviceOptions) -contains "kindle" -and
   $interaction.editorCore.writingFeatures.wordFreqTogglePresent -eq $true -and
+  $interaction.editorCore.writingFeatures.suggestOrnamentAvailable -eq $true -and
   $interaction.editorCore.writingFeatures.hasDropCap -eq $true -and
+  $interaction.editorCore.writingFeatures.dropCapVariant -eq "drop3" -and
+  $interaction.editorCore.writingFeatures.runInApplied -eq $true -and
+  $interaction.editorCore.writingFeatures.tintApplied -eq $true -and
   $interaction.editorCore.writingFeatures.sceneBreakRendered -eq $true -and
+  $interaction.editorCore.writingFeatures.sceneBreakGlyphRendered -eq $true -and
+  $interaction.editorCore.writingFeatures.sceneBreakSizeApplied -eq $true -and
   $interaction.editorCore.writingFeatures.wordFreqMarked -eq $true -and
   [int]$interaction.editorCore.writingFeatures.pacingCount -ge 2 -and
   [int]$interaction.editorCore.writingFeatures.overusedCount -ge 1 -and

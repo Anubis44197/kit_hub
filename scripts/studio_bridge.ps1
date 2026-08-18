@@ -2367,7 +2367,10 @@ function Save-LayoutPlan {
   $pageDesign = if ($Payload.page_design) { [string]$Payload.page_design } else { "classicFrame" }
   $ornamentStyle = if ($Payload.ornament_style) { [string]$Payload.ornament_style } else { "diamond" }
   $dropCap = if ($Payload.drop_cap) { [string]$Payload.drop_cap } else { "none" }
+  $dropCapRunIn = if ($Payload.drop_cap_run_in) { [string]$Payload.drop_cap_run_in } else { "none" }
+  $dropCapTint = if ($Payload.drop_cap_tint) { [string]$Payload.drop_cap_tint } else { "none" }
   $sceneBreak = if ($Payload.scene_break_ornament) { [string]$Payload.scene_break_ornament } else { "fleuron" }
+  $sceneBreakSize = if ($Payload.scene_break_size) { [string]$Payload.scene_break_size } else { "normal" }
   $printMode = [string]$Payload.print_mode
   $frontMatterSelection = [string]$Payload.front_matter
   $chapterStartPolicy = if ($Payload.chapter_start_policy) { [string]$Payload.chapter_start_policy } else { "new_page" }
@@ -2467,8 +2470,11 @@ $printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_s
 
   if ($pageDesign -notin @("classicFrame", "minimalEditorial", "artDeco", "botanical", "vintagePrint")) { throw "Unsupported page_design: $pageDesign" }
   if ($ornamentStyle -notin @("diamond", "fleuron", "flower", "asterism", "star")) { throw "Unsupported ornament_style: $ornamentStyle" }
-  if ($dropCap -notin @("none", "large", "classic")) { throw "Unsupported drop_cap: $dropCap" }
-  if ($sceneBreak -notin @("fleuron", "flower", "asterism", "dash", "none")) { throw "Unsupported scene_break_ornament: $sceneBreak" }
+  if ($dropCap -notin @("none", "large", "classic", "drop2", "drop3", "drop4", "drop-hanging", "drop-raised", "drop-baseline")) { throw "Unsupported drop_cap: $dropCap" }
+  if ($dropCapRunIn -notin @("none", "drop-runin", "drop-runin-upper")) { throw "Unsupported drop_cap_run_in: $dropCapRunIn" }
+  if ($dropCapTint -notin @("none", "drop-tint-light", "drop-tint-strong", "drop-tint-box")) { throw "Unsupported drop_cap_tint: $dropCapTint" }
+  if ($sceneBreak -notin @("fleuron", "flower", "asterism", "dinkus", "dots", "bullets", "emdash", "florette", "rosette", "diamond", "lozenge", "star", "sparkle", "snowflake", "fleurdelis", "crescent", "dagger", "heart", "crown", "spade", "club", "dash", "none")) { throw "Unsupported scene_break_ornament: $sceneBreak" }
+  if ($sceneBreakSize -notin @("small", "normal", "large")) { throw "Unsupported scene_break_size: $sceneBreakSize" }
   if ($printMode -notin @("Tek taraf", "Karşılıklı sayfa")) { throw "Unsupported print_mode: $printMode" }
   if ($frontMatterSelection -notin @("Künye + İçindekiler", "Yalnız metin")) { throw "Unsupported front_matter: $frontMatterSelection" }
   if ($font -notin @("Garamond", "Times New Roman", "Georgia", "Palatino Linotype", "Courier New", "Book Antiqua", "Constantia", "Cambria", "Perpetua")) {
@@ -2508,7 +2514,10 @@ $printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_s
   $layout["page_design"] = $pageDesign
   $layout["ornament_style"] = $ornamentStyle
   $layout["drop_cap"] = $dropCap
+  $layout["drop_cap_run_in"] = $dropCapRunIn
+  $layout["drop_cap_tint"] = $dropCapTint
   $layout["scene_break_ornament"] = $sceneBreak
+  $layout["scene_break_size"] = $sceneBreakSize
   $layout["print_mode"] = $printMode
   $layout["print_mode_key"] = $printModeKey
   $layout["front_matter_selection"] = $frontMatterSelection
@@ -2585,7 +2594,10 @@ $printModeKey = if ($printMode -match "Kar") { "facing_pages" } else { "single_s
     page_design = $pageDesign
     ornament_style = $ornamentStyle
     drop_cap = $dropCap
+    drop_cap_run_in = $dropCapRunIn
+    drop_cap_tint = $dropCapTint
     scene_break_ornament = $sceneBreak
+    scene_break_size = $sceneBreakSize
     font_family = $font
     body_font_size_pt = $fontSize
     line_spacing = $lineSpacing
