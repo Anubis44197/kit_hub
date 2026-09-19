@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0.0",
+  "adapter_id": "codebase-memory-mcp",
+  "enabled": true,
+  "mode": "read_only",
+  "transport": "stdio",
+  "binary": "codebase-memory-mcp",
+  "binary_resolution": {
+    "version": "0.11.0",
+    "sha256": "7edcd3807ebcfd85ec1968985964080f2589748da2fc3c7ce9261eebab31ff04",
+    "preferred_path": "%LOCALAPPDATA%/Programs/codebase-memory-mcp/codebase-memory-mcp.exe",
+    "repo_copy": ".tools/codebase-memory-mcp/codebase-memory-mcp.exe",
+    "installer": "scripts/install_codebase_memory.ps1",
+    "why_not_repo_copy": "Binary, exe yolunun ata zincirinde guvenilmeyen kimlige mutasyon hakki veren ACE bulursa baslamayi reddeder ('exact executable identity could not be verified (cache-private)'). Repo Desktop altinda oldugu icin oradaki zincir kirlidir; kurulum dizini temiz zincirdedir. Ayni hash, ayni ikili."
+  },
+  "project_scope_required": true,
+  "allowed_operations": [
+    "index_repository",
+    "search_graph",
+    "trace_path",
+    "impact_analysis"
+  ],
+  "denied_operations": [
+    "write_file",
+    "delete_file",
+    "execute_command",
+    "modify_agent_config"
+  ],
+  "context_output": {
+    "target": "runtime/agent-runs/<runId>/context-pack.json",
+    "include_source_hash": true,
+    "include_query": true,
+    "max_results": 20
+  },
+  "limits": {
+    "timeout_seconds": 30,
+    "max_response_bytes": 262144,
+    "max_memory_mb": 1024
+  },
+  "fallback": "filesystem_context_pack",
+  "evidence": {
+    "install": "runtime/fixture-reports/codebase-memory-install.json",
+    "stdio_probe": "runtime/fixture-reports/codebase-memory-probe.json",
+    "fixture_test": "runtime/fixture-reports/codebase-memory-fixture.json"
+  },
+  "notes": "Activated 2026-09-18. DACL engeli ACL cerrahisi olmadan cozuldu: binary temiz zincirli kurulum dizininden calistirilir. Kanit: probe ok (17 arac, 0.11.0) + fixture testi (index_repository 10 dugum/15 kenar, search_graph 'src/util.js' sembolunu buldu, delete_project ile temizlendi). Long-running daemon memory leak riski nedeniyle sidecar/kontrollu kullanim."
+}

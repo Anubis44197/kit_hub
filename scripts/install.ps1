@@ -148,4 +148,32 @@ Ensure-ApprovalFile -Path (Join-Path $approvalsDir "book-plan-approval.json") -T
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "rewrite-approval.json") -Title "Rewrite Approval"
 Ensure-ApprovalFile -Path (Join-Path $approvalsDir "export-approval.json") -Title "Export Approval"
 
+Write-Host "[install] checking TDK dictionary provider (tdk-py)..."
+$tdkInstalled = $false
+try {
+  $check = & python -c "import tdk; print('ok')" 2>$null
+  $tdkInstalled = ($LASTEXITCODE -eq 0 -and $check -match "ok")
+} catch {
+  $tdkInstalled = $false
+}
+if (-not $tdkInstalled) {
+  Write-Host "[install] tdk-py not found; installing (requires internet and pip)..."
+  try {
+    & python -m pip install --quiet tdk-py 2>$null
+    $verify = & python -c "import tdk; has_search=hasattr(tdk,'search_gts_sync'); has_suggest=hasattr(tdk,'get_gts_suggestions_sync'); print('ok' if has_search and has_suggest else 'missing')" 2>$null
+    if ($LASTEXITCODE -eq 0 -and $verify -match "ok") {
+      Write-Host "[install] tdk-py installed: TDK dictionary provider ready."
+    }
+    else {
+      Write-Host "[install] WARNING: tdk-py installed but tdk.search_gts_sync/get_gts_suggestions_sync unavailable. Dictionary check will report provider unavailable."
+    }
+  }
+  catch {
+    Write-Host "[install] WARNING: could not install tdk-py automatically: $($_.Exception.Message). Run 'python -m pip install tdk-py' manually."
+  }
+}
+else {
+  Write-Host "[install] tdk-py already available."
+}
+
 Write-Host "[install] runtime bootstrap complete."

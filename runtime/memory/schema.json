@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "storage": "kithub_local_sqlite_fts5",
+  "namespace_keys": ["project_id", "book_id", "run_id", "phase"],
+  "record_types": ["decision", "error", "artifact", "verification", "user_preference", "story_state"],
+  "required_fields": ["project_id", "book_id", "run_id", "phase", "source_hash", "summary"],
+  "forbidden_fields": ["raw_prompt", "api_key", "credential", "personal_data"],
+  "context_selector": "same_project_same_book_relevant_phase",
+  "story_selector": "same_project_same_book_recent_story_state",
+  "story_state_recent_count": 3,
+  "conflict_policy": "flag_only",
+  "retention": "summary_only_session_end"
+}

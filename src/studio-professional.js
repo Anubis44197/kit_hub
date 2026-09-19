@@ -3,9 +3,29 @@ import "./studio-professional.css";
 const clone = value => JSON.parse(JSON.stringify(value));
 const uid = prefix => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const html = value => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]));
+const elapsed = (started, finished) => { if (!started) return ""; const seconds = Math.max(0, Math.round((new Date(finished || Date.now()) - new Date(started)) / 1000)); return `${Math.floor(seconds / 60)}dk ${seconds % 60}sn`; };
 const nowIso = () => new Date().toISOString();
 const roles = { author: "Yazar", editor: "Editör", reviewer: "Okur", admin: "Yönetici" };
 const entityLabels = { characters: "Karakterler", locations: "Mekânlar", plot: "Olay Örgüsü", research: "Araştırma" };
+
+function familyEntityLabels(family) {
+  if (family === "academic") return { characters: "Literatür", locations: "Kapsam", plot: "Argüman Akışı", research: "Kaynaklar" };
+  if (family === "research" || family === "report") return { characters: "Kanıtlar", locations: "Kapsam", plot: "Bulgu Akışı", research: "Araştırma" };
+  if (family === "instructional") return { characters: "Örnekler", locations: "Modüller", plot: "Öğrenme Akışı", research: "Kaynaklar" };
+  if (family === "article") return { characters: "Örnekler", locations: "Kanal", plot: "Mesaj Akışı", research: "Kaynaklar" };
+  if (family === "poetry") return { characters: "İmgeler", locations: "Atmosfer", plot: "Tema Akışı", research: "Notlar" };
+  return entityLabels;
+}
+
+function entityCopy(kind, family) {
+  const labels = familyEntityLabels(family);
+  const label = labels[kind] || entityLabels[kind] || "Kayıt";
+  if (kind === "characters" && family !== "fiction" && family !== "screenplay") return { label, detail: "Odak / kaynak / örnek durumu", intro: "Seçilen türe göre odak kayıtlarını yönetin." };
+  if (kind === "locations" && family !== "fiction" && family !== "screenplay") return { label, detail: "Kapsam / seviye / bağlam", intro: "Kapsam ve bağlam kayıtları proje state dosyalarına yazılır." };
+  if (kind === "plot" && family !== "fiction" && family !== "screenplay") return { label, detail: "Akış durumu", intro: "Argüman, bulgu veya öğrenme akışını izleyin." };
+  if (kind === "research") return { label, detail: "Kaynak", intro: "Kaynak, not ve kanıt kayıtlarını yönetin." };
+  return { label, detail: kind === "characters" ? "Karakter yayı / durum" : kind === "locations" ? "İlk göründüğü bölüm" : "Durum", intro: "Kitap dünyasını tek yerden yönetin." };
+}
 
 function defaults() {
   return {
@@ -40,6 +60,7 @@ export function createProfessionalStudio(config) {
   let editEntity = null;
   let coverPreviewUrl = "";
   let dialog;
+  let agentRefreshTimer;
 
   const projectRoot = () => {
     const value = config.getProjectRoot();
@@ -58,10 +79,10 @@ export function createProfessionalStudio(config) {
     return true;
   }
 
-  const tabTitle = () => ({ entities: "Kitap Varlıkları", review: "Yorumlar ve Değişiklikler", writing: "Hedefler ve Oturumlar", publication: "Yayın Kimliği ve Kapak" }[tab]);
+  const tabTitle = () => ({ entities: "Kitap Varlıkları", review: "Yorumlar ve Değişiklikler", writing: "Hedefler ve Oturumlar", agents: "Ajanlar ve Görevler", publication: "Yayın Kimliği ve Kapak" }[tab]);
 
   function shell() {
-    const tabs = [["entities","Varlıklar"],["review","Editörlük"],["writing","Yazma Hedefleri"],["publication","Yayın Kimliği"]];
+    const tabs = [["entities","Varlıklar"],["review","Editörlük"],["agents","Ajanlar"],["writing","Yazma Hedefleri"],["publication","Yayın Kimliği"]];
     return `<div class="professional-shell">
       <aside class="professional-rail"><strong>Profesyonel Araçlar</strong><div class="professional-tabs" role="tablist" aria-label="Profesyonel araç bölümleri">
         ${tabs.map(([key,label]) => `<button type="button" role="tab" data-prof-tab="${key}" aria-selected="${tab === key}">${label}</button>`).join("")}
@@ -72,7 +93,8 @@ export function createProfessionalStudio(config) {
 
   function entityForm() {
     const item = editEntity || {};
-    const detailLabel = entityKind === "characters" ? "Karakter yayı / durum" : entityKind === "locations" ? "İlk göründüğü bölüm" : entityKind === "plot" ? "Durum" : "Kaynak";
+    const copy = entityCopy(entityKind, config.getWritingFamily?.() || "fiction");
+    const detailLabel = copy.detail;
     return `<form class="professional-form" data-entity-form>
       <strong>${editEntity ? "Kaydı düzenle" : "Yeni kayıt"}</strong>
       <input type="hidden" name="id" value="${html(item.id || "")}"><input type="hidden" name="originalLabel" value="${html(item.label || "")}">
@@ -86,8 +108,10 @@ export function createProfessionalStudio(config) {
 
   function entitiesView() {
     const items = entities[entityKind] || [];
-    return `<div class="professional-section-head"><div><h3>Kitap dünyasını tek yerden yönetin</h3><p>Kayıtlar doğrudan proje state dosyalarına atomik olarak yazılır.</p></div></div>
-      <div class="professional-kind-tabs">${Object.entries(entityLabels).map(([key,label]) => `<button type="button" data-entity-kind="${key}" aria-pressed="${entityKind === key}">${label} <span>${(entities[key] || []).length}</span></button>`).join("")}</div>
+    const labels = familyEntityLabels(config.getWritingFamily?.() || "fiction");
+    const copy = entityCopy(entityKind, config.getWritingFamily?.() || "fiction");
+    return `<div class="professional-section-head"><div><h3>${html(copy.intro)}</h3><p>Kayıtlar doğrudan proje state dosyalarına atomik olarak yazılır.</p></div></div>
+      <div class="professional-kind-tabs">${Object.entries(labels).map(([key,label]) => `<button type="button" data-entity-kind="${key}" aria-pressed="${entityKind === key}">${label} <span>${(entities[key] || []).length}</span></button>`).join("")}</div>
       <div class="professional-grid"><div class="professional-list">
         ${items.length ? items.map(item => `<article class="professional-row"><div><strong>${html(item.label || item.id)}</strong><span>${html(item.detail || item.status || "")}</span></div><div class="professional-row-actions">${item.readonly ? '<span class="professional-badge">Salt okunur belge</span>' : `<button type="button" class="ghost" data-entity-edit="${html(item.id)}">Düzenle</button><button type="button" class="ghost danger" data-entity-delete="${html(item.id)}">Sil</button>`}</div></article>`).join("") : '<div class="professional-empty">Bu türde henüz kayıt yok.</div>'}
       </div>${entityForm()}</div>`;
@@ -148,10 +172,75 @@ export function createProfessionalStudio(config) {
     </div>`;
   }
 
+
+  async function agentsView() {
+    const root = projectRoot();
+    if (!root) return '<div class="professional-empty">Ajanlar için önce gerçek bir KitHub projesi bağlayın.</div>';
+    const summary = await config.api("/api/task-summary", { projectRoot: root });
+    if (!summary || !summary.ok) throw new Error((summary && summary.error) || "Görev özeti alınamadı.");
+    const counts = summary.task_counts || {};
+    const tasks = (summary.tasks || []).slice().reverse();
+    const feed = (summary.feed || []).slice().reverse();
+    const agents = summary.agents || [];
+    const runs = summary.runs || [];
+    const statusLabel = { pending: "Bekliyor", in_flight: "Çalışıyor", completed: "Tamamlandı", failed: "Hata", cancelled: "İptal", blocked: "Engelli" };
+    const phaseLabel = { intake: "İstek", propose: "Öneri", "design-big": "Büyük Tasarım", "design-small": "Sahne Tasarımı", create: "Yazım", polish: "Düzeltme", rewrite: "Yeniden Yazım", export: "Export" };
+    const agentMeta = {};
+    for (const a of agents) agentMeta[a.id] = { label: a.label || a.id, color: a.color || "#6b7280", enabled: a.enabled };
+    const chip = (label, value, color) => '<div class="professional-card" style="padding:10px 14px;min-width:110px"><div style="font-size:22px;font-weight:700;color:' + color + '">' + html(value) + '</div><div style="font-size:12px;color:#6b7280">' + html(label) + '</div></div>';
+    const chipRow = '<div class="professional-stack" style="flex-direction:row;flex-wrap:wrap;gap:8px">' + chip("Bekleyen", counts.pending || 0, "#b45309") + chip("Çalışıyor", counts.in_flight || 0, "#2563eb") + chip("Tamamlandı", counts.completed || 0, "#15803d") + chip("Hata", (counts.failed || 0) + (counts.blocked || 0), "#be123c") + '</div>';
+    const taskRows = tasks.length ? tasks.map(t => {
+      const meta = agentMeta[t.agent] || { label: t.agent, color: "#6b7280", enabled: true };
+      const st = statusLabel[t.status] || t.status;
+      const ph = phaseLabel[t.phase] || t.phase || "—";
+      const scope = t.scope ? (t.scope.episode ? html(t.scope.episode) : t.scope.kind === "phase" ? "Faz: " + (phaseLabel[t.scope.phase] || t.scope.phase) : t.scope.kind || "") : "";
+      let appr = "";
+      if (t.approval) appr = t.approval.status === "approved" ? '<span class="professional-badge" style="background:#dcfce7;color:#15803d">Onaylandı · ' + html(t.approval.by || "") + '</span>' : '<span class="professional-badge" style="background:#fee2e2;color:#be123c">Reddedildi</span>';
+      const run = runs.find(item => item.runId === t.run_id);
+      const runtimeMeta = run ? '<div style="font-size:12px;color:#6b7280;margin-top:6px">Run ' + html(run.runId) + ' ? PID ' + html(run.pid ?? '?') + ' ? ' + html(run.status || '') + (run.startedAt ? ' ? s?re ' + elapsed(run.startedAt, run.finishedAt) : '') + (t.attempts ? ' ? deneme ' + html(t.attempts) + '/' + html(t.max_attempts || 2) : '') + ' ? log: ' + html(run.logOut || '') + ' ? verifier: runtime/agent-runs/' + html(run.runId) + '/verification.json</div>' : '';
+      if (t.requires_approval && t.status === "completed") appr = '<span class="professional-badge" style="background:#fef3c7;color:#b45309">Onay bekliyor</span>';
+      const result = t.result ? '<div style="font-size:12px;color:#374151;margin-top:6px">' + html(t.result.summary || "") + (t.result.issues != null ? " · <strong>" + t.result.issues + "</strong> sorun" : "") + '</div>' : "";
+      const btns = [];
+      appr += runtimeMeta;
+      if (t.status === "pending") btns.push('<button type="button" class="primary" data-task-run="' + html(t.id) + '">Başlat</button>');
+      if (t.status === "in_flight") btns.push('<button type="button" class="primary" data-task-complete="' + html(t.id) + '">Tamamlandı İşaretle</button>');
+      if (t.requires_approval && t.status === "completed" && !t.approval) { btns.push('<button type="button" class="primary" data-task-approve="' + html(t.id) + '">Onayla</button>'); btns.push('<button type="button" class="ghost danger" data-task-reject="' + html(t.id) + '">Reddet</button>'); }
+      if (t.status === "pending" || t.status === "in_flight") btns.push('<button type="button" class="ghost danger" data-task-cancel="' + html(t.id) + '">İptal</button>');
+      const btnsHtml = btns.length ? '<div class="professional-actions">' + btns.join("") + '</div>' : "";
+      const runtimeMetaHtml = runtimeMeta;
+      return '<article class="professional-card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div><strong>' + html(t.title) + '</strong> <span class="professional-badge" style="background:' + meta.color + '1a;color:' + meta.color + ';border:1px solid ' + meta.color + '55">' + html(meta.label) + '</span> <span class="professional-badge">' + html(ph) + '</span> <span class="professional-badge">' + html(st) + '</span></div>' + appr + '</div><div style="font-size:12px;color:#6b7280;margin-top:4px">' + scope + ' · ' + html(t.source) + ' · ' + new Date(t.created_at).toLocaleString("tr-TR") + '</div>' + result + btnsHtml + '</article>';
+    }).join("") : '<div class="professional-empty">Görev yok. Aşağıdan bir görev oluşturun veya yorumda @ajan yazın.</div>';
+    const agentOptions = agents.filter(a => a.enabled).map(a => '<option value="' + html(a.id) + '">' + html(a.label || a.id) + '</option>').join("");
+    const phaseOptions = Object.entries(phaseLabel).map(([k, v]) => '<option value="' + k + '">' + v + '</option>').join("");
+    const feedRows = feed.length ? feed.map(e => '<div class="professional-row"><div><span class="professional-badge">' + html(e.actor_id || e.actor_type) + '</span> <span style="font-size:12px;color:#6b7280">' + new Date(e.at).toLocaleString("tr-TR") + '</span></div><div style="font-size:13px">' + html(e.message) + '</div></div>').join("") : '<div class="professional-empty">Akış boş.</div>';
+    const agentChips = agents.map(a => '<span class="professional-badge" style="background:' + html(a.color || "#6b7280") + '1a;color:' + html(a.color || "#6b7280") + ';border:1px solid ' + html(a.color || "#6b7280") + '55">' + html(a.label || a.id) + (a.enabled ? "" : " · pasif") + '</span>').join(" ");
+    return '<section class="professional-stack">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center"><h3>Ajan Durumu</h3><button type="button" class="ghost" data-task-refresh>Yenile</button></div>'
+      + chipRow
+      + '<h3 style="margin-top:14px">Görev Kuyruğu</h3>'
+      + '<div class="professional-stack">' + taskRows + '</div>'
+      + '<form class="professional-form" data-task-form style="margin-top:14px"><strong>Yeni görev oluştur</strong>'
+      + '<div class="professional-split"><label>Ajan<select name="agent" required>' + agentOptions + '</select></label><label>Faz<select name="phase">' + phaseOptions + '</select></label></div>'
+      + '<label>Başlık<input name="title" maxlength="200" required placeholder="Örn: Bölüm 5 TDK kontrolü"></label>'
+      + '<label>@mention (opsiyonel)<input name="mentionText" maxlength="300" placeholder="Örn: @tdk-polisher bölüm 5i kontrol et"></label>'
+      + '<div class="professional-actions"><button type="submit" class="primary">Görevi Ekle</button></div>'
+      + '</form>'
+      + '<h3 style="margin-top:14px">Olay Akışı</h3>'
+      + '<div class="professional-stack">' + feedRows + '</div>'
+      + '<h3 style="margin-top:14px">Ajanlar</h3>'
+      + '<div>' + agentChips + '</div>'
+      + '</section>';
+  }
+
   function render() {
     if (!dialog) return;
     dialog.innerHTML = shell();
     const body = dialog.querySelector("[data-prof-body]");
+    if (tab === "agents") {
+      body.innerHTML = '<div class="professional-empty">Ajanlar yükleniyor…</div>';
+      agentsView().then(htmlOut => { if (body) body.innerHTML = htmlOut; }).catch(error => { if (body) body.innerHTML = '<div class="professional-empty">Ajanlar yüklenemedi: ' + html(error.message) + '</div>'; });
+      return;
+    }
     body.innerHTML = tab === "entities" ? entitiesView() : tab === "review" ? reviewView() : tab === "writing" ? writingView() : publicationView();
     if (tab === "review") body.insertAdjacentHTML("afterbegin", membersView());
   }
@@ -245,6 +334,17 @@ export function createProfessionalStudio(config) {
       else { state.writing.sessions.push({ id: uid("session"), started_at: nowIso(), ended_at: "", start_words: config.getWordCount(), end_words: 0, chapter: config.getChapter()?.filename || "" }); await saveState("Odak oturumu başladı."); }
       return;
     }
+    if (event.target.closest("[data-task-refresh]")) { render(); return; }
+    const taskRun = event.target.closest("[data-task-run]");
+    if (taskRun) { const result = await config.api("/api/task-run", { projectRoot: projectRoot(), taskId: taskRun.dataset.taskRun }); if (!result.ok) throw new Error(result.error || "Görev başlatılamadı."); config.setStatus(result.task.id + " başlatıldı."); render(); return; }
+    const taskApprove = event.target.closest("[data-task-approve]");
+    if (taskApprove) { const result = await config.api("/api/task-approve", { projectRoot: projectRoot(), taskId: taskApprove.dataset.taskApprove, approval: "approved", by: state.collaboration.current_name || "Yazar" }); if (!result.ok) throw new Error(result.error || "Görev onaylanamadı."); config.setStatus(taskApprove.dataset.taskApprove + " onaylandı."); render(); return; }
+    const taskReject = event.target.closest("[data-task-reject]");
+    if (taskReject) { const result = await config.api("/api/task-approve", { projectRoot: projectRoot(), taskId: taskReject.dataset.taskReject, approval: "denied", by: state.collaboration.current_name || "Yazar" }); if (!result.ok) throw new Error(result.error || "Görev reddedilemedi."); config.setStatus(taskReject.dataset.taskReject + " reddedildi."); render(); return; }
+    const taskComplete = event.target.closest("[data-task-complete]");
+    if (taskComplete) { const result = await config.api("/api/task-complete", { projectRoot: projectRoot(), taskId: taskComplete.dataset.taskComplete, summary: "Kullanıcı tarafından tamamlandı işaretlendi." }); if (!result.ok) throw new Error(result.error || "Görev tamamlanamadı."); config.setStatus(taskComplete.dataset.taskComplete + " tamamlandı."); render(); return; }
+    const taskCancel = event.target.closest("[data-task-cancel]");
+    if (taskCancel) { const result = await config.api("/api/task-cancel", { projectRoot: projectRoot(), taskId: taskCancel.dataset.taskCancel, by: state.collaboration.current_name || "Yazar" }); if (!result.ok) throw new Error(result.error || "Görev iptal edilemedi."); config.setStatus(taskCancel.dataset.taskCancel + " iptal edildi."); render(); return; }
     if (event.target.closest("[data-apply-matter-templates]")) {
       await config.applyMatterTemplates({ ...state.publication, author: state.collaboration.current_name });
       return;
@@ -254,6 +354,14 @@ export function createProfessionalStudio(config) {
   async function submit(event) {
     event.preventDefault();
     const form = event.target;
+    if (form.matches("[data-task-form]")) {
+      const data = Object.fromEntries(new FormData(form));
+      const result = await config.api("/api/task-create", { projectRoot: projectRoot(), agent: data.agent, title: data.title, phase: data.phase || "", scope: { kind: "phase" }, source: "manual", mentionText: data.mentionText || "" });
+      if (!result.ok) throw new Error(result.error || "Görev oluşturulamadı.");
+      config.setStatus("Görev oluşturuldu: " + result.task.id + " → " + (result.mentions && result.mentions.length ? "@" + result.mentions.join(", @") : data.agent));
+      render();
+      return;
+    }
     if (form.matches("[data-entity-form]")) { await entitySubmit(form); return; }
     if (form.matches("[data-member-form]")) { const data = Object.fromEntries(new FormData(form)); state.collaboration.members.push({ id: uid("member"), name: data.name, role: data.role }); await saveState("Ekip üyesi kaydedildi."); return; }
     if (form.matches("[data-comment-form]")) {
@@ -303,6 +411,7 @@ export function createProfessionalStudio(config) {
     dialog.addEventListener("submit", event => submit(event).catch(error => config.setStatus(`Profesyonel araç hatası: ${error.message}`)));
     dialog.addEventListener("change", event => { if (event.target.matches("[data-cover-file]")) uploadCover(event.target.files?.[0]).catch(error => config.setStatus(`Kapak yüklenemedi: ${error.message}`)); });
     button.addEventListener("click", () => { if (!projectRoot()) return; render(); dialog.showModal(); if (tab === "publication") loadCover().catch(() => {}); });
+    agentRefreshTimer = window.setInterval(() => { if (dialog?.open && tab === "agents") render(); }, 5000);
     render();
   }
 

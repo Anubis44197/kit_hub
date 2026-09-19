@@ -13,6 +13,9 @@
 
 $ErrorActionPreference = "Stop"
 
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+try { $OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+
 function Ensure-File {
   param([string]$Path)
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
@@ -337,6 +340,7 @@ function Validate-PhaseArtifacts {
     "intake" {
       Ensure-File (Join-Path $Root "runtime/book-request.md")
       foreach ($requiredIntake in @(
+        "runtime/book-contract.json",
         "runtime/book-brief.json",
         "runtime/book-dna.json",
         "runtime/layout-profile.json",
@@ -355,6 +359,7 @@ function Validate-PhaseArtifacts {
     "design-big" {
       Ensure-File (Join-Path $Root "novel-config.md")
       foreach ($requiredDesign in @(
+        "runtime/book-contract.json",
         "design/01_concept_bootstrap.md",
         "design/02_character_core.md",
         "design/03_macro_plot_hooks.md",
@@ -964,10 +969,14 @@ function Validate-BookBriefApproval {
     $acceptedAnswers = $Approval.accepted_answers
   }
   $answers = $brief.answers
-  foreach ($field in @("writing_type","premise","target_reader","genre","character_policy","setting_period","pov_tense","style_tone","publication_package")) {
+  foreach ($field in @("writing_type","premise","target_reader","genre","setting_period","pov_tense","style_tone","publication_package")) {
     if (-not (Test-AnsweredField -Primary $acceptedAnswers -Fallback $answers -Field $field)) {
       throw "Book brief approval blocked: required intake answer '$field' is empty. Fill runtime/book-brief.json answers or $ApprovalRel accepted_answers before approving."
     }
+  }
+  $focusPolicyAnswered = (Test-AnsweredField -Primary $acceptedAnswers -Fallback $answers -Field "focus_policy") -or (Test-AnsweredField -Primary $acceptedAnswers -Fallback $answers -Field "character_policy")
+  if (-not $focusPolicyAnswered) {
+    throw "Book brief approval blocked: required intake answer 'focus_policy' is empty. Fill runtime/book-brief.json answers.focus_policy or legacy character_policy before approving."
   }
 
   $targetLengthAnswered = (Test-AnsweredField -Primary $acceptedAnswers -Fallback $answers -Field "target_length") -or (Test-AnsweredField -Primary $acceptedAnswers -Fallback $answers -Field "target_pages")

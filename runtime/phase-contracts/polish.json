@@ -28,6 +28,7 @@
                                 "skills/polish/references/verdict-report-standard.md"
                             ],
     "required_state_files":  [
+                                 "runtime/book-contract.json",
                                  "runtime/book-brief.json",
                                  "runtime/book-dna.json",
                                  "runtime/layout-profile.json",
@@ -47,10 +48,10 @@
                                  "revision/_state/timeline.json",
                                  "revision/_state/theme-ledger.json",
                                  "revision/_state/volume-plan.json",
-                                 "revision/_state/style-profile.json",
-                                 "revision/_state/create-plan.json",
-                                 "revision/_state/design-hashes.json"
-                             ],
+                                      "revision/_state/style-profile.json",
+                                      "revision/_state/create-plan.json",
+                                      "revision/_state/design-hashes.json"
+                                  ],
     "required_approvals":  [
 
                            ],
@@ -61,6 +62,8 @@
                                 "runtime/agent-compliance"
                             ],
     "allowed_output_patterns":  [
+                                    "revision/_workspace/00_chief-editor-orchestrator_polish.md",
+                                    "revision/_workspace/00_chief-editor-orchestrator_polish.json",
                                     "episode/ep*.md",
                                     "revision/_workspace/*revision-reviewer*EP*.md",
                                     "revision/_workspace/08_tdk-polisher_issues_EP*.json",
@@ -84,7 +87,8 @@
                                     "revision/_state/volume-plan.json",
                                     "revision/_state/style-profile.json",
                                     "revision/_state/create-plan.json",
-                                    "revision/_state/design-hashes.json"
+                                    "revision/_state/design-hashes.json",
+                                    "revision/_state/*.json"
                                 ],
     "denied_output_patterns":  [
                                    "revision/export/*",

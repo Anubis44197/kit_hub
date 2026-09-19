@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "adapter_id": "observer",
+  "enabled": true,
+  "mode": "read_only",
+  "transport": "local_process",
+  "binary": ".tools/observer/observer.exe",
+  "command": ["usage", "--json", "--no-progress", "--since", "30d"],
+  "project_scope_required": false,
+  "allowed_operations": ["usage_snapshot", "status_snapshot", "process_snapshot"],
+  "denied_operations": ["init", "start", "proxy", "config_write", "task_status_write"],
+  "output": {
+    "target": "runtime/agent-runs/<runId>/observer.jsonl",
+    "max_bytes": 262144,
+    "timeout_seconds": 30
+  },
+  "fallback": "no_observer_data",
+  "notes": "One-shot local usage only; daemon/proxy disabled until canary approval."
+}

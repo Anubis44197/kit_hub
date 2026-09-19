@@ -22,6 +22,7 @@
                                 "skills/export-word/references/docx-style-profile-template.md"
                             ],
     "required_state_files":  [
+                                 "runtime/book-contract.json",
                                  "runtime/book-brief.json",
                                  "runtime/book-dna.json",
                                  "runtime/layout-profile.json",
@@ -54,6 +55,10 @@
                                 "runtime/agent-compliance"
                             ],
     "allowed_output_patterns":  [
+                                    "revision/_workspace/00_chief-editor-orchestrator_export.md",
+                                    "revision/_workspace/00_chief-editor-orchestrator_export.json",
+                                    "revision/_workspace/07_research-citation-auditor_export.md",
+                                    "revision/_workspace/07_research-citation-auditor_export.json",
                                     "revision/_workspace/*export*manifest*.json",
                                     "revision/_workspace/*export-validator*verdict*.json",
                                     "revision/_workspace/*export-content-match*",
@@ -80,7 +85,8 @@
                                     "revision/_state/theme-ledger.json",
                                     "revision/_state/volume-plan.json",
                                     "revision/_state/style-profile.json",
-                                    "revision/_state/llm-adapter-contract.json"
+                                    "revision/_state/llm-adapter-contract.json",
+                                    "revision/_state/*.json"
                                 ],
     "denied_output_patterns":  [
                                    "episode/*",

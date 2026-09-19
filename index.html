@@ -150,7 +150,7 @@
 
     .topbar {
       position: relative;
-      z-index: 30;
+      z-index: 90;
       grid-column: 1 / -1;
       display: grid;
       grid-template-columns: var(--left-w) minmax(0, 1fr) auto;
@@ -431,6 +431,21 @@
       background: rgba(12, 22, 25, 0.92);
     }
 
+    .surface-backdrop {
+      display: none;
+      position: fixed;
+      inset: 64px 0 0;
+      z-index: 70;
+      background:
+        radial-gradient(circle at 50% 12%, rgba(52, 198, 193, 0.14), transparent 34%),
+        rgba(1, 8, 10, 0.62);
+      backdrop-filter: blur(10px);
+    }
+
+    body.surface-open .surface-backdrop {
+      display: block;
+    }
+
     .sidebar {
       grid-row: 2 / 4;
       border-right: 1px solid var(--line-soft);
@@ -440,6 +455,40 @@
       scrollbar-gutter: stable;
       display: flex;
       flex-direction: column;
+    }
+
+    body:not(.nav-collapsed) .sidebar {
+      position: fixed;
+      z-index: 82;
+      top: calc(64px + ((100vh - 64px) / 2));
+      left: 50%;
+      bottom: auto;
+      width: min(1180px, calc(100vw - 64px));
+      height: min(760px, calc(100vh - 112px));
+      border: 1px solid rgba(52, 198, 193, 0.28);
+      border-radius: 22px;
+      background:
+        linear-gradient(145deg, rgba(13, 30, 34, 0.92), rgba(6, 14, 17, 0.9)),
+        rgba(12, 22, 25, 0.9);
+      backdrop-filter: blur(18px) saturate(1.08);
+      box-shadow: 0 26px 90px rgba(0, 0, 0, 0.46);
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-auto-rows: max-content;
+      align-content: start;
+      gap: 14px;
+      padding: 0 16px 16px;
+      transform: translate(-50%, -50%);
+    }
+
+    body:not(.nav-collapsed) .sidebar .side-head {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      grid-column: 1 / -1;
+      margin: 0 -16px;
+      background: rgba(8, 17, 20, 0.98);
+      border-bottom: 1px solid var(--line-soft);
     }
 
     body.nav-collapsed .brand {
@@ -533,6 +582,44 @@
       border-bottom: 1px solid var(--line-soft);
     }
 
+    .nav-section.utility-output-section {
+      display: none;
+    }
+
+    .onboarding-next-section {
+      display: none;
+    }
+
+    body:not(.project-ready):not(.nav-collapsed) .sidebar .onboarding-next-section {
+      display: none;
+    }
+
+    body:not(.project-ready):not(.nav-collapsed) .sidebar .chapter-section {
+      display: none;
+    }
+
+    body:not(.project-ready):not(.nav-collapsed) .sidebar .entity-section {
+      display: none;
+    }
+
+    .onboarding-next-card {
+      margin: 0 16px;
+      padding: 14px;
+      border: 1px solid rgba(52, 198, 193, 0.22);
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(52,198,193,0.08), rgba(255,255,255,0.018));
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .onboarding-next-card strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text);
+      font: 700 15px/1.25 var(--book);
+    }
+
     .nav-title {
       display: flex;
       align-items: center;
@@ -547,7 +634,10 @@
     .chapter-actions {
       display: flex;
       align-items: center;
-      gap: 3px;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      position: relative;
     }
 
     .chapter-actions button {
@@ -570,6 +660,72 @@
     .chapter-actions .danger:focus-visible {
       color: #ff9f98;
       border-color: rgba(215, 94, 81, 0.5);
+    }
+
+    .chapter-primary-action {
+      width: auto !important;
+      min-width: 82px !important;
+      padding: 0 10px !important;
+      color: var(--text) !important;
+      border-color: rgba(52, 198, 193, 0.38) !important;
+      background: rgba(52, 198, 193, 0.06) !important;
+      font-weight: 700;
+    }
+
+    .chapter-action-menu {
+      position: relative;
+    }
+
+    .chapter-action-menu summary {
+      min-height: 27px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      list-style: none;
+      cursor: pointer;
+      user-select: none;
+      background: rgba(255,255,255,0.025);
+    }
+
+    .chapter-action-menu summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .chapter-action-menu[open] summary,
+    .chapter-action-menu summary:hover,
+    .chapter-action-menu summary:focus-visible {
+      color: var(--teal);
+      border-color: rgba(52, 198, 193, 0.45);
+    }
+
+    .chapter-action-popover {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 6;
+      width: 210px;
+      display: grid;
+      gap: 4px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(8, 20, 23, 0.98);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.34);
+    }
+
+    .chapter-action-popover button {
+      width: 100%;
+      min-width: 0;
+      min-height: 34px;
+      padding: 0 10px;
+      display: flex;
+      justify-content: flex-start;
+      gap: 8px;
+      border-radius: 8px;
+      font-size: 12px;
     }
 
     .chapter-list {
@@ -599,6 +755,29 @@
     }
 
     .chapter-list small { color: var(--quiet); }
+
+    .chapter-empty-card {
+      margin: 0 8px 8px;
+      padding: 14px;
+      border: 1px dashed rgba(143, 166, 166, 0.24);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.018);
+      color: var(--muted);
+    }
+
+    .chapter-empty-card strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text);
+      font: 700 15px/1.25 var(--book);
+    }
+
+    .chapter-empty-card span {
+      display: block;
+      max-width: 34ch;
+      font-size: 12px;
+      line-height: 1.45;
+    }
 
     #chapterList button {
       grid-template-columns: 25px 1fr auto auto 12px;
@@ -670,12 +849,69 @@
     }
 
     .side-footer::before {
-      content: "Motor Alanı";
+      content: "Akış Kısayolları";
       grid-column: 1 / -1;
       color: var(--muted);
       font-size: 10px;
       letter-spacing: 1.3px;
       text-transform: uppercase;
+    }
+
+    .side-footer .context-action {
+      display: none;
+    }
+
+    .side-footer .context-action.is-visible {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .advanced-engine-panel {
+      grid-column: 1 / -1;
+      border: 1px solid var(--line-soft);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.018);
+      overflow: hidden;
+    }
+
+    .advanced-engine-panel summary {
+      min-height: 36px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .advanced-engine-panel summary::after {
+      content: "+";
+      color: var(--teal);
+      font-size: 15px;
+    }
+
+    .advanced-engine-panel[open] summary::after {
+      content: "−";
+    }
+
+    .advanced-engine-panel summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .advanced-engine-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 0 12px 12px;
+    }
+
+    .advanced-engine-panel:not([open]) .advanced-engine-body {
+      display: none;
     }
 
     .project-path {
@@ -724,9 +960,13 @@
 
     .primary-flow {
       grid-column: 1 / -1;
-      display: grid;
+      display: none;
       grid-template-columns: 1fr;
       gap: 8px;
+    }
+
+    .primary-flow.is-visible {
+      display: grid;
     }
 
     .primary-flow button {
@@ -782,6 +1022,137 @@
     .tabs button.active {
       color: var(--teal);
       border-bottom-color: var(--teal);
+    }
+
+    .mode-launcher {
+      grid-column: 1 / -1;
+      grid-row: 2 / 4;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      padding: clamp(22px, 5vw, 70px);
+      background:
+        radial-gradient(circle at 22% 16%, rgba(52, 198, 193, 0.16), transparent 32%),
+        radial-gradient(circle at 78% 82%, rgba(247, 200, 115, 0.09), transparent 34%),
+        #071012;
+      overflow: auto;
+    }
+
+    body:not(.launch-active) .mode-launcher {
+      display: none;
+    }
+
+    body.launch-active .workspace {
+      display: none;
+    }
+
+    body.launch-active .chrome-controls,
+    body.launch-active .top-actions {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .mode-launcher-card {
+      width: min(1080px, 100%);
+      border: 1px solid rgba(52, 198, 193, 0.22);
+      border-radius: 28px;
+      padding: clamp(24px, 4vw, 46px);
+      background:
+        linear-gradient(145deg, rgba(18, 38, 42, 0.96), rgba(8, 18, 21, 0.98)),
+        #0b1518;
+      box-shadow: 0 34px 120px rgba(0, 0, 0, 0.44);
+    }
+
+    .mode-launcher-kicker {
+      margin: 0 0 10px;
+      color: var(--teal);
+      font-size: 12px;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+    }
+
+    .mode-launcher-card h2 {
+      margin: 0;
+      font: 700 clamp(31px, 5vw, 58px)/0.96 var(--book);
+      color: var(--ink);
+      letter-spacing: -0.04em;
+    }
+
+    .mode-launcher-card > p {
+      max-width: 720px;
+      margin: 16px 0 28px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .mode-choice-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .mode-choice-grid.project-entry {
+      max-width: 760px;
+    }
+
+    .mode-choice {
+      min-height: 142px;
+      display: grid;
+      align-content: space-between;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(148, 163, 157, 0.22);
+      border-radius: 20px;
+      color: var(--text);
+      background: rgba(8, 20, 23, 0.82);
+      text-align: left;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .mode-choice:hover,
+    .mode-choice:focus-visible {
+      transform: translateY(-2px);
+      border-color: rgba(52, 198, 193, 0.66);
+      background: rgba(14, 39, 43, 0.94);
+    }
+
+    .mode-choice strong {
+      display: block;
+      color: var(--ink);
+      font-size: 17px;
+      line-height: 1.2;
+    }
+
+    .mode-choice span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .mode-choice small {
+      color: var(--teal);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+
+    .launcher-tool-note {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .launcher-tool-note span {
+      border: 1px solid rgba(148, 163, 157, 0.2);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.025);
     }
 
     .toolbar {
@@ -1622,7 +1993,7 @@
       min-width: 0;
       min-height: 0;
       display: grid;
-      grid-template-rows: 1fr 38px;
+      grid-template-rows: minmax(0, 1fr) auto;
       border: 1px solid var(--line-soft);
       border-radius: var(--radius);
       background: #0b1214;
@@ -1631,10 +2002,10 @@
 
     .page-stage {
       min-height: 0;
-      display: grid;
-      align-items: start;
-      justify-items: center;
-      gap: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
       padding: 14px 22px 14px 14px;
       overflow: auto;
       scrollbar-gutter: stable;
@@ -1645,6 +2016,51 @@
       padding: 24px 34px 18px;
     }
 
+    .preview-empty-state {
+      width: min(520px, 100%);
+      min-height: 360px;
+      display: none;
+      place-items: center;
+      padding: 34px;
+      border: 1px dashed rgba(52, 198, 193, 0.28);
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 20% 18%, rgba(52,198,193,0.12), transparent 34%),
+        rgba(10, 22, 25, 0.78);
+      text-align: center;
+      color: var(--muted);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.018);
+    }
+
+    .preview-empty-state strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--ink);
+      font: 700 28px/1.05 var(--book);
+    }
+
+    .preview-empty-state span {
+      display: block;
+      max-width: 42ch;
+      line-height: 1.6;
+    }
+
+    .preview-shell.no-project-preview .page,
+    .preview-shell.no-project-preview .preview-extra,
+    .preview-shell.no-project-preview .preview-limit-note,
+    .preview-shell.no-project-preview .preview-controls {
+      display: none;
+    }
+
+    .preview-shell.no-project-preview .page-stage {
+      display: grid;
+      place-items: center;
+    }
+
+    .preview-shell.no-project-preview .preview-empty-state {
+      display: grid;
+    }
+
     .page {
       width: min(100%, calc(440px * var(--page-zoom)));
       aspect-ratio: 148 / 210;
@@ -1653,11 +2069,14 @@
         linear-gradient(90deg, rgba(105, 82, 44, 0.08), transparent 12%, transparent 88%, rgba(105,82,44,0.06)),
         var(--paper);
       color: var(--paper-ink);
-      border: 1px solid #d7cbb7;
-      box-shadow: 0 24px 60px rgba(0,0,0,0.42);
+      border: 1px solid #cfc2ab;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.22), 0 24px 60px rgba(0,0,0,0.34);
       font-family: var(--book);
       position: relative;
       overflow: hidden;
+      flex: 0 0 auto;
+      justify-self: center;
+      align-self: start;
     }
 
     body.preview-focus .page {
@@ -2016,11 +2435,9 @@
       text-align: left;
     }
 
-    .page .preview-list::before {
-      content: "•";
-      display: inline-block;
-      width: 0.85em;
-      text-indent: 0;
+    .page .preview-dialog::before {
+      content: "";
+      display: none;
     }
 
     .page-no {
@@ -2034,6 +2451,7 @@
     }
 
     .preview-controls {
+      min-height: 38px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -2204,6 +2622,22 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
+    }
+
+    body:not(.agents-collapsed) .agents {
+      position: fixed;
+      z-index: 82;
+      top: calc(64px + ((100vh - 64px) / 2));
+      left: 50%;
+      right: auto;
+      bottom: auto;
+      width: min(1180px, calc(100vw - 64px));
+      height: min(760px, calc(100vh - 112px));
+      border: 1px solid rgba(52, 198, 193, 0.24);
+      border-radius: 22px;
+      background: rgba(12, 22, 25, 0.98);
+      box-shadow: 0 26px 90px rgba(0, 0, 0, 0.48);
+      transform: translate(-50%, -50%);
     }
 
     body.agents-collapsed .agent-head {
@@ -2522,6 +2956,23 @@
       min-height: 0;
     }
 
+    body:not(.type-collapsed) .typography {
+      position: fixed;
+      z-index: 84;
+      top: calc(64px + ((100vh - 64px) / 2));
+      left: 50%;
+      right: auto;
+      bottom: auto;
+      width: min(1180px, calc(100vw - 64px));
+      height: min(760px, calc(100vh - 112px));
+      border: 1px solid rgba(52, 198, 193, 0.26);
+      border-radius: 22px;
+      background: rgba(12, 22, 25, 0.98);
+      box-shadow: 0 30px 100px rgba(0, 0, 0, 0.52);
+      overflow: hidden;
+      transform: translate(-50%, -50%);
+    }
+
     body.type-collapsed .typography {
       display: none;
     }
@@ -2532,9 +2983,9 @@
 
     .type-body {
       display: grid;
-      grid-template-columns: minmax(138px, 0.7fr) repeat(6, minmax(185px, 1fr));
+      grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
       min-width: 0;
-      overflow: auto;
+      overflow: hidden;
     }
 
     .type-nav {
@@ -2562,10 +3013,24 @@
     .type-nav button.active { color: var(--teal); }
 
     .type-group {
-      padding: 10px 12px;
-      border-right: 1px solid var(--line-soft);
+      display: none;
+      padding: 18px 22px;
+      border-right: 0;
       min-width: 0;
-      overflow: hidden;
+      overflow: auto;
+      align-content: start;
+      gap: 12px 18px;
+    }
+
+    .type-group.is-active {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 360px));
+    }
+
+    .type-group h4,
+    .suggest-ornament-row,
+    .mini-page {
+      grid-column: 1 / -1;
     }
 
     .type-group h4 {
@@ -2643,12 +3108,58 @@
 
     .wizard-panel {
       margin: 0 10px 10px;
-      padding: 8px;
+      padding: 12px;
       border: 1px solid var(--line-soft);
       border-radius: var(--radius);
       background: rgba(255,255,255,0.025);
       display: grid;
-      gap: 6px;
+      gap: 12px;
+    }
+
+    body:not(.nav-collapsed) .sidebar .book-card {
+      grid-column: 1 / -1;
+      margin: 0;
+      padding: 20px 22px;
+    }
+
+    body:not(.nav-collapsed) .sidebar .wizard-panel {
+      grid-column: 1 / -1;
+      margin: 16px;
+      padding: 22px;
+    }
+
+    body:not(.nav-collapsed) .sidebar .wizard-grid {
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    body:not(.nav-collapsed) .sidebar .nav-section {
+      grid-column: 1 / -1;
+      margin: 0;
+      border-top: 0;
+      border: 1px solid var(--line-soft);
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.018);
+    }
+
+    body:not(.nav-collapsed) .sidebar .side-footer {
+      grid-column: 1 / -1;
+      margin: 0;
+      border: 1px solid var(--line-soft);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.018);
+    }
+
+    body:not(.nav-collapsed) .sidebar {
+      padding-bottom: 16px;
+    }
+
+    body:not(.nav-collapsed) .sidebar > .wizard-panel,
+    body:not(.nav-collapsed) .sidebar > .nav-section,
+    body:not(.nav-collapsed) .sidebar > .side-footer {
+      margin-left: 16px;
+      margin-right: 16px;
     }
 
     .wizard-head {
@@ -2668,12 +3179,120 @@
       gap: 6px;
     }
 
+    .wizard-flow {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .wizard-flow-step {
+      display: grid;
+      gap: 3px;
+      padding: 9px 10px;
+      border: 1px solid rgba(148, 163, 157, 0.14);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.018);
+      color: var(--quiet);
+      font: 10px/1.35 var(--ui);
+    }
+
+    .wizard-flow-step strong {
+      color: var(--text);
+      font: 700 11px/1.25 var(--ui);
+    }
+
+    .wizard-panel.has-genre .wizard-flow-step:nth-child(1),
+    .wizard-panel.has-details .wizard-flow-step:nth-child(2),
+    .wizard-panel.is-complete .wizard-flow-step:nth-child(3) {
+      border-color: rgba(52, 198, 193, 0.42);
+      background: rgba(52,198,193,0.075);
+    }
+
+    .wizard-section {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(240px, 1fr));
+      gap: 16px;
+      padding: 16px;
+      border: 1px solid rgba(148, 163, 157, 0.12);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.016);
+    }
+
+    .wizard-section-title {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font: 700 10px/1.25 var(--ui);
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .wizard-section-title span {
+      color: var(--quiet);
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .wizard-panel:not(.has-genre) .wizard-section.adaptive,
+    .wizard-panel:not(.has-genre) .wizard-section.ai-rules {
+      display: none;
+    }
+
+    .wizard-next-hint {
+      grid-column: 1 / -1;
+      padding: 10px 12px;
+      border: 1px solid rgba(52, 198, 193, 0.2);
+      border-radius: 12px;
+      background: rgba(52,198,193,0.055);
+      color: var(--muted);
+      font: 11px/1.45 var(--ui);
+    }
+
+    body:not(.nav-collapsed) .sidebar .wizard-section.core {
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
+    }
+
+    body:not(.nav-collapsed) .sidebar .wizard-section.adaptive,
+    body:not(.nav-collapsed) .sidebar .wizard-section.ai-rules {
+      grid-template-columns: repeat(2, minmax(300px, 1fr));
+    }
+
+    .wizard-family-card {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 5px;
+      padding: 12px 13px;
+      border: 1px solid rgba(52, 198, 193, 0.2);
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(52,198,193,0.07), rgba(216,170,69,0.035));
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .wizard-family-card strong {
+      color: var(--text);
+      font: 700 15px/1.2 var(--book);
+    }
+
+    .wizard-field-note {
+      color: #93a8a3;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
     .wizard-panel label {
       display: grid;
-      gap: 4px;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.2;
+      gap: 7px;
+      color: #a9bbb7;
+      font-size: 12px;
+      line-height: 1.3;
     }
 
     .wizard-panel input,
@@ -2682,16 +3301,40 @@
       width: 100%;
       min-width: 0;
       border: 1px solid var(--line);
-      border-radius: 5px;
-      background: #0c171a;
+      border-radius: 10px;
+      background: rgba(7, 16, 18, 0.92);
       color: var(--text);
-      padding: 6px 8px;
-      font: 12px/1.35 var(--ui);
+      padding: 12px 13px;
+      font: 15px/1.45 var(--ui);
+      min-height: 44px;
+      transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+
+    .wizard-panel input:focus,
+    .wizard-panel select:focus,
+    .wizard-panel textarea:focus {
+      outline: none;
+      border-color: rgba(52, 198, 193, 0.72);
+      background: rgba(9, 21, 24, 0.98);
+      box-shadow: 0 0 0 3px rgba(52, 198, 193, 0.12);
     }
 
     .wizard-panel textarea {
-      min-height: 44px;
+      min-height: 88px;
       resize: vertical;
+    }
+
+    #wizardPurpose {
+      min-height: 96px;
+    }
+
+    #wizardPremise {
+      min-height: 120px;
+    }
+
+    #wizardSourcePolicy,
+    #wizardSuccessCriteria {
+      min-height: 88px;
     }
 
     .wizard-panel .wide { grid-column: 1 / -1; }
@@ -2699,14 +3342,20 @@
     .wizard-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 12px;
+    }
+
+    .wizard-actions button {
+      min-height: 46px;
+      border-radius: 12px;
+      font-size: 14px;
     }
 
     .wizard-missing {
       color: #f0b0a8;
-      font-size: 11px;
-      line-height: 1.35;
-      min-height: 15px;
+      font-size: 12px;
+      line-height: 1.45;
+      min-height: 18px;
     }
 
     .mode-guide {
@@ -3221,6 +3870,7 @@
       .agents { grid-column: 1 / -1; grid-row: 3; border-top: 1px solid var(--line-soft); }
       .typography { grid-column: 1 / -1; grid-row: 4; }
       .editor-grid { grid-template-columns: 1fr; }
+      .mode-choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     @media (max-width: 780px) {
@@ -3232,9 +3882,11 @@
       .top-actions { padding: 8px 12px; border-left: 0; border-top: 1px solid var(--line-soft); }
       .settings-panel {
         position: fixed;
-        inset: 72px 12px auto;
+        /* Mobil topbar icerik kaydirdikca uzayabilir (min 56px + crumbs rail);
+           sabit 72px varsayimi paneli topbar altinda birakmasin diye CSS degiskeniyle bağlıyoruz. */
+        inset: var(--topbar-observed-height, 72px) 12px auto;
         width: auto;
-        max-height: calc(100vh - 84px);
+        max-height: calc(100vh - var(--topbar-observed-height, 72px) - 12px);
         overflow-y: auto;
       }
       .toolbar {
@@ -3245,6 +3897,36 @@
       }
       .toolbar .spacer { display: none; }
       .tool-cluster { flex-wrap: wrap; }
+      .mode-launcher {
+        min-height: calc(100vh - 64px);
+        padding: 16px;
+      }
+      .mode-choice-grid { grid-template-columns: 1fr; }
+      body:not(.nav-collapsed) .sidebar,
+      body:not(.agents-collapsed) .agents,
+      body:not(.type-collapsed) .typography {
+        top: 190px;
+        left: 50%;
+        right: auto;
+        bottom: auto;
+        width: calc(100vw - 24px);
+        height: calc(100vh - 210px);
+        border-radius: 18px;
+        transform: translateX(-50%);
+      }
+      body:not(.nav-collapsed) .sidebar {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      body:not(.nav-collapsed) .sidebar .book-card,
+      body:not(.nav-collapsed) .sidebar .wizard-panel,
+      body:not(.nav-collapsed) .sidebar .nav-section,
+      body:not(.nav-collapsed) .sidebar .side-footer {
+        grid-column: 1;
+      }
+      body:not(.nav-collapsed) .sidebar .wizard-grid {
+        grid-template-columns: 1fr;
+      }
       .find-panel { position: fixed; top: 12px; right: 10px; left: 10px; width: auto; }
       .find-row, .find-replace-row { grid-template-columns: minmax(0, 1fr) auto auto; }
       .find-row select { grid-column: 1 / -1; }
@@ -3258,9 +3940,23 @@
         max-height: 26vh;
       }
       .editor-grid { padding: 10px; }
+      .preview-shell {
+        height: min(76vh, 680px);
+        min-height: 520px;
+      }
+      .preview-controls {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 6px 10px;
+        padding: 6px 10px;
+      }
+      .preview-controls label {
+        min-width: 0;
+      }
       textarea { min-height: 360px; padding: 28px; }
       .type-body { grid-template-columns: 1fr; }
       .type-nav { grid-template-columns: repeat(3, 1fr); border-right: 0; border-bottom: 1px solid var(--line-soft); }
+      .type-group.is-active { grid-template-columns: 1fr; }
       .statusbar { min-height: 42px; height: auto; flex-wrap: wrap; gap: 6px 12px; padding: 7px 10px; }
       .statusbar .live { width: 100%; margin-left: 0; }
     }
@@ -3284,6 +3980,11 @@
       grid-template-columns: repeat(6, minmax(70px, 1fr));
       align-items: stretch;
       height: 100%;
+    }
+
+    body.launch-active .workflow-rail {
+      visibility: hidden;
+      pointer-events: none;
     }
 
     .workflow-step {
@@ -3339,6 +4040,46 @@
       padding: 14px;
       border-bottom: 1px solid var(--line-soft);
       background: linear-gradient(180deg, rgba(216,170,69,0.045), transparent 55%);
+    }
+
+    body.workflow-edit .agents .ai-assistant {
+      display: grid;
+    }
+
+    body.workflow-edit .agents .process-card,
+    body.workflow-edit .agents .agent-list,
+    body.workflow-edit .agents .agent-summary {
+      display: none;
+    }
+
+    body.workflow-publish .agents .ai-assistant,
+    body.workflow-publish .agents .process-card,
+    body.workflow-publish .agents .agent-list {
+      display: none;
+    }
+
+    body.workflow-publish .agents .agent-summary,
+    body.workflow-publish .agents .publication-panel {
+      display: block;
+    }
+
+    body.workflow-publish .agents .health-panel {
+      display: none;
+    }
+
+    body.workflow-status .agents .ai-assistant,
+    body.workflow-status .agents .publication-panel {
+      display: none;
+    }
+
+    body.workflow-status .agents .process-card,
+    body.workflow-status .agents .agent-list {
+      display: grid;
+    }
+
+    body.workflow-status .agents .agent-summary,
+    body.workflow-status .agents .health-panel {
+      display: block;
     }
 
     .ai-assistant-head,
@@ -3498,7 +4239,7 @@
     }
   </style>
 </head>
-<body class="nav-collapsed type-collapsed">
+<body class="nav-collapsed type-collapsed agents-collapsed launch-active">
   <a class="skip-link" id="skipToWorkspace" href="#workspace">Ana çalışma alanına atla</a>
   <main class="app">
     <header class="topbar">
@@ -3510,19 +4251,19 @@
       <div class="crumbs">
         <h1 class="studio-heading">KitHub Studio</h1>
         <div class="chrome-controls" aria-label="Panel kontrolleri">
-          <button type="button" class="icon-button active" id="toggleNav" title="Kitap haritasını aç/kapat" aria-label="Kitap haritasını aç veya kapat">☰</button>
-          <button type="button" class="icon-button active" id="toggleType" title="Dizgi panelini aç/kapat" aria-label="Dizgi panelini aç veya kapat">▣</button>
-          <button type="button" class="icon-button active" id="toggleAgents" title="Ajan panelini aç/kapat" aria-label="Ajan panelini aç veya kapat">◎</button>
+          <button type="button" class="icon-button active" id="toggleNav" title="Kitap başlangıcı ve haritası" aria-label="Kitap başlangıcı ve haritası kartını aç veya kapat">☰</button>
+          <button type="button" class="icon-button active" id="toggleType" title="Sayfa tasarımı" aria-label="Sayfa tasarımı kartını aç veya kapat">▣</button>
+          <button type="button" class="icon-button active" id="toggleAgents" title="AI, yayın ve işlem durumu" aria-label="AI, yayın ve işlem durumu kartını aç veya kapat">◎</button>
           <button type="button" class="icon-button" id="togglePreviewFocus" title="Büyük ön izleme" aria-label="Büyük ön izlemeyi aç veya kapat">⤢</button>
           <button type="button" class="icon-button active" id="toggleWritingTools" title="Yazım araçlarını aç/kapat" aria-label="Yazım araçlarını aç veya kapat">✎</button>
         </div>
-        <nav class="workflow-rail" aria-label="Kitap üretim aşamaları">
-          <button type="button" class="workflow-step" data-workflow-step="start">Başlat</button>
-          <button type="button" class="workflow-step" data-workflow-step="plan">Planla</button>
+        <nav class="workflow-rail" aria-label="Kitap editörü araçları">
           <button type="button" class="workflow-step active" data-workflow-step="write" aria-current="step">Yaz</button>
-          <button type="button" class="workflow-step" data-workflow-step="edit">Düzenle</button>
-          <button type="button" class="workflow-step" data-workflow-step="design">Tasarla</button>
-          <button type="button" class="workflow-step" data-workflow-step="publish">Yayınla</button>
+          <button type="button" class="workflow-step" data-workflow-step="plan">Plan</button>
+          <button type="button" class="workflow-step" data-workflow-step="edit">AI Düzelt</button>
+          <button type="button" class="workflow-step" data-workflow-step="design">Sayfa Tasarla</button>
+          <button type="button" class="workflow-step" data-workflow-step="publish">Yayına Hazırla</button>
+          <button type="button" class="workflow-step" data-workflow-step="status">İşlem Durumu</button>
         </nav>
       </div>
       <div class="top-actions">
@@ -3607,7 +4348,33 @@
         <button type="button" class="primary" id="exportBtn" title="Export fazını çalıştırır; final DOCX kopyalama ayrı düğmedir.">Export Fazını Çalıştır</button>
       </div>
     </header>
-
+    <div class="surface-backdrop" id="surfaceBackdrop" aria-hidden="true"></div>
+    <section class="mode-launcher" id="modeLauncher" aria-labelledby="modeLauncherTitle">
+      <div class="mode-launcher-card">
+        <p class="mode-launcher-kicker">KitHub Studio</p>
+        <h2 id="modeLauncherTitle">Kitabını aç ve editöre gir.</h2>
+        <p>Önce bir kitap projesi başlat veya mevcut projeyi aç. Plan, AI düzeltme, sayfa tasarımı, yayın ve işlem durumu editörün içinde yönetilir.</p>
+        <div class="mode-choice-grid project-entry">
+          <button type="button" class="mode-choice" data-launch-mode="new">
+            <strong>Yeni Kitap Başlat</strong>
+            <span>Künye, hedef, konu ve planı aynı başlangıç akışında hazırla; sonra editöre geç.</span>
+            <small>Proje oluştur</small>
+          </button>
+          <button type="button" class="mode-choice" data-launch-mode="open">
+            <strong>Mevcut Projeyi Aç</strong>
+            <span>Daha önce oluşturduğun kitabı bağla; yazı, plan, AI ve yayın araçları editörde açılır.</span>
+            <small>Devam et</small>
+          </button>
+        </div>
+        <div class="launcher-tool-note" aria-label="Editör içinde kullanılacak araçlar">
+          <span>Plan editör içinde</span>
+          <span>AI düzeltme seçili metinde</span>
+          <span>Sayfa tasarımı kitap içinde</span>
+          <span>Yayın hazırlığı son aşamada</span>
+          <span>36 ajan = işlem durumu kanıtı</span>
+        </div>
+      </div>
+    </section>
     <aside class="sidebar">
       <div class="side-head">
         <span class="label">Kitap Haritası</span>
@@ -3620,12 +4387,49 @@
           <div class="book-meta">KitHub projesi<br><span id="bookStats">bölüm ve hedef bekliyor</span></div>
         </div>
       </section>
+      <section class="nav-section onboarding-next-section" aria-label="Sonraki adım">
+        <div class="nav-title"><span>Sonraki Adım</span><span>Plan</span></div>
+        <div class="onboarding-next-card">
+          <strong>Önce kitap bilgisini tamamla</strong>
+          <span>Tür, amaç, hedef okur, uzunluk, kaynak/gerçeklik kuralı ve türe göre sorular tamamlanınca KitHub AI planını hazırlar.</span>
+        </div>
+      </section>
       <section class="wizard-panel" aria-label="Başlangıç sihirbazı">
         <div class="wizard-head">
           <span>Başlangıç Sihirbazı</span>
-          <span id="wizardCompleteness">0/9</span>
+          <span id="wizardCompleteness">0/13</span>
         </div>
         <div class="wizard-grid">
+          <div class="wizard-flow" aria-label="Kitap haritası ilerleme">
+            <div class="wizard-flow-step"><strong>1. Temel</strong><span>Ne yazılacak?</span></div>
+            <div class="wizard-flow-step"><strong>2. Türe göre</strong><span>Roman, rapor, akademik vb.</span></div>
+            <div class="wizard-flow-step"><strong>3. AI planı</strong><span>Kaydet ve plan oluştur.</span></div>
+          </div>
+          <div class="wizard-family-card" id="wizardFamilyHint">
+            <strong>Önce türü seç</strong>
+            <span>KitHub soruları seçtiğin türe göre değiştirir: roman başka, akademik metin başka planlanır.</span>
+          </div>
+          <label class="wide">Çalışma Adı
+            <input id="wizardTitle" placeholder="örn. Kayıp Defter" aria-label="Çalışma adı" />
+          </label>
+          <label>Yazar / İmza
+            <input id="wizardAuthor" placeholder="örn. Ayşe Yılmaz" aria-label="Yazar veya imza" />
+          </label>
+          <label>Çıktı Hedefi
+            <select id="wizardOutput" aria-label="Çıktı hedefi">
+              <option value="">Türe göre öner</option>
+              <option>Kitap dosyası</option>
+              <option>Yayıncı DOCX</option>
+              <option>Baskı PDF</option>
+              <option>Dijital EPUB</option>
+              <option>Makale taslağı</option>
+              <option>Blog yayını</option>
+              <option>Akademik çalışma</option>
+              <option>Rapor dosyası</option>
+              <option>Eğitim dosyası</option>
+              <option>Teknik doküman</option>
+            </select>
+          </label>
           <label>Tür
             <select id="wizardType" aria-label="Yazı türü">
               <option value="">Seç</option>
@@ -3637,10 +4441,17 @@
               <option>Anı</option>
               <option>Araştırma kitabı</option>
               <option>Akademik metin</option>
+              <option>Tez / Bitirme çalışması</option>
               <option>Makale</option>
               <option>Blog yazısı</option>
               <option>Kişisel gelişim</option>
               <option>İş kitabı</option>
+              <option>Ders kitabı</option>
+              <option>Eğitim içeriği</option>
+              <option>Kullanım kılavuzu</option>
+              <option>Teknik doküman</option>
+              <option>Rapor</option>
+              <option>Whitepaper</option>
               <option>Genç yetişkin</option>
               <option>Fantastik kurgu</option>
               <option>Bilimkurgu</option>
@@ -3655,14 +4466,47 @@
           </label>
           <label>Hedef Sayfa
             <input id="wizardPages" type="number" min="1" max="10000" step="1" placeholder="örn. 245" aria-label="Hedef sayfa" />
+            <span class="wizard-field-note" id="wizardPagesNote">Kitapta sayfa, kısa metinde yaklaşık uzunluk hedefi.</span>
           </label>
           <label class="wide">Hedef Okur
             <input id="wizardReader" placeholder="örn. yetişkin psikolojik gizem okurları" aria-label="Hedef okur" />
           </label>
-          <label class="wide">Karakterler / Karakter Politikası
+          <label>Okur Seviyesi
+            <select id="wizardAudienceLevel" aria-label="Okur seviyesi">
+              <option value="">Seç</option>
+              <option>Başlangıç</option>
+              <option>Orta</option>
+              <option>Uzman</option>
+              <option>Akademik</option>
+              <option>Çocuk</option>
+              <option>Genç</option>
+              <option>Genel okur</option>
+            </select>
+          </label>
+          <label class="wide">Kitap Amacı
+            <textarea id="wizardPurpose" placeholder="Bu kitap okura ne verecek, hangi problemi çözecek veya hangi duyguyu yaşatacak?" aria-label="Kitap amacı"></textarea>
+          </label>
+          <label class="wide">Yapı / Plan Şablonu
+            <select id="wizardStructure" aria-label="Yapı veya plan şablonu">
+              <option value="">Türe göre öner</option>
+              <option>3 Perde Yapısı</option>
+              <option>5 Perde Yapısı</option>
+              <option>Kahramanın Yolculuğu</option>
+              <option>Bölüm bölüm öğretici yapı</option>
+              <option>Problem → Çözüm → Uygulama</option>
+              <option>IMRAD akademik yapı</option>
+              <option>SEO blog outline</option>
+              <option>Problem → Bulgular → Öneri</option>
+              <option>Modül → Örnek → Alıştırma</option>
+              <option>Adım adım kullanım akışı</option>
+              <option>Senaryo sekans yapısı</option>
+              <option>Şiir tematik bölümleme</option>
+            </select>
+          </label>
+          <label class="wide"><span id="wizardCharactersLabel">Karakterler / Karakter Politikası</span>
             <input id="wizardCharacters" placeholder="örn. Defne, Cem ve Nermin; yeni karakterleri sistem önerebilir" aria-label="Karakterler veya karakter politikası" />
           </label>
-          <label>Anlatıcı
+          <label><span id="wizardNarratorLabel">Anlatıcı</span>
             <select id="wizardNarrator" aria-label="Anlatıcı">
               <option value="">Seç</option>
               <option>Üçüncü tekil sınırlı</option>
@@ -3672,13 +4516,13 @@
               <option>Mektup/günlük biçimi</option>
             </select>
           </label>
-          <label class="wide">Konu
+          <label class="wide"><span id="wizardPremiseLabel">Konu</span>
             <textarea id="wizardPremise" placeholder="Ana çatışma, tema, olay vaadi..." aria-label="Konu"></textarea>
           </label>
-          <label class="wide">Dönem ve Mekân
+          <label class="wide"><span id="wizardSettingLabel">Dönem ve Mekân</span>
             <input id="wizardSetting" placeholder="örn. 1930'lar İstanbul, Pera, Dolmabahçe..." aria-label="Dönem ve mekan" />
           </label>
-          <label>Final Tipi
+          <label><span id="wizardEndingLabel">Final Tipi</span>
             <select id="wizardEnding" aria-label="Final tipi">
               <option value="">Seç</option>
               <option>Kapalı ve net final</option>
@@ -3691,34 +4535,45 @@
           <label>Üslup
             <input id="wizardStyle" placeholder="edebi, akıcı, karanlık..." aria-label="Üslup" />
           </label>
-          <label class="wide">Sınırlar / Yasaklar
+          <label class="wide"><span id="wizardBoundariesLabel">Sınırlar / Yasaklar</span>
             <textarea id="wizardBoundaries" placeholder="İstenmeyen sahneler, sahte alıntı yasağı, tarihsel kişi kuralları..." aria-label="Sınırlar ve yasaklar"></textarea>
+          </label>
+          <label class="wide">Kaynak / Gerçeklik Kuralı
+            <textarea id="wizardSourcePolicy" placeholder="Kaynak uydurma, varsayımı işaretle, alıntı stilini koru veya kurguysa gerçek kişi iddiası üretme." aria-label="Kaynak ve gerçeklik kuralı"></textarea>
+          </label>
+          <label class="wide">Başarı Ölçütü
+            <textarea id="wizardSuccessCriteria" placeholder="Bu çalışma bittiğinde iyi sayılması için neyi başarmalı?" aria-label="Başarı ölçütü"></textarea>
           </label>
         </div>
         <div class="wizard-missing" id="wizardMissing"></div>
         <div class="wizard-actions">
-          <button class="ghost" id="buildRequestBtn" type="button">İsteği Oluştur</button>
-          <button class="primary" id="saveWizardBtn" type="button">Kaydet</button>
+          <button class="ghost" id="buildRequestBtn" type="button">Önizle</button>
+          <button class="primary" id="saveWizardBtn" type="button">Kitap Haritasını Kaydet</button>
         </div>
       </section>
-      <section class="nav-section">
+      <section class="nav-section chapter-section">
         <div class="nav-title">
           <span>Yazı</span>
-<div class="chapter-actions" aria-label="Bölüm yönetimi">
-            <button type="button" id="addChapterBtn" title="Yeni bölüm" aria-label="Yeni bölüm">＋</button>
-            <button type="button" id="sceneManagerBtn" title="Sahne yönetimi" aria-label="Sahne yönetimi">◧</button>
-            <button type="button" id="chapterPlanBtn" title="Bölüm planı" aria-label="Bölüm planı">☰</button>
-            <button type="button" id="archiveChapterBtn" title="Bölümü arşivle" aria-label="Bölümü arşivle">▣</button>
-            <button type="button" id="renameChapterBtn" title="Bölümü yeniden adlandır" aria-label="Bölümü yeniden adlandır">✎</button>
-            <button type="button" id="duplicateChapterBtn" title="Bölümü çoğalt" aria-label="Bölümü çoğalt">⧉</button>
-            <button type="button" id="moveChapterUpBtn" title="Bölümü yukarı taşı" aria-label="Bölümü yukarı taşı">↑</button>
-            <button type="button" id="moveChapterDownBtn" title="Bölümü aşağı taşı" aria-label="Bölümü aşağı taşı">↓</button>
-            <button type="button" class="danger" id="deleteChapterBtn" title="Bölümü sil" aria-label="Bölümü sil">×</button>
+          <div class="chapter-actions" aria-label="Bölüm yönetimi">
+            <button type="button" class="chapter-primary-action" id="addChapterBtn" title="Yeni bölüm" aria-label="Yeni bölüm">+ Bölüm</button>
+            <details class="chapter-action-menu" id="chapterActionMenu">
+              <summary>Bölüm İşlemleri</summary>
+              <div class="chapter-action-popover">
+                <button type="button" id="sceneManagerBtn" title="Sahne yönetimi" aria-label="Sahne yönetimi">◧ Sahne yönetimi</button>
+                <button type="button" id="chapterPlanBtn" title="Bölüm planı" aria-label="Bölüm planı">☰ Bölüm planı</button>
+                <button type="button" id="archiveChapterBtn" title="Bölümü arşivle" aria-label="Bölümü arşivle">▣ Arşivle</button>
+                <button type="button" id="renameChapterBtn" title="Bölümü yeniden adlandır" aria-label="Bölümü yeniden adlandır">✎ Yeniden adlandır</button>
+                <button type="button" id="duplicateChapterBtn" title="Bölümü çoğalt" aria-label="Bölümü çoğalt">⧉ Çoğalt</button>
+                <button type="button" id="moveChapterUpBtn" title="Bölümü yukarı taşı" aria-label="Bölümü yukarı taşı">↑ Yukarı taşı</button>
+                <button type="button" id="moveChapterDownBtn" title="Bölümü aşağı taşı" aria-label="Bölümü aşağı taşı">↓ Aşağı taşı</button>
+                <button type="button" class="danger" id="deleteChapterBtn" title="Bölümü sil" aria-label="Bölümü sil">× Sil</button>
+              </div>
+            </details>
           </div>
         </div>
         <ul class="chapter-list" id="chapterList"></ul>
       </section>
-      <section class="nav-section">
+      <section class="nav-section entity-section">
         <div class="nav-title"><span>Varlıklar</span><span>Durum</span></div>
         <ul class="chapter-list" id="entityList">
           <li><button type="button" data-entity="characters" data-info="Karakter state dosyası proje bağlanınca okunur."><span>◎</span><span>Karakterler</span><small data-entity-count>0</small><i class="dot wait"></i></button></li>
@@ -3727,34 +4582,40 @@
           <li><button type="button" data-entity="research" data-info="Araştırma belgeleri design klasöründen okunur."><span>≡</span><span>Araştırma</span><small data-entity-count>0</small><i class="dot wait"></i></button></li>
         </ul>
       </section>
-      <section class="nav-section">
+      <section class="nav-section utility-output-section">
         <div class="nav-title"><span>Dışa Aktarım</span><span>Sonuç</span></div>
         <ul class="chapter-list" id="exportList">
           <li><button type="button" data-export-info="A5 baskı DOCX, Export fazı tamamlandıktan sonra üretilir."><span>◇</span><span>A5 Baskı DOCX</span><small>Export bekler</small><i class="dot wait"></i></button></li>
           <li><button type="button" data-export-info="Baskı PDF profili; mevcut font, ölçü ve sayfa tasarımını kullanır."><span>◇</span><span>Baskı PDF</span><small>Export bekler</small><i class="dot wait"></i></button></li>
           <li><button type="button" data-export-info="Dijital EPUB profili; yeniden akışkan okuma paketi olarak doğrulanır."><span>◇</span><span>Dijital EPUB</span><small>Export bekler</small><i class="dot wait"></i></button></li>
           <li><button type="button" data-export-info="Kapak briefi Export fazında yayın paketine eklenir."><span>◇</span><span>Kapak Briefi</span><small>Export bekler</small><i class="dot wait"></i></button></li>
-          <li><button type="button" data-export-info="Temizlik onayı kullanıcı romanı bitirdim dediğinde çalışır."><span>◇</span><span>Temizlik Onayı</span><small>Bekler</small><i class="dot wait"></i></button></li>
+          <li><button type="button" data-export-info="Temizlik onayı kullanıcı çalışmayı bitirdim dediğinde çalışır."><span>◇</span><span>Temizlik Onayı</span><small>Bekler</small><i class="dot wait"></i></button></li>
         </ul>
       </section>
-      <section class="nav-section">
+      <section class="nav-section utility-output-section">
         <div class="nav-title"><span>Onaylar</span><span>Kapı</span></div>
         <ul class="chapter-list approval-list" id="approvalList"></ul>
       </section>
       <div class="side-footer">
-        <input class="project-path" id="projectPathInput" placeholder="Proje yolu: C:\Users\...\KitHubProjects\Kitap" aria-label="Proje yolu" />
-        <div class="mode-guide" aria-label="Çalışma yolu">
-          <div class="mode-guide-card active" data-mode-guide="IDE">
-            <b>IDE ile yazdır</b>
-            İsteği kaydet. IDE ajanı bu projenin runtime/book-request.md dosyasını okur, dosyaları üretir; KitHub denetler.
+        <details class="advanced-engine-panel">
+          <summary>Gelişmiş Motor Ayarları</summary>
+          <div class="advanced-engine-body">
+            <input class="project-path" id="projectPathInput" placeholder="Proje yolu: C:\Users\...\KitHubProjects\Kitap" aria-label="Proje yolu" />
+            <div class="mode-guide" aria-label="Çalışma yolu">
+              <div class="mode-guide-card active" data-mode-guide="IDE">
+                <b>IDE ile yazdır</b>
+                Kitap isteğini proje klasörüne yazar; IDE ajanı oradan üretir, KitHub sonucu denetler.
+              </div>
+              <div class="mode-guide-card" data-mode-guide="API">
+                <b>API ile otomatik yazdır</b>
+                API ayarı varsa seçili akışı otomatik çalıştırır ve kanıt kapılarından geçirir.
+              </div>
+            </div>
+            <span class="request-label">Motorun okuyacağı kısa istek</span>
+            <textarea class="book-request" id="bookRequestInput" placeholder="Kitap isteği: tür, amaç, hedef uzunluk, okur, kapsam, odak/kaynak politikası, sınırlar..." aria-label="Kitap isteği"></textarea>
+            <button type="button" class="ghost context-action" id="saveRequestBtn">İsteği Kaydet</button>
           </div>
-          <div class="mode-guide-card" data-mode-guide="API">
-            <b>API ile otomatik yazdır</b>
-            API anahtarını kaydet. Pipeline butonu seçili fazları modele yazdırır ve kanıt kapılarından geçirir.
-          </div>
-        </div>
-        <span class="request-label">IDE/API'nin okuyacagi kitap istegi</span>
-        <textarea class="book-request" id="bookRequestInput" placeholder="Kitap isteği: tür, konu, sayfa hedefi, dönem, karakterler, sınırlar..." aria-label="Kitap isteği"></textarea>
+        </details>
         <input type="file" id="importTextInput" class="hidden" accept=".txt,.md,.markdown,.docx,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
         <div class="phase-controls">
           <select id="fromPhaseSelect" aria-label="Başlangıç fazı">
@@ -3779,15 +4640,14 @@
           </select>
         </div>
         <div class="primary-flow" aria-label="Kitap üretim akışı">
-          <button type="button" class="primary-action" id="planBookBtn">Romanı Planla</button>
+        <button type="button" class="primary-action" id="planBookBtn">Kitabı Planla</button>
           <button type="button" class="secondary-action" id="writeBookBtn">Planı Onayla ve Yazdır</button>
         </div>
-        <button type="button" class="ghost" id="newProjectBtn">Yeni Proje</button>
-        <button type="button" class="ghost" id="bindProjectBtn">Projeyi Bağla</button>
-        <button type="button" class="ghost" id="importTextBtn">Metin İçe Aktar</button>
-        <button type="button" class="ghost" id="saveRequestBtn">İsteği Kaydet</button>
-        <button type="button" class="ghost" id="refreshProjectBtn">Yenile</button>
-        <button type="button" class="ghost" id="saveEpisodeBtn">Bölümü Kaydet</button>
+        <button type="button" class="ghost context-action" id="newProjectBtn">Yeni Proje</button>
+        <button type="button" class="ghost context-action" id="bindProjectBtn">Projeyi Bağla</button>
+        <button type="button" class="ghost context-action" id="importTextBtn">Metin İçe Aktar</button>
+        <button type="button" class="ghost context-action" id="refreshProjectBtn">Yenile</button>
+        <button type="button" class="ghost context-action" id="saveEpisodeBtn">Bölümü Kaydet</button>
       </div>
     </aside>
 
@@ -3914,6 +4774,12 @@
               <div id="pageBody"></div>
               <div class="page-no" id="pageNo">119</div>
             </article>
+            <div class="preview-empty-state" id="previewEmptyState" aria-live="polite">
+              <div>
+                <strong>Önizleme proje bekliyor</strong>
+                <span>Yeni kitap başlatıldığında burada sayfa tasarımı değil, önce tamamlanacak adımlar görünür. Proje bağlanınca kitap sayfası açılır.</span>
+              </div>
+            </div>
           </div>
           <div class="preview-controls">
             <span id="previewMeta">A5 · 148 x 210 mm · Garamond</span>
@@ -3963,7 +4829,7 @@
           <button type="button" data-type-section="header">Üstbilgi</button>
           <button type="button" data-type-section="numbering">Numaralandırma</button>
         </nav>
-        <div class="type-group" data-type-panel="page">
+        <div class="type-group is-active" data-type-panel="page">
           <h4>Sayfa</h4>
           <label class="field">Kitap Şablonu
             <select id="layoutProfile">
@@ -4173,9 +5039,9 @@
       </div>
     </section>
 
-    <aside class="agents">
+    <aside class="agents" data-agent-surface>
       <div class="agent-head">
-        <span class="label">AI ve Yayın</span>
+        <span class="label" id="agentSurfaceTitle">AI ve Yayın</span>
         <button type="button" id="collapseAgents" class="ghost">Daralt</button>
       </div>
       <section class="ai-assistant" aria-labelledby="aiAssistantTitle">
@@ -4212,14 +5078,14 @@
         <div class="label">Genel İlerleme</div>
         <div class="progress-line"><span id="overallProgress"></span></div>
         <div class="book-meta" id="agentSummary">Proje bağlanınca ajan kanıtı gösterilir.</div>
-        <div class="audit-panel">
+        <div class="audit-panel health-panel">
           <header>
             <span>Kitap Sağlığı</span>
             <span id="healthMeta">Bekler</span>
           </header>
           <div class="audit-list" id="healthList"></div>
         </div>
-        <div class="audit-panel">
+        <div class="audit-panel publication-panel">
           <header>
             <span>Yayın Paketi</span>
             <span id="lifecycleMeta">Taslak</span>
@@ -4415,10 +5281,24 @@
     </form>
   </dialog>
 
-  <script src="assets/page-flow.js"></script>
+  <script src="assets/page-flow.js?v=20260825-3"></script>
   <script src="assets/studio-editor.js"></script>
-  <script src="assets/studio-professional.js"></script>
+  <script src="assets/studio-professional.js?v=20260825-1"></script>
   <script>
+    // Topbar gozlemlenen yuksekligini CSS'e yay: mobil kirilimda sabit 72px varsayimi
+    // settings-panel'in topbar altinda kalmasini (preview overlap) engeller.
+    (function () {
+      var topbar = document.querySelector(".topbar");
+      if (!topbar) return;
+      var apply = function () {
+        var h = Math.ceil(topbar.getBoundingClientRect().height);
+        if (h > 0) document.documentElement.style.setProperty("--topbar-observed-height", h + "px");
+      };
+      apply();
+      if (window.ResizeObserver) { new ResizeObserver(apply).observe(topbar); }
+      window.addEventListener("resize", apply);
+    })();
+
     let chapters = [];
 
     let agentEvidenceMode = "Yürütme kanıtı: proje bağlanmadı.";
@@ -4451,6 +5331,7 @@
 
     const chapterList = document.getElementById("chapterList");
     const addChapterBtn = document.getElementById("addChapterBtn");
+    const chapterActionMenu = document.getElementById("chapterActionMenu");
     const renameChapterBtn = document.getElementById("renameChapterBtn");
     const duplicateChapterBtn = document.getElementById("duplicateChapterBtn");
     const moveChapterUpBtn = document.getElementById("moveChapterUpBtn");
@@ -4534,11 +5415,15 @@ const findCount = document.getElementById("findCount");
     const pageMeta = document.getElementById("pageMeta");
     const bookPage = document.getElementById("bookPage");
     const pageStage = document.querySelector(".page-stage");
+    const previewShell = document.getElementById("previewShell");
+    const previewEmptyState = document.getElementById("previewEmptyState");
     const toggleNav = document.getElementById("toggleNav");
     const toggleType = document.getElementById("toggleType");
     const toggleAgents = document.getElementById("toggleAgents");
     const togglePreviewFocus = document.getElementById("togglePreviewFocus");
     const toggleWritingTools = document.getElementById("toggleWritingTools");
+    const surfaceBackdrop = document.getElementById("surfaceBackdrop");
+    const modeLauncher = document.getElementById("modeLauncher");
     const focusModeBtn = document.getElementById("focusModeBtn");
     const blockStyle = document.getElementById("blockStyle");
     const bookControlMenu = document.getElementById("bookControlMenu");
@@ -4554,6 +5439,7 @@ const findCount = document.getElementById("findCount");
     const copyIdeCommandBtn = document.getElementById("copyIdeCommandBtn");
     const drawerToggle = document.getElementById("drawerToggle");
     const collapseAgents = document.getElementById("collapseAgents");
+    const agentSurfaceTitle = document.getElementById("agentSurfaceTitle");
     const sideCollapseBtn = document.getElementById("sideCollapseBtn");
     const zoomSelect = document.getElementById("zoomSelect");
     const bindProjectBtn = document.getElementById("bindProjectBtn");
@@ -4581,6 +5467,7 @@ const findCount = document.getElementById("findCount");
     const saveRequestBtn = document.getElementById("saveRequestBtn");
     const planBookBtn = document.getElementById("planBookBtn");
     const writeBookBtn = document.getElementById("writeBookBtn");
+    const primaryFlow = document.querySelector(".primary-flow");
     const refreshProjectBtn = document.getElementById("refreshProjectBtn");
     let runLogText = "Studio Bridge bekleniyor.";
     const wizardType = document.getElementById("wizardType");
@@ -4595,6 +5482,22 @@ const findCount = document.getElementById("findCount");
     const wizardBoundaries = document.getElementById("wizardBoundaries");
     const wizardCompleteness = document.getElementById("wizardCompleteness");
     const wizardMissing = document.getElementById("wizardMissing");
+    const wizardTitle = document.getElementById("wizardTitle");
+    const wizardAuthor = document.getElementById("wizardAuthor");
+    const wizardOutput = document.getElementById("wizardOutput");
+    const wizardStructure = document.getElementById("wizardStructure");
+    const wizardPurpose = document.getElementById("wizardPurpose");
+    const wizardAudienceLevel = document.getElementById("wizardAudienceLevel");
+    const wizardSourcePolicy = document.getElementById("wizardSourcePolicy");
+    const wizardSuccessCriteria = document.getElementById("wizardSuccessCriteria");
+    const wizardFamilyHint = document.getElementById("wizardFamilyHint");
+    const wizardPagesNote = document.getElementById("wizardPagesNote");
+    const wizardCharactersLabel = document.getElementById("wizardCharactersLabel");
+    const wizardNarratorLabel = document.getElementById("wizardNarratorLabel");
+    const wizardPremiseLabel = document.getElementById("wizardPremiseLabel");
+    const wizardSettingLabel = document.getElementById("wizardSettingLabel");
+    const wizardEndingLabel = document.getElementById("wizardEndingLabel");
+    const wizardBoundariesLabel = document.getElementById("wizardBoundariesLabel");
     const buildRequestBtn = document.getElementById("buildRequestBtn");
     const saveWizardBtn = document.getElementById("saveWizardBtn");
     const processTitle = document.getElementById("processTitle");
@@ -4750,6 +5653,7 @@ let findMatches = [];
       professionalStudio = window.KitHubProfessional.createProfessionalStudio({
         api: professionalApi,
         getProjectRoot: () => bridgeOnline && bridgeProjectActive ? (projectPathInput.value.trim() || currentProjectPathHint) : "",
+        getWritingFamily: currentWizardFamily,
         getSelection: getEditorSelectedText,
         getChapter: () => chapters[currentChapterIndex] || null,
         getWordCount: () => chapters.reduce((sum, chapter, index) => sum + (index === currentChapterIndex ? countWords(manuscriptText.value) : Number(chapter.words || 0)), 0),
@@ -5201,10 +6105,17 @@ function replaceAllLiteral(text, query, replacement, options = findOptions) {
       "Biyografi": ["Bölüm Başlığı", "Zaman Çizgisi", "Alıntı", "Kaynak Notu"],
       "Araştırma kitabı": ["Bölüm Başlığı", "Alt Başlık", "Alıntı", "Dipnot"],
       "Akademik metin": ["Bölüm Başlığı", "Alt Başlık", "Alıntı", "Dipnot", "Kaynak Notu"],
+      "Tez / Bitirme çalışması": ["Bölüm Başlığı", "Alt Başlık", "Alıntı", "Dipnot", "Kaynak Notu"],
       "Makale": ["Başlık", "Alt Başlık", "Alıntı", "Kaynak Notu"],
       "Blog yazısı": ["Başlık", "Alt Başlık", "Alıntı", "Geçiş"],
       "Kişisel gelişim": ["Bölüm Başlığı", "Egzersiz", "Alıntı", "Alt Başlık"],
       "İş kitabı": ["Bölüm Başlığı", "Vaka", "Çerçeve", "Alt Başlık"],
+      "Ders kitabı": ["Ünite Başlığı", "Öğrenme Hedefi", "Örnek", "Alıştırma"],
+      "Eğitim içeriği": ["Modül Başlığı", "Kazanım", "Örnek", "Alıştırma"],
+      "Kullanım kılavuzu": ["Başlık", "Adım", "Uyarı", "Kontrol Listesi"],
+      "Teknik doküman": ["Başlık", "Adım", "Kod/Komut", "Uyarı"],
+      "Rapor": ["Başlık", "Bulgu", "Veri Notu", "Öneri"],
+      "Whitepaper": ["Başlık", "Problem", "Kanıt", "Çözüm"],
       "Genç yetişkin": ["Gövde Metni", "Bölüm Başlığı", "Diyalog", "Alıntı"],
       "Fantastik kurgu": ["Gövde Metni", "Bölüm Başlığı", "Diyalog", "Dünya Notu"],
       "Bilimkurgu": ["Gövde Metni", "Bölüm Başlığı", "Diyalog", "Teknik Not"],
@@ -5219,6 +6130,320 @@ function replaceAllLiteral(text, query, replacement, options = findOptions) {
       "Anı": ["Gövde Metni", "Tarih Notu", "Alıntı"],
       "Çocuk kitabı": ["Gövde Metni", "Bölüm Başlığı", "Diyalog"]
     };
+    const genreFamilyByType = {
+      "Roman": "fiction",
+      "Hikaye": "fiction",
+      "Novella": "fiction",
+      "Genç yetişkin": "fiction",
+      "Fantastik kurgu": "fiction",
+      "Bilimkurgu": "fiction",
+      "Gizem / Gerilim": "fiction",
+      "Romantik kurgu": "fiction",
+      "Tarihi kurgu": "fiction",
+      "Çocuk kitabı": "fiction",
+      "Biyografi": "nonfiction",
+      "Anı": "nonfiction",
+      "Araştırma kitabı": "research",
+      "Deneme": "nonfiction",
+      "Kişisel gelişim": "nonfiction",
+      "İş kitabı": "nonfiction",
+      "Gezi yazısı": "nonfiction",
+      "Akademik metin": "academic",
+      "Tez / Bitirme çalışması": "academic",
+      "Makale": "article",
+      "Blog yazısı": "article",
+      "Ders kitabı": "instructional",
+      "Eğitim içeriği": "instructional",
+      "Kullanım kılavuzu": "instructional",
+      "Teknik doküman": "instructional",
+      "Rapor": "report",
+      "Whitepaper": "report",
+      "Senaryo": "screenplay",
+      "Şiir kitabı": "poetry"
+    };
+    const wizardFamilyProfiles = {
+      fiction: {
+        title: "Kurgu şablonu",
+        description: "Karakter, olay örgüsü, mekân, anlatıcı, final ve bölüm ritmi birlikte planlanır.",
+        characters: "Karakterler / Karakter Politikası",
+        narrator: "Anlatıcı",
+        premise: "Konu / Ana Çatışma",
+        setting: "Dönem ve Mekân",
+        ending: "Final Tipi",
+        boundaries: "Sınırlar / Yasaklar",
+        pagesNote: "Roman ve kurgu türlerinde hedef sayfa bölüm/kelime dağılımına çevrilir.",
+        placeholders: {
+          characters: "örn. Defne, Cem ve Nermin; yeni karakterleri sistem önerebilir",
+          premise: "Ana çatışma, tema, olay vaadi...",
+          setting: "örn. 1930'lar İstanbul, Pera, Dolmabahçe...",
+          style: "edebi, akıcı, karanlık...",
+          boundaries: "İstenmeyen sahneler, sahte alıntı yasağı, tarihsel kişi kuralları..."
+        },
+        required: ["title", "author", "type", "pages", "reader", "premise", "characters", "setting", "narrator", "ending", "boundaries"]
+      },
+      nonfiction: {
+        title: "Kurgu dışı şablon",
+        description: "Ana tez, okur vaadi, bölüm omurgası, örnek/vaka ve uygulanabilir sonuç planlanır.",
+        characters: "Örnekler / Vaka Politikası",
+        narrator: "Anlatım Yaklaşımı",
+        premise: "Ana Tez / Okura Vaat",
+        setting: "Kapsam / Bağlam",
+        ending: "Sonuç / Dönüşüm Tipi",
+        boundaries: "Sınırlar / İddia Kuralları",
+        pagesNote: "Kurgu dışı metinde hedef sayfa bölüm sayısı ve okuma temposuna çevrilir.",
+        placeholders: {
+          characters: "örn. gerçek vaka kullanılmasın; anonim örnekler üretilebilir",
+          premise: "Okura ne kanıtlanacak, ne öğretilecek, hangi vaat verilecek?",
+          setting: "Kapsam, sektör, ülke, dönem, hariç tutulacak alanlar...",
+          style: "öğretici, net, sıcak, uzman ama sade...",
+          boundaries: "Abartılı vaat yok, kaynak gerektiren iddialar işaretlenecek..."
+        },
+        required: ["title", "author", "type", "pages", "reader", "premise", "characters", "setting", "narrator", "ending", "boundaries"]
+      },
+      research: {
+        title: "Araştırma kitabı şablonu",
+        description: "Araştırma sorusu, kaynak disiplini, kapsam, bölüm tezi ve kanıt seviyesi planlanır.",
+        characters: "Kaynak / Kanıt Politikası",
+        narrator: "Araştırma Yaklaşımı",
+        premise: "Araştırma Sorusu / Ana Tez",
+        setting: "Kapsam / Dönem / Coğrafya",
+        ending: "Sonuç Çerçevesi",
+        boundaries: "Kaynak ve Alıntı Kuralları",
+        pagesNote: "Araştırma kitabında hedef sayfa kaynak yoğunluğu ve bölüm planına bağlanır.",
+        placeholders: {
+          characters: "örn. akademik kaynak öncelikli; doğrulanamayan iddia kullanılmasın",
+          premise: "Hangi soruya cevap aranacak, ana tez ne?",
+          setting: "Kapsam, dönem, ülke, disiplin, hariç tutulan konular...",
+          style: "analitik, anlaşılır, kaynak disiplinli...",
+          boundaries: "Sahte kaynak yok, belirsiz iddiayı işaretle, doğrudan alıntı sınırı..."
+        },
+        required: ["title", "author", "type", "pages", "reader", "premise", "characters", "setting", "narrator", "boundaries"]
+      },
+      academic: {
+        title: "Akademik metin şablonu",
+        description: "Araştırma sorusu, hipotez, yöntem, atıf stili, kapsam ve etik sınırlar planlanır.",
+        characters: "Kaynaklar / Literatür Politikası",
+        narrator: "Yöntem / Metodoloji",
+        premise: "Araştırma Sorusu / Hipotez",
+        setting: "Kapsam / Evren / Örneklem",
+        ending: "Beklenen Sonuç / Tartışma",
+        boundaries: "Atıf / Etik / Kaynak Kuralları",
+        pagesNote: "Akademik türde hedef sayfa bölüm, yöntem ve kaynak yoğunluğuna göre hesaplanır.",
+        placeholders: {
+          characters: "örn. APA 7; hakemli kaynak öncelikli; uydurma kaynak kesin yasak",
+          premise: "Araştırma sorusu ve varsa hipotez...",
+          setting: "Evren, örneklem, dönem, veri seti, kapsam dışı alanlar...",
+          style: "akademik, açık, kanıt temelli...",
+          boundaries: "İntihal yok, sahte atıf yok, sınırlılıklar açık yazılsın..."
+        },
+        required: ["title", "author", "type", "pages", "reader", "premise", "characters", "setting", "narrator", "boundaries"]
+      },
+      article: {
+        title: "Makale / blog şablonu",
+        description: "Ana mesaj, hedef okur, başlık açısı, SEO/CTA ve kısa yapı planlanır.",
+        characters: "Kanıt / Örnek / CTA Politikası",
+        narrator: "Yayın Kanalı / Ton",
+        premise: "Ana Mesaj / Başlık Açısı",
+        setting: "Kapsam / Anahtar Kelimeler",
+        ending: "Okur Aksiyonu",
+        boundaries: "Marka / SEO / İddia Sınırları",
+        pagesNote: "Kısa türlerde hedef sayfa yaklaşık uzunluk hedefi gibi kullanılır.",
+        placeholders: {
+          characters: "örn. örnek ver; sonunda bültene/ürüne değil, bilgiye yönlendir",
+          premise: "Okurun yazıdan alacağı ana fikir ne?",
+          setting: "Anahtar kelimeler, yayın bağlamı, hedef platform...",
+          style: "net, hızlı, konuşur gibi, uzman...",
+          boundaries: "Clickbait yok, doğrulanmamış istatistik yok, marka dili korunacak..."
+        },
+        required: ["title", "author", "type", "pages", "reader", "premise", "characters", "narrator", "boundaries"]
+      },
+      instructional: {
+        title: "Eğitim / rehber şablonu",
+        description: "Öğrenme hedefi, seviye, modül akışı, örnek, alıştırma ve uygulama çıktısı planlanır.",
+        characters: "Örnekler / Alıştırma Politikası",
+        narrator: "Öğretim Yaklaşımı",
+        premise: "Öğrenme Hedefi / Kullanıcı Problemi",
+        setting: "Seviye / Ön Koşul / Kapsam",
+        ending: "Uygulama Çıktısı",
+        boundaries: "Güvenlik / Doğruluk / Seviye Sınırları",
+        pagesNote: "Eğitim türlerinde hedef sayfa modül, kazanım ve alıştırma yoğunluğuna çevrilir.",
+        placeholders: {
+          characters: "örn. her modülde örnek, mini alıştırma ve kontrol sorusu olsun",
+          premise: "Okur neyi öğrenmeli veya hangi problemi çözmeli?",
+          setting: "Başlangıç/orta/ileri seviye, gerekli ön bilgi, kapsam dışı konular...",
+          style: "öğretici, sade, adım adım, sabırlı...",
+          boundaries: "Yanlış yönlendirme yok, tehlikeli adımlar uyarı kutusuyla verilsin..."
+        },
+        required: ["title", "author", "type", "pages", "reader", "premise", "characters", "setting", "narrator", "ending", "boundaries"]
+      },
+      report: {
+        title: "Rapor / whitepaper şablonu",
+        description: "Karar sorusu, veri/kanıt politikası, bulgular, öneriler ve varsayım sınırları planlanır.",
+        characters: "Veri / Kanıt Politikası",
+        narrator: "Analiz Yöntemi",
+        premise: "Problem / Karar Sorusu",
+        setting: "Kapsam / Dönem / Pazar",
+        ending: "Öneri / Karar Çıktısı",
+        boundaries: "Varsayım / Kaynak / İddia Sınırları",
+        pagesNote: "Rapor türlerinde hedef sayfa yönetici özeti, bulgu sayısı ve ek yoğunluğuna çevrilir.",
+        placeholders: {
+          characters: "örn. veri yoksa varsayım olarak işaretle; uydurma istatistik kullanma",
+          premise: "Hangi karar, sorun veya fırsat açıklığa kavuşacak?",
+          setting: "Pazar, dönem, departman, veri kapsamı, hariç tutulan alanlar...",
+          style: "net, kanıt odaklı, yöneticiye uygun, kısa...",
+          boundaries: "Kaynak olmayan iddia yok, riskler ve varsayımlar açık yazılsın..."
+        },
+        required: ["title", "author", "type", "pages", "reader", "premise", "characters", "setting", "narrator", "ending", "boundaries"]
+      },
+      screenplay: {
+        title: "Senaryo şablonu",
+        description: "Logline, karakter, sahne/sekans yapısı, format ve görsel aksiyon planlanır.",
+        characters: "Karakterler / Oyuncu İşlevi",
+        narrator: "Format / Bakış",
+        premise: "Logline / Ana Çatışma",
+        setting: "Mekânlar / Zaman",
+        ending: "Final / Sezon Kancası",
+        boundaries: "Format ve Yapım Sınırları",
+        pagesNote: "Senaryoda hedef sayfa sahne/sekans temposuna çevrilir.",
+        placeholders: {
+          characters: "ana karakterler, antagonist, yan karakter işlevleri...",
+          premise: "Tek cümle logline ve ana çatışma...",
+          setting: "İç/dış mekânlar, dönem, atmosfer...",
+          style: "görsel, ekonomik, tempolu...",
+          boundaries: "Sahne başlığı formatı korunsun, uzun iç monolog yazılmasın..."
+        },
+        required: ["title", "author", "type", "pages", "reader", "premise", "characters", "setting", "ending", "boundaries"]
+      },
+      poetry: {
+        title: "Şiir kitabı şablonu",
+        description: "Tema, ses, biçim, imge dünyası ve bölümleme planlanır; karakter zorunlu değildir.",
+        characters: "Ses / İmge Politikası",
+        narrator: "Şiirsel Ses",
+        premise: "Tema / Duygu Omurgası",
+        setting: "İmge Dünyası / Atmosfer",
+        ending: "Kitap Kapanışı",
+        boundaries: "Biçim / Dil Sınırları",
+        pagesNote: "Şiirde hedef sayfa şiir sayısı, bölümleme ve boşluk ritmine çevrilir.",
+        placeholders: {
+          characters: "örn. kent imgeleri, su metaforu, birinci tekil ses...",
+          premise: "Ana tema, duygu geçişi, şiirlerin ortak derdi...",
+          setting: "İmge alanı, atmosfer, dönem, mekânsal his...",
+          style: "yalın, lirik, deneysel, ölçülü...",
+          boundaries: "Klişe imge yok, aşırı açıklama yok, biçim tutarlı kalsın..."
+        },
+        required: ["title", "author", "type", "pages", "reader", "premise", "characters", "narrator", "boundaries"]
+      }
+    };
+
+    function currentWizardFamily() {
+      const type = (wizardType?.value || "").trim();
+      return genreFamilyByType[type] || "fiction";
+    }
+
+    function currentWizardProfile() {
+      return wizardFamilyProfiles[currentWizardFamily()] || wizardFamilyProfiles.fiction;
+    }
+
+    function currentContentNouns() {
+      const family = currentWizardFamily();
+      if (family === "academic") {
+        return {
+          promise: "Araştırma vaadi",
+          focus: "Literatür dengesi",
+          focusEmpty: "Kaynak, yöntem ve literatür politikası bekleniyor.",
+          focusMeta: "kaynak politikası",
+          setting: "Kapsam / örneklem",
+          ending: "Tartışma sonucu",
+          progress: "kanıt ilerlemesi",
+          unit: "bölüm"
+        };
+      }
+      if (family === "research" || family === "report") {
+        return {
+          promise: "Karar vaadi",
+          focus: "Kanıt dengesi",
+          focusEmpty: "Veri, kanıt ve varsayım sınırı bekleniyor.",
+          focusMeta: "kanıt politikası",
+          setting: "Kapsam / dönem",
+          ending: "Öneri vaadi",
+          progress: "bulgu ilerlemesi",
+          unit: "bölüm"
+        };
+      }
+      if (family === "instructional") {
+        return {
+          promise: "Öğrenme vaadi",
+          focus: "Örnek dengesi",
+          focusEmpty: "Örnek, alıştırma ve uygulama politikası bekleniyor.",
+          focusMeta: "öğretim politikası",
+          setting: "Seviye / kapsam",
+          ending: "Uygulama çıktısı",
+          progress: "öğrenme ilerlemesi",
+          unit: "modül"
+        };
+      }
+      if (family === "article") {
+        return {
+          promise: "Ana mesaj",
+          focus: "Kanıt / CTA dengesi",
+          focusEmpty: "Örnek, kanıt veya okur aksiyonu bekleniyor.",
+          focusMeta: "yayın politikası",
+          setting: "Kanal / anahtar kelime",
+          ending: "Okur aksiyonu",
+          progress: "mesaj ilerlemesi",
+          unit: "parça"
+        };
+      }
+      if (family === "poetry") {
+        return {
+          promise: "Duygu omurgası",
+          focus: "Ses / imge dengesi",
+          focusEmpty: "Ses, imge ve biçim politikası bekleniyor.",
+          focusMeta: "şiirsel ses",
+          setting: "İmge dünyası",
+          ending: "Kapanış sesi",
+          progress: "imge ilerlemesi",
+          unit: "şiir"
+        };
+      }
+      return {
+        promise: "Konu vaadi",
+        focus: "Karakter dengesi",
+        focusEmpty: "Karakter sayısı ve ana karakter bilgisi bekleniyor.",
+        focusMeta: "karakter politikası",
+        setting: "Dönem ve mekân",
+        ending: "Final vaadi",
+        progress: "olay ilerlemesi",
+        unit: "bölüm"
+      };
+    }
+
+    function familyAwareEntityLabels() {
+      const family = currentWizardFamily();
+      if (family === "academic") return { characters: "Literatür", locations: "Kapsam", plot: "Argüman Akışı", research: "Kaynaklar" };
+      if (family === "research" || family === "report") return { characters: "Kanıtlar", locations: "Kapsam", plot: "Bulgu Akışı", research: "Araştırma" };
+      if (family === "instructional") return { characters: "Örnekler", locations: "Modüller", plot: "Öğrenme Akışı", research: "Kaynaklar" };
+      if (family === "article") return { characters: "Örnekler", locations: "Kanal", plot: "Mesaj Akışı", research: "Kaynaklar" };
+      if (family === "poetry") return { characters: "İmgeler", locations: "Atmosfer", plot: "Tema Akışı", research: "Notlar" };
+      return { characters: "Karakterler", locations: "Mekânlar", plot: "Olay Örgüsü", research: "Araştırma" };
+    }
+
+    function familyAwareProcessSteps() {
+      const family = currentWizardFamily();
+      if (family === "fiction" || family === "screenplay") return processSteps;
+      const nouns = currentContentNouns();
+      return [
+        { title: "İstek alınıyor", text: "Tür, amaç, hedef uzunluk, okur ve sınırlar toparlanıyor." },
+        { title: "Yön seçiliyor", text: "Ana tez, okur vaadi ve riskli noktalar sadeleştiriliyor." },
+        { title: `${nouns.focus} kuruluyor`, text: "Odak, kaynak ve doğruluk politikası yazım sözleşmesine bağlanıyor." },
+        { title: "Plan hazırlanıyor", text: "Hedef uzunluğa göre bölüm/parça akışı dengeleniyor." },
+        { title: "Metin üretiliyor", text: "Onaylı plana bağlı kalarak içerik yazılıyor." },
+        { title: "Tutarlılık kontrol ediliyor", text: "Kapsam, kanıt, örnek ve okur vaadi sürekliliği izleniyor." },
+        { title: "Türkçe denetleniyor", text: "Yazım, noktalama ve Türkçe karakterler kontrol ediliyor." },
+        { title: "Sayfa düzeni hazırlanıyor", text: "Font, paragraf ve sayfa yapısı çıktı hedefine göre ayarlanıyor." },
+        { title: "Yayın paketi hazırlanıyor", text: "DOCX, PDF, kapak briefi ve final teslim kapıları kontrol ediliyor." }
+      ];
+    }
     const layoutProfiles = {
       classicNovel: {
         label: "Roman Klasik",
@@ -5475,13 +6700,9 @@ function replaceAllLiteral(text, query, replacement, options = findOptions) {
     function renderChapters() {
       if (!chapters.length) {
         chapterList.innerHTML = `
-          <li>
-            <button type="button" data-info="Önce proje oluştur veya mevcut KitHub proje klasörünü bağla.">
-              <span>§</span>
-              <span>Proje bağlı değil</span>
-              <small>Bekler</small>
-              <i class="dot wait"></i>
-            </button>
+          <li class="chapter-empty-card">
+            <strong>Bölüm listesi henüz boş</strong>
+            <span>Yeni kitap başlatıp proje bağlandığında bölümler burada görünür. Boşken bölüm işlem araçları gösterilmez.</span>
           </li>
         `;
         syncChapterManagerButtons();
@@ -5513,6 +6734,11 @@ function syncChapterManagerButtons() {
       archiveChapterBtn.disabled = !canManage || !active?.filename;
       moveChapterUpBtn.disabled = !canManage || !active?.filename || currentChapterIndex <= 0;
       moveChapterDownBtn.disabled = !canManage || !active?.filename || currentChapterIndex >= chapters.length - 1;
+      if (chapterActionMenu) {
+        chapterActionMenu.hidden = !canManage || !active?.filename;
+        if (chapterActionMenu.hidden) chapterActionMenu.removeAttribute("open");
+      }
+      syncWorkspaceContext();
     }
 
     function openChapterPlanDialog() {
@@ -5796,10 +7022,11 @@ function closeChapterDialog() {
     ];
 
     function renderAgents() {
+      const activeProcessSteps = familyAwareProcessSteps();
       agentList.innerHTML = agents.map((agent, index) => {
         const step = agent.title
           ? { title: agent.title, text: agent.text }
-          : (processSteps[index] || { title: agent.name, text: agent.text });
+          : (activeProcessSteps[index] || { title: agent.name, text: agent.text });
         const phaseBadge = agent.phaseLabel ? `<span class="agent-phase">${escapeHtml(agent.phaseLabel)}</span>` : "";
         return `
         <article class="agent ${agent.state}" data-agent="${index}">
@@ -5826,7 +7053,7 @@ function closeChapterDialog() {
       const activeAgent = agents[activeIndex] || agents[0] || {};
       const activeStep = activeAgent.title
         ? { title: activeAgent.title, text: activeAgent.text }
-        : (processSteps[activeIndex] || processSteps[0]);
+        : (activeProcessSteps[activeIndex] || activeProcessSteps[0]);
       const percent = agents.length ? Math.round((done / agents.length) * 100) : 0;
       document.getElementById("overallProgress").style.width = `${Math.max(12, percent)}%`;
       document.getElementById("agentSummary").textContent = `${agents.length} ajandan ${done}'i tamamlandı. ${review} onay bekliyor. ${blocked} bloke. ${agentEvidenceMode}`;
@@ -5862,7 +7089,7 @@ function closeChapterDialog() {
       lifecycleList.innerHTML = [
         { label: "Final dışa aktarıldı", ok: exported, detail: exported ? (finalExport?.final_output_path || status?.final_output_path || "harici çıktı var") : "önce export ve final aktarım gerekir" },
         { label: "Yayıncı incelemesi", ok: publisherReviewReady, detail: publisherReviewReady ? "dış inceleme alanları onaylandı" : "ISBN, künye, bandrol ve yayınevi incelemesi ayrıca bekleniyor" },
-        { label: "Kullanıcı kitabı bitirdi dedi", ok: cleanupApproved, detail: cleanupApproved ? "temizlik onayı yazıldı" : "roman bitti onayı bekleniyor" },
+        { label: "Kullanıcı çalışmayı bitirdi dedi", ok: cleanupApproved, detail: cleanupApproved ? "temizlik onayı yazıldı" : "çalışma bitti onayı bekleniyor" },
         { label: "Çalışma alanı temizliği", ok: cleaned, detail: cleaned ? "çalışma dosyaları kaldırıldı" : "onay olmadan çalışmaz" }
       ].map(item => `
         <div class="audit-row ${item.ok ? "ok" : "wait"}">
@@ -5919,11 +7146,13 @@ function closeChapterDialog() {
         }));
       }
       const values = collectWizardValues();
+      const nouns = currentContentNouns();
+      const focusMeta = values.characters ? nouns.focusMeta : "Eksik";
       return [
-        { title: "Konu Vaadi", body: values.premise || "Konu girildiğinde romanın ana vaadi burada kartlaşır.", meta: values.type || "Tür bekleniyor" },
-        { title: "Karakter Dengesi", body: values.characters ? `${values.characters} karakter için rol, arzu, korku ve çatışma dengesi kurulacak.` : "Karakter sayısı ve ana karakter bilgisi bekleniyor.", meta: values.characters ? `${values.characters} karakter` : "Eksik" },
-        { title: "Dönem ve Mekan", body: values.setting || "Dönem ve mekan girildiğinde atmosfer kartı oluşur.", meta: values.pages ? `${values.pages} sayfa hedefi` : "Sayfa hedefi bekleniyor" },
-        { title: "Final Vaadi", body: values.ending || "Final tipi seçildiğinde olay akışı ona göre kapanır.", meta: values.boundaries ? "Sınırlar var" : "Sınır bekleniyor" }
+        { title: nouns.promise, body: values.premise || "Konu girildiğinde çalışmanın ana vaadi burada kartlaşır.", meta: values.type || "Tür bekleniyor" },
+        { title: nouns.focus, body: values.characters ? `${values.characters} bilgisi yazım sözleşmesine bağlanacak.` : nouns.focusEmpty, meta: focusMeta },
+        { title: nouns.setting, body: values.setting || "Kapsam, dönem veya bağlam girildiğinde plan kartı oluşur.", meta: values.pages ? `${values.pages} sayfa hedefi` : "Sayfa hedefi bekleniyor" },
+        { title: nouns.ending, body: values.ending || "Sonuç seçildiğinde akış ona göre kapanır.", meta: values.boundaries ? "Sınırlar var" : "Sınır bekleniyor" }
       ];
     }
 
@@ -6003,8 +7232,55 @@ function closeChapterDialog() {
       const lastParagraph = cleanParagraphs(currentText).slice(-1)[0] || "";
       const chapterLabel = chapter.title || "Açık bölüm";
       const target = selected ? "seçili paragraf" : chapterLabel;
-      const premise = values.premise || chapter.summary || "ana hikaye çizgisi";
-      const setting = values.setting || "sahnenin mekânı";
+      const premise = values.premise || chapter.summary || "ana çalışma çizgisi";
+      const setting = values.setting || "sahnenin veya kapsamın bağlamı";
+      const family = currentWizardFamily();
+      const nouns = currentContentNouns();
+
+      if (family !== "fiction" && family !== "screenplay") {
+        const contextName = values.setting || "kapsam";
+        return [
+          {
+            id: "continue",
+            title: "Devam Ettir",
+            body: `${target} kaldığı yerden ilerlesin; yeni bilgi ekle, aynı fikri tekrar anlatma.`,
+            meta: nouns.progress,
+            prompt: `Bu ${nouns.unit} içinde ${premise} vaadine bağlı kalarak metni devam ettir. Son paragraftaki sonucu tekrarlama; yeni kanıt, örnek, açıklama veya okur değeri üret.`
+          },
+          {
+            id: "expand",
+            title: "Açıklamayı Genişlet",
+            body: `${contextName} bağlamını güçlendir; kavramları, örnekleri ve geçişleri netleştir.`,
+            meta: "Açıklık",
+            prompt: `Metni genişlet: kapsamı, kavram geçişlerini ve örnekleri netleştir. Gereksiz tekrar yapma; kaynak gerektiren iddiaları kaynak/gerçeklik kuralına göre işaretle.`
+          },
+          {
+            id: "evidence",
+            title: "Kanıtı Güçlendir",
+            body: "İddia, örnek, veri ve varsayım ayrımını görünür yap; uydurma kaynak üretme.",
+            meta: nouns.focusMeta,
+            prompt: `Kanıt yapısını güçlendir: iddia, örnek, veri, kaynak ve varsayım ayrımını açık tut. Kaynak yoksa kesinlik iddiası kurma; belirsizliği dürüstçe işaretle.`
+          },
+          {
+            id: "structure",
+            title: "Akışı Düzenle",
+            body: "Başlık, geçiş ve sonuç cümlelerini toparla; okur bir sonraki adımı açıkça görsün.",
+            meta: "Yapı",
+            prompt: `Metin akışını düzenle: başlık-alt başlık geçişlerini, paragraf sırasını ve sonuç cümlesini güçlendir. Anlamı değiştirme; onaylı kitap haritası sınırlarını koru.`
+          },
+          {
+            id: "polish",
+            title: "Dili Sıkılaştır",
+            body: "Tekrarları azalt, cümle ritmini düzelt, Türkçe karakter ve noktalama temizliğini koru.",
+            meta: "Dil",
+            prompt: `Metni sıkılaştır: tekrarları azalt, cümle ritmini iyileştir, Türkçe yazım ve noktalama kurallarını koru. Anlamı ve kaynak/kanıt sınırlarını değiştirme.`
+          }
+        ].map(card => ({
+          ...card,
+          selected: card.id === selectedWritingCardId,
+          source: selected ? selected.slice(0, 240) : lastParagraph.slice(0, 240)
+        }));
+      }
 
       return [
         {
@@ -7988,7 +9264,7 @@ function applyEditorialFinding(index) {
         if (list) {
           return {
             kind: "list",
-            html: `<p class="preview-list">${escapeAndHighlight(list[1], activeHotWords)}</p>`
+            html: `<p class="preview-dialog">- ${escapeAndHighlight(list[1], activeHotWords)}</p>`
           };
         }
         const firstClass = firstBodyParagraph
@@ -8040,7 +9316,7 @@ function applyEditorialFinding(index) {
       probe.style.cssText = `${bookPage.style.cssText};position:fixed;left:-10000px;top:0;width:${rect.width}px;height:${rect.height}px;aspect-ratio:auto;visibility:hidden;pointer-events:none;`;
       const header = pageIndex === 0
         ? `<div class="chapter-kicker">${escapeHtml(chapter.id.toUpperCase())}</div><h2>${escapeHtml(chapterTitle)}</h2><div class="ornament"></div>`
-        : `<div class="running-head"><span>${escapeHtml(chapterTitle)}</span><span>${escapeHtml(chapter.id)}</span></div>`;
+        : `<div style="height:52px"></div>`;
       probe.innerHTML = `${header}<div data-page-flow-body></div><div class="page-no">${pageIndex + 1}</div>`;
       const number = probe.querySelector(".page-no");
       if (number) number.style.cssText = pageNo.style.cssText;
@@ -8191,12 +9467,180 @@ function applyEditorialFinding(index) {
       setStatus(`Motor olayı: ${style} biçimi uygulandı`);
     }
 
+    function getWizardFamily(type = wizardType.value.trim()) {
+      return genreFamilyByType[type] || "fiction";
+    }
+
+    function getWizardProfile(type = wizardType.value.trim()) {
+      return wizardFamilyProfiles[getWizardFamily(type)] || wizardFamilyProfiles.fiction;
+    }
+
+    function setSelectOptions(select, options, currentValue = select?.value || "") {
+      if (!select) return;
+      const normalized = options.map(option => typeof option === "string"
+        ? { value: option, label: option }
+        : { value: Object.prototype.hasOwnProperty.call(option, "value") ? option.value : option.label, label: option.label });
+      select.innerHTML = normalized.map(option => `<option value="${escapeHtml(String(option.value ?? ""))}">${escapeHtml(String(option.label ?? option.value ?? ""))}</option>`).join("");
+      const values = normalized.map(option => option.value);
+      select.value = values.includes(currentValue) ? currentValue : "";
+    }
+
+    function getWizardLabel(input) {
+      return input?.closest("label");
+    }
+
+    function makeWizardSection(className, title, hint) {
+      const section = document.createElement("div");
+      section.className = `wizard-section ${className}`;
+      section.innerHTML = `<div class="wizard-section-title">${escapeHtml(title)} <span>${escapeHtml(hint)}</span></div>`;
+      return section;
+    }
+
+    function enhanceWizardLayout() {
+      const grid = document.querySelector(".wizard-grid");
+      if (!grid || grid.dataset.enhanced === "true") return;
+      grid.dataset.enhanced = "true";
+      const core = makeWizardSection("core", "Temel bilgiler", "Önce bunları doldur.");
+      const adaptive = makeWizardSection("adaptive", "Türe göre sorular", "Seçtiğin türe göre değişir.");
+      const rules = makeWizardSection("ai-rules", "AI yazım kuralları", "Yapay zekâ bunları sınır kabul eder.");
+      const nextHint = document.createElement("div");
+      nextHint.id = "wizardNextHint";
+      nextHint.className = "wizard-next-hint";
+      nextHint.textContent = "Türü seçince KitHub bu kartı roman, akademik metin, rapor veya eğitim içeriğine göre değiştirecek.";
+      const anchor = wizardFamilyHint?.nextSibling || grid.firstChild;
+      grid.insertBefore(core, anchor);
+      grid.insertBefore(nextHint, core.nextSibling);
+      grid.insertBefore(adaptive, nextHint.nextSibling);
+      grid.insertBefore(rules, adaptive.nextSibling);
+      [wizardTitle, wizardAuthor, wizardOutput, wizardType, wizardPages, wizardReader, wizardAudienceLevel, wizardPurpose].map(getWizardLabel).filter(Boolean).forEach(label => core.appendChild(label));
+      [wizardStructure, wizardCharacters, wizardNarrator, wizardPremise, wizardSetting, wizardEnding].map(getWizardLabel).filter(Boolean).forEach(label => adaptive.appendChild(label));
+      [wizardStyle, wizardBoundaries, wizardSourcePolicy, wizardSuccessCriteria].map(getWizardLabel).filter(Boolean).forEach(label => rules.appendChild(label));
+      updateWizardVisualState();
+    }
+
+    function updateWizardVisualState() {
+      const panel = document.querySelector(".wizard-panel");
+      if (!panel) return;
+      const values = collectWizardValues();
+      const hasGenre = Boolean(values.type);
+      const hasDetails = Boolean(values.premise || values.characters || values.narrator || values.setting || values.ending || values.sourcePolicy || values.successCriteria);
+      const validation = validateWizard(values);
+      panel.classList.toggle("has-genre", hasGenre);
+      panel.classList.toggle("has-details", hasDetails);
+      panel.classList.toggle("is-complete", validation.complete);
+      const hint = document.getElementById("wizardNextHint");
+      if (hint) {
+        hint.textContent = hasGenre
+          ? "Şimdi türe göre soruları doldur; KitHub bunları doğrudan AI planına çevirecek."
+          : "Türü seçince KitHub bu kartı roman, akademik metin, rapor veya eğitim içeriğine göre değiştirecek.";
+      }
+    }
+
+    function syncWizardFamilyFields(type = wizardType.value.trim()) {
+      enhanceWizardLayout();
+      if (!type) {
+        if (wizardFamilyHint) {
+          wizardFamilyHint.innerHTML = "<strong>Önce türü seç</strong><span>KitHub soruları seçtiğin türe göre değiştirir: roman başka, akademik metin başka planlanır.</span>";
+        }
+        if (wizardCharactersLabel) wizardCharactersLabel.textContent = "Karakterler / Kaynaklar / Örnekler";
+        if (wizardNarratorLabel) wizardNarratorLabel.textContent = "Anlatıcı / Yöntem";
+        if (wizardPremiseLabel) wizardPremiseLabel.textContent = "Konu / Ana Amaç";
+        if (wizardSettingLabel) wizardSettingLabel.textContent = "Dönem / Mekân / Kapsam";
+        if (wizardEndingLabel) wizardEndingLabel.textContent = "Final / Sonuç";
+        if (wizardBoundariesLabel) wizardBoundariesLabel.textContent = "Sınırlar / Yasaklar";
+        if (wizardPagesNote) wizardPagesNote.textContent = "Tür seçilince bu hedef sayfa, kelime veya kısa metin uzunluğuna çevrilir.";
+        updateWizardVisualState();
+        return;
+      }
+      const family = getWizardFamily(type);
+      const profile = getWizardProfile(type);
+      if (wizardFamilyHint) {
+        wizardFamilyHint.innerHTML = `<strong>${escapeHtml(profile.title)}</strong><span>${escapeHtml(profile.description)}</span>`;
+      }
+      if (wizardCharactersLabel) wizardCharactersLabel.textContent = profile.characters;
+      if (wizardNarratorLabel) wizardNarratorLabel.textContent = profile.narrator;
+      if (wizardPremiseLabel) wizardPremiseLabel.textContent = profile.premise;
+      if (wizardSettingLabel) wizardSettingLabel.textContent = profile.setting;
+      if (wizardEndingLabel) wizardEndingLabel.textContent = profile.ending;
+      if (wizardBoundariesLabel) wizardBoundariesLabel.textContent = profile.boundaries;
+      if (wizardPagesNote) wizardPagesNote.textContent = profile.pagesNote;
+      wizardCharacters.placeholder = profile.placeholders.characters;
+      wizardPremise.placeholder = profile.placeholders.premise;
+      wizardSetting.placeholder = profile.placeholders.setting;
+      wizardStyle.placeholder = profile.placeholders.style;
+      wizardBoundaries.placeholder = profile.placeholders.boundaries;
+      const narratorOptionsByFamily = {
+        fiction: ["", "Üçüncü tekil sınırlı", "Üçüncü tekil tanrısal", "Birinci tekil", "Çoklu bakış açısı", "Mektup/günlük biçimi"],
+        nonfiction: ["", "Uzman anlatıcı", "Rehber anlatıcı", "Kişisel deneyim", "Vaka odaklı", "Soru-cevap ilerleyen"],
+        research: ["", "Araştırmacı anlatımı", "Belgesel anlatım", "Analitik anlatım", "Vaka karşılaştırmalı", "Kaynak merkezli"],
+        academic: ["", "Nitel yöntem", "Nicel yöntem", "Karma yöntem", "Literatür taraması", "Kuramsal inceleme", "Vaka çalışması"],
+        article: ["", "Bilgilendirici", "SEO odaklı", "Düşünce yazısı", "Liste/rehber", "Karşılaştırma"],
+        instructional: ["", "Adım adım öğretim", "Kazanım odaklı", "Uygulamalı rehber", "Soru-cevap ilerleyen", "Kontrol listeli"],
+        report: ["", "Yönetici özeti odaklı", "Analitik rapor", "Karşılaştırmalı analiz", "Risk/fırsat analizi", "Öneri odaklı"],
+        screenplay: ["", "Uzun metraj", "Kısa film", "Dizi bölümü", "Sahne tretmanı", "Sekans outline"],
+        poetry: ["", "Birinci tekil lirik", "Anlatısal şiir", "Tematik döngü", "Deneysel ses", "Minimal ses"]
+      };
+      setSelectOptions(wizardNarrator, (narratorOptionsByFamily[family] || narratorOptionsByFamily.fiction).map(value => ({ value, label: value || "Seç" })), wizardNarrator.value);
+      const endingOptionsByFamily = {
+        fiction: ["", "Kapalı ve net final", "Yüzleşme finali", "Acı-tatlı final", "Açık uçlu final", "Devam kitabına açık final"],
+        nonfiction: ["", "Uygulanabilir sonuç", "Dönüşüm vaadi", "Özet + eylem planı", "Açık öneriler"],
+        research: ["", "Kanıtlı değerlendirme", "Sonuç çerçevesi", "Açık araştırma soruları", "Öneri listesi"],
+        academic: ["", "Tartışma bölümü", "Sonuç ve sınırlılıklar", "Hipotez değerlendirme", "Gelecek çalışma önerisi"],
+        article: ["", "Okur aksiyonu", "Özet kapanış", "CTA", "Soru ile kapanış"],
+        instructional: ["", "Mini proje", "Kontrol listesi", "Alıştırma seti", "Uygulama görevi"],
+        report: ["", "Yönetici önerisi", "Karar notu", "Risk azaltma planı", "Aksiyon listesi"],
+        screenplay: ["", "Final sahnesi", "Sezon kancası", "Açık uç", "Çözülmüş çatışma"],
+        poetry: ["", "Tematik kapanış", "Açık imge", "Döngüsel kapanış", "Sessiz bitiş"]
+      };
+      setSelectOptions(wizardEnding, (endingOptionsByFamily[family] || endingOptionsByFamily.fiction).map(value => ({ value, label: value || "Seç" })), wizardEnding.value);
+      const structureSuggestions = {
+        fiction: "3 Perde Yapısı",
+        nonfiction: "Problem → Çözüm → Uygulama",
+        research: "Bölüm bölüm öğretici yapı",
+        academic: "IMRAD akademik yapı",
+        article: "SEO blog outline",
+        instructional: type === "Kullanım kılavuzu" || type === "Teknik doküman" ? "Adım adım kullanım akışı" : "Modül → Örnek → Alıştırma",
+        report: "Problem → Bulgular → Öneri",
+        screenplay: "Senaryo sekans yapısı",
+        poetry: "Şiir tematik bölümleme"
+      };
+      if (wizardStructure) {
+        const knownStructureSuggestions = Object.values(structureSuggestions);
+        const nextStructure = structureSuggestions[family] || "";
+        if (!wizardStructure.value || knownStructureSuggestions.includes(wizardStructure.value)) {
+          wizardStructure.value = nextStructure;
+        }
+      }
+      const outputSuggestions = {
+        fiction: "Kitap dosyası",
+        nonfiction: "Kitap dosyası",
+        research: "Yayıncı DOCX",
+        academic: "Akademik çalışma",
+        article: type === "Blog yazısı" ? "Blog yayını" : "Makale taslağı",
+        instructional: type === "Teknik doküman" || type === "Kullanım kılavuzu" ? "Teknik doküman" : "Eğitim dosyası",
+        report: "Rapor dosyası",
+        screenplay: "Kitap dosyası",
+        poetry: "Kitap dosyası"
+      };
+      if (wizardOutput && outputSuggestions[family]) wizardOutput.value = outputSuggestions[family];
+      wizardCharacters.setAttribute("aria-label", profile.characters);
+      wizardNarrator.setAttribute("aria-label", profile.narrator);
+      wizardPremise.setAttribute("aria-label", profile.premise);
+      wizardSetting.setAttribute("aria-label", profile.setting);
+      wizardEnding.setAttribute("aria-label", profile.ending);
+      wizardBoundaries.setAttribute("aria-label", profile.boundaries);
+      updateWizardVisualState();
+    }
+
     function applyGenreMode(type = wizardType.value.trim()) {
       const options = genreBlockOptions[type] || genreBlockOptions.Roman;
       blockStyle.innerHTML = options.map((option, index) => `<option${index === 0 ? " selected" : ""}>${escapeHtml(option)}</option>`).join("");
+      syncWizardFamilyFields(type);
+      renderEntities(currentBridgeSummary?.entities || {});
+      renderAgents();
       const statusText = type
-        ? `Motor olayı: ${type} için editör biçimleri hazırlandı`
-        : "Motor olayı: genel yazım biçimleri hazırlandı";
+        ? `Motor olayı: ${type} için şablon soruları ve editör biçimleri hazırlandı`
+        : "Motor olayı: tür seçilince şablon soruları uyarlanacak.";
       setStatus(statusText);
     }
 
@@ -8266,8 +9710,9 @@ function applyEditorialFinding(index) {
       document.querySelectorAll("[data-type-section]").forEach(button => {
         button.classList.toggle("active", button.dataset.typeSection === section);
       });
-      const panel = document.querySelector(`[data-type-panel="${targetSection}"]`);
-      if (panel) panel.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      document.querySelectorAll("[data-type-panel]").forEach(panel => {
+        panel.classList.toggle("is-active", panel.dataset.typePanel === targetSection);
+      });
       const labels = {
         page: "sayfa ayarları",
         font: "tipografi ayarları",
@@ -8310,8 +9755,7 @@ function applyEditorialFinding(index) {
         article.style.cssText = bookPage.style.cssText;
         article.dataset.pageDesign = document.getElementById("pageDesign")?.value || "classicFrame";
         article.innerHTML = `
-          <div class="running-head"><span>${escapeHtml(chapterTitle)}</span><span>${escapeHtml(chapter.id)}</span></div>
-          <div>${page.html || ""}</div>
+          <div class="preview-page-body">${page.html || ""}</div>
           <div class="page-no">${index + 2}</div>
         `;
         const number = article.querySelector(".page-no");
@@ -8385,33 +9829,48 @@ function applyEditorialFinding(index) {
         button.classList.toggle("active", active);
         button.toggleAttribute("aria-current", active);
       });
+      syncWorkspaceContext();
       if (!focus) return;
       if (step === "start") {
-        document.body.classList.remove("nav-collapsed");
-        syncPanelButtons();
-        wizardType.focus();
+        showLauncher();
       }
       else if (step === "plan") {
-        document.body.classList.remove("nav-collapsed");
-        syncPanelButtons();
+        closeLauncher();
+        closeSurfaceCards(false);
         renderSupportTab("plan");
       }
       else if (step === "write") {
+        closeLauncher();
+        closeSurfaceCards(false);
         renderSupportTab("manuscript");
         structuredEditorMode === "rich" ? structuredEditor.focus() : manuscriptText.focus();
       }
-      else if (step === "edit") renderSupportTab("editorial");
+      else if (step === "edit") {
+        closeLauncher();
+        openSurfaceCard("agents", "Motor olayı: AI düzeltme kartı açıldı");
+        renderSupportTab("editorial");
+      }
       else if (step === "design") {
-        document.body.classList.remove("type-collapsed");
-        syncPanelButtons();
+        openSurfaceCard("type", "Motor olayı: sayfa tasarımı kartı açıldı");
         applyTypography();
       }
       else if (step === "publish") {
-        document.body.classList.remove("agents-collapsed");
-        syncPanelButtons();
-        lifecycleList.scrollIntoView({ behavior: "smooth", block: "center" });
+        openSurfaceCard("agents", "Motor olayı: yayına hazırlık kartı açıldı");
       }
-      setStatus(`Motor olayı: ${step} çalışma aşaması açıldı`);
+      else if (step === "status") {
+        openSurfaceCard("agents", "Motor olayı: işlem durumu ve ajan kanıtı kartı açıldı");
+      }
+      const stepLabels = {
+        start: "proje seçimi",
+        plan: "kitap planı",
+        write: "yazı editörü",
+        edit: "AI düzeltme",
+        design: "sayfa tasarımı",
+        publish: "yayına hazırlık",
+        status: "işlem durumu"
+      };
+      setStatus(`Motor olayı: ${stepLabels[step] || step} açıldı`);
+      syncWorkspaceContext();
     }
 
     function aiHistoryStorageKey() {
@@ -8850,6 +10309,49 @@ function applyEditorialFinding(index) {
       return document.querySelector(".mode button.active")?.dataset.mode || "IDE";
     }
 
+    function setContextActionVisible(button, visible) {
+      if (!button) return;
+      button.classList.toggle("is-visible", Boolean(visible));
+      button.hidden = !visible;
+    }
+
+    function updateAgentSurfaceTitle() {
+      if (!agentSurfaceTitle) return;
+      const labels = {
+        edit: "AI Düzelt",
+        publish: "Yayına Hazırla",
+        status: "İşlem Durumu"
+      };
+      agentSurfaceTitle.textContent = labels[activeWorkflowStep] || "AI ve Yayın";
+    }
+
+    function syncWorkspaceContext() {
+      const hasLocalProject = Boolean(projectHandle);
+      const hasBridgeProject = bridgeOnline && bridgeProjectActive && Boolean(currentProjectPathHint);
+      const hasAnyProject = hasLocalProject || hasBridgeProject;
+      const activeChapter = chapters[currentChapterIndex];
+      const hasWritableChapter = hasAnyProject && Boolean(activeChapter?.filename);
+      const isPlanStep = activeWorkflowStep === "plan";
+      const isEditorStep = activeWorkflowStep === "write" || activeWorkflowStep === "edit";
+
+      document.body.classList.toggle("project-ready", hasAnyProject);
+      document.body.classList.toggle("chapter-ready", hasWritableChapter);
+      ["write", "plan", "edit", "design", "publish", "status"].forEach(step => {
+        document.body.classList.toggle(`workflow-${step}`, activeWorkflowStep === step);
+      });
+      previewShell?.classList.toggle("no-project-preview", !hasAnyProject);
+      previewEmptyState?.toggleAttribute("hidden", hasAnyProject);
+      updateAgentSurfaceTitle();
+      primaryFlow?.classList.toggle("is-visible", hasAnyProject && isPlanStep);
+
+      setContextActionVisible(newProjectBtn, !hasAnyProject && isPlanStep);
+      setContextActionVisible(bindProjectBtn, !hasAnyProject && isPlanStep);
+      setContextActionVisible(saveRequestBtn, hasAnyProject && isPlanStep);
+      setContextActionVisible(importTextBtn, hasAnyProject && isEditorStep);
+      setContextActionVisible(refreshProjectBtn, hasAnyProject);
+      setContextActionVisible(saveEpisodeBtn, hasWritableChapter && isEditorStep);
+    }
+
     function syncBridgeButtons() {
       const projectText = (projectPathInput.value || currentProjectPathHint || "").trim();
       const hasLocalProject = Boolean(projectHandle);
@@ -8878,6 +10380,7 @@ function applyEditorialFinding(index) {
       cleanupProjectBtn.title = hasBridgeProject ? "Kullanıcı onayından sonra çalışma dosyalarını temizler." : "Studio Bridge ve gercek proje yolu gerekli.";
       exportBtn.title = hasBridgeProject ? "Export fazını çalıştırır; final DOCX kopyalama ayrı düğmedir." : "Önce gerçek KitHub projesini bağlayın.";
       syncChapterManagerButtons();
+      syncWorkspaceContext();
       auditControlContracts();
     }
 
@@ -8887,6 +10390,14 @@ function applyEditorialFinding(index) {
 
     function collectWizardValues() {
       return {
+        title: wizardTitle.value.trim(),
+        author: wizardAuthor.value.trim(),
+        output: wizardOutput.value.trim(),
+        structure: wizardStructure.value.trim(),
+        purpose: wizardPurpose.value.trim(),
+        audienceLevel: wizardAudienceLevel.value.trim(),
+        sourcePolicy: wizardSourcePolicy.value.trim(),
+        successCriteria: wizardSuccessCriteria.value.trim(),
         type: wizardType.value.trim(),
         pages: wizardPages.value.trim(),
         reader: wizardReader.value.trim(),
@@ -8906,10 +10417,43 @@ function applyEditorialFinding(index) {
     }
 
     function validateBookRequestText(text) {
-      const checks = [
+      const family = getWizardFamily(readRequestField(text, "T.{0,2}r"));
+      const evidencePattern = "(Karakter|Kaynak|Kan.{0,2}t|Veri|.{0,2}rnek)[^:]*";
+      const scopePattern = "(D.{0,2}nem|Kapsam|Seviye|Mek.{0,2}n|Mekan)[^:]*";
+      const methodPattern = "(Anlat|Y.{0,2}ntem|Analiz|.{0,2}retim|Ogretim|Format|Ses)[^:]*";
+      const outcomePattern = "(Final|Sonu.{0,2}|Okur aksiyonu|Uygulama .{0,2}kt.{0,2}|.{0,2}neri)[^:]*";
+      const checksByFamily = [
+        ["Çalışma adı", "Çal.{0,2}şma ad.{0,2}|Calisma adi"],
+        ["Yazar / imza", "Yazar[^:]*"],
         ["Tür", "T.{0,2}r"],
+        ["Çıktı hedefi", "Ç.{0,2}kt.{0,2} hedefi|Cikti hedefi"],
+        ["Kitap amacı", "Kitap amac.{0,2}|Çal.{0,2}şma amac.{0,2}|Calisma amaci"],
         ["Hedef sayfa", "Hedef sayfa"],
         ["Hedef okur", "Hedef okur"],
+        ["Okur seviyesi", "Okur seviyesi"],
+        ["Yapı", "Yap.{0,2}|Yapi"],
+        ["Konu", "Konu"],
+        [family === "fiction" || family === "screenplay" ? "Karakterler" : "Kaynak / kanıt / örnek", evidencePattern],
+        ["Üslup", "[ÜU]slup|Uslup"],
+        ["Sınırlar", "S.{0,2}n.{0,2}r[^:]*|Sinir[^:]*"],
+        ["Kaynak / gerçeklik kuralı", "Kaynak[^:]*ger.{0,2}eklik[^:]*|Kaynak kural.{0,2}|Ger.{0,2}eklik kural.{0,2}"]
+      ];
+      if (!["article", "poetry"].includes(family)) checksByFamily.push(["Kapsam / mekân / seviye", scopePattern]);
+      if (family !== "screenplay") checksByFamily.push(["Yöntem / anlatım", methodPattern]);
+      if (!["research", "academic", "article", "poetry"].includes(family)) checksByFamily.push(["Sonuç / final / çıktı", outcomePattern]);
+      const familyMissing = checksByFamily.filter(([, pattern]) => !readRequestField(text, pattern)).map(([label]) => label);
+      const familyPages = Number(readRequestField(text, "Hedef sayfa"));
+      const familyInvalid = [];
+      if (!Number.isInteger(familyPages) || familyPages < 1 || familyPages > 10000) familyInvalid.push("Hedef sayfa 1-10000 arasında tam sayı olmalı");
+      return { complete: familyMissing.length === 0 && familyInvalid.length === 0, missing: familyMissing, invalid: familyInvalid };
+      const checks = [
+        ["Çalışma adı", "Çalışma ad.{0,2}"],
+        ["Yazar / imza", "Yazar[^:]*"],
+        ["Tür", "T.{0,2}r"],
+        ["Çıktı hedefi", "Ç.{0,2}kt.{0,2} hedefi"],
+        ["Hedef sayfa", "Hedef sayfa"],
+        ["Hedef okur", "Hedef okur"],
+        ["Yapı", "Yap.{0,2}"],
         ["Konu", "Konu"],
         ["Karakterler", "Karakter[^:]*"],
         ["Dönem ve mekân", "D.{0,2}nem[^:]*"],
@@ -8928,14 +10472,22 @@ function applyEditorialFinding(index) {
 
     function syncWizardFromRequestText(text) {
       const fields = [
+        [wizardTitle, "Çalışma ad.{0,2}"],
+        [wizardAuthor, "Yazar[^:]*"],
+        [wizardOutput, "Ç.{0,2}kt.{0,2} hedefi"],
+        [wizardStructure, "Yap.{0,2}"],
+        [wizardPurpose, "Kitap amac.{0,2}"],
+        [wizardAudienceLevel, "Okur seviyesi"],
+        [wizardSourcePolicy, "Kaynak[^:]*"],
+        [wizardSuccessCriteria, "Ba.{0,2}ar.{0,2} .{0,8}l.{0,2}.{0,2}t.{0,2}"],
         [wizardType, "T.{0,2}r"],
         [wizardPages, "Hedef sayfa"],
         [wizardReader, "Hedef okur"],
-        [wizardCharacters, "Karakter[^:]*"],
-        [wizardNarrator, "Anlat[^:]*"],
+        [wizardCharacters, "(Karakter|Kaynak|Kan.{0,2}t|Veri|.{0,2}rnek)[^:]*"],
+        [wizardNarrator, "(Anlat|Y.{0,2}ntem|Analiz|.{0,2}retim|Ogretim|Format|Ses)[^:]*"],
         [wizardPremise, "Konu"],
-        [wizardSetting, "D.{0,2}nem[^:]*"],
-        [wizardEnding, "Final[^:]*"],
+        [wizardSetting, "(D.{0,2}nem|Kapsam|Seviye|Mek.{0,2}n|Mekan)[^:]*"],
+        [wizardEnding, "(Final|Sonu.{0,2}|Okur aksiyonu|Uygulama .{0,2}kt.{0,2}|.{0,2}neri)[^:]*"],
         [wizardStyle, "[ÜU]slup"],
         [wizardBoundaries, "S.{0,2}n.{0,2}r[^:]*"]
       ];
@@ -8943,11 +10495,16 @@ function applyEditorialFinding(index) {
         const value = readRequestField(text, pattern);
         if (value && !field.value.trim()) field.value = value;
       });
+      applyGenreMode(wizardType.value.trim());
       validateWizard();
     }
 
     function focusFirstMissingWizardField(missing) {
       const fields = {
+        "Çalışma adı": wizardTitle,
+        "Yazar / imza": wizardAuthor,
+        "Çıktı hedefi": wizardOutput,
+        "Yapı": wizardStructure,
         "Tür": wizardType,
         "Hedef sayfa": wizardPages,
         "Hedef okur": wizardReader,
@@ -8961,24 +10518,44 @@ function applyEditorialFinding(index) {
         "Hedef sayfa 1-10000 arasında tam sayı olmalı": wizardPages
       };
       const field = fields[missing?.[0]];
-      if (field) {
-        field.focus();
-        field.scrollIntoView({ behavior: "smooth", block: "center" });
+      const dynamicField = field
+        || (missing?.[0] === wizardCharactersLabel?.textContent ? wizardCharacters : null)
+        || (missing?.[0] === wizardNarratorLabel?.textContent ? wizardNarrator : null)
+        || (missing?.[0] === wizardPremiseLabel?.textContent ? wizardPremise : null)
+        || (missing?.[0] === wizardSettingLabel?.textContent ? wizardSetting : null)
+        || (missing?.[0] === wizardEndingLabel?.textContent ? wizardEnding : null)
+        || (missing?.[0] === wizardBoundariesLabel?.textContent ? wizardBoundaries : null);
+      if (dynamicField) {
+        dynamicField.focus();
+        dynamicField.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }
 
     function validateWizard(values = collectWizardValues()) {
-      const checks = [
-        ["Tür", values.type],
-        ["Hedef sayfa", values.pages],
-        ["Hedef okur", values.reader],
-        ["Konu", values.premise],
-        ["Karakterler", values.characters],
-        ["Dönem ve mekân", values.setting],
-        ["Anlatıcı", values.narrator],
-        ["Final", values.ending],
-        ["Sınırlar", values.boundaries]
-      ];
+      const profile = getWizardProfile(values.type);
+      const labels = {
+        title: "Çalışma adı",
+        author: "Yazar / imza",
+        type: "Tür",
+        output: "Çıktı hedefi",
+        structure: "Yapı",
+        purpose: "Kitap amacı",
+        audienceLevel: "Okur seviyesi",
+        sourcePolicy: "Kaynak / gerçeklik kuralı",
+        successCriteria: "Başarı ölçütü",
+        pages: "Hedef sayfa",
+        reader: "Hedef okur",
+        premise: wizardPremiseLabel?.textContent || "Konu",
+        characters: wizardCharactersLabel?.textContent || "Karakterler",
+        setting: wizardSettingLabel?.textContent || "Dönem ve mekân",
+        narrator: wizardNarratorLabel?.textContent || "Anlatıcı",
+        ending: wizardEndingLabel?.textContent || "Final",
+        boundaries: wizardBoundariesLabel?.textContent || "Sınırlar"
+      };
+      const requiredKeys = values.type
+        ? Array.from(new Set([...(profile.required || wizardFamilyProfiles.fiction.required), "output", "structure", "purpose", "audienceLevel", "sourcePolicy"]))
+        : ["title", "type", "pages", "reader", "purpose", "audienceLevel"];
+      const checks = requiredKeys.map(key => [labels[key] || key, values[key]]);
       const missing = checks.filter(([, value]) => !String(value || "").trim()).map(([label]) => label);
       const invalid = [];
       const pages = Number(values.pages);
@@ -8993,26 +10570,53 @@ function applyEditorialFinding(index) {
     function buildWizardRequestText() {
       const values = collectWizardValues();
       const validation = validateWizard(values);
+      const profile = getWizardProfile(values.type);
+      const family = getWizardFamily(values.type);
+      const evidenceLabel = wizardCharactersLabel?.textContent || "Karakterler / Kaynaklar";
+      const settingLabel = wizardSettingLabel?.textContent || "Dönem ve mekân / Kapsam";
+      const narratorLabel = wizardNarratorLabel?.textContent || "Anlatıcı / Yöntem";
+      const endingLabel = wizardEndingLabel?.textContent || "Final / Sonuç";
       const text = [
         "# Kitap İsteği",
         "",
         "## Zorunlu Cevaplar",
+        `- Çalışma adı: ${values.title}`,
+        `- Yazar / imza: ${values.author || "Belirtilmedi"}`,
         `- Tür: ${values.type}`,
+        `- Tür ailesi: ${profile.title}`,
+        `- Çıktı hedefi: ${values.output}`,
+        `- Yapı / plan şablonu: ${values.structure || "Türe göre öner"}`,
         `- Hedef sayfa: ${values.pages}`,
         `- Hedef okur: ${values.reader}`,
+        `- Okur seviyesi: ${values.audienceLevel}`,
+        `- Kitap amacı: ${values.purpose}`,
         `- Konu: ${values.premise}`,
-        `- Karakterler: ${values.characters}`,
-        `- Dönem ve mekân: ${values.setting}`,
-        `- Anlatıcı: ${values.narrator}`,
-        `- Final: ${values.ending}`,
+        `- ${evidenceLabel}: ${values.characters}`,
+        `- ${settingLabel}: ${values.setting}`,
+        `- ${narratorLabel}: ${values.narrator}`,
+        `- ${endingLabel}: ${values.ending}`,
         `- Sınırlar: ${values.boundaries}`,
+        `- Kaynak / gerçeklik kuralı: ${values.sourcePolicy}`,
+        `- Başarı ölçütü: ${values.successCriteria || "Okur vaadi karşılanacak; tür, uzunluk ve kalite kuralları tutarlı olacak."}`,
+        "",
+        "## Türe Göre Alan Anlamları",
+        `- Konu alanı: ${wizardPremiseLabel?.textContent || "Konu"}`,
+        `- Karakterler alanı: ${wizardCharactersLabel?.textContent || "Karakterler"}`,
+        `- Dönem/mekân alanı: ${wizardSettingLabel?.textContent || "Dönem ve mekân"}`,
+        `- Anlatıcı alanı: ${wizardNarratorLabel?.textContent || "Anlatıcı"}`,
+        `- Final alanı: ${wizardEndingLabel?.textContent || "Final"}`,
         "",
         "## Üslup ve Üretim Kuralları",
         `- Çalışma modu: ${getActiveMode()}`,
         `- Üslup: ${values.style || "Konuya ve türe uygun, tutarlı, akıcı, yayın dosyasına yakışır."}`,
-        "- Plan zorunluluğu: Yazıma başlamadan önce karakterler, olay akışı, bölüm dağılımı, sayfa hedefi ve tutarlılık ledgeri çıkarılacak.",
-        "- Tutarlılık: Her bölüm önceki bölüm özetleri, karakter durumu, olay ledgeri ve vaat/karşılık listesiyle uyumlu olacak.",
-        "- Uzunluk: Hedef sayfa sayısına göre bölüm ve kelime dağılımı yapılacak; hedef tutmadan kitap bitmiş sayılmayacak.",
+        `- Okur seviyesi: ${values.audienceLevel}`,
+        `- Kaynak / gerçeklik kuralı: ${values.sourcePolicy || "Türün gerektirdiği doğruluk ve gerçeklik sınırları korunacak."}`,
+        `- Başarı ölçütü: ${values.successCriteria || "Okur vaadi karşılanacak; metin tamamlanmış, tutarlı ve yayıma hazırlanabilir olacak."}`,
+        `- Şablon mantığı: ${profile.description}`,
+        `- Tür ailesi kuralı: ${family === "fiction" ? "Kurgu öğeleri karakter, olay örgüsü, sahne ve final üzerinden kurulacak." : family === "academic" ? "Akademik öğeler araştırma sorusu, yöntem, literatür ve atıf disiplini üzerinden kurulacak." : family === "article" ? "Kısa yayın öğeleri ana mesaj, okur aksiyonu ve net yapı üzerinden kurulacak." : family === "instructional" ? "Eğitim öğeleri kazanım, modül, örnek, alıştırma ve uygulama çıktısı üzerinden kurulacak." : family === "report" ? "Rapor öğeleri karar sorusu, kanıt, bulgu, öneri ve varsayım sınırları üzerinden kurulacak." : "Bu türün kendi üretim mantığına göre plan yapılacak; roman varsayımları zorlanmayacak."}`,
+        "- Plan zorunluluğu: Yazıma başlamadan önce seçilen tür ailesine uygun yapı, bölüm/başlık dağılımı, uzunluk hedefi ve tutarlılık kuralları çıkarılacak.",
+        "- Tutarlılık: Her bölüm/parça önceki kararlar, kapsam, kaynak/karakter politikası ve vaat/karşılık listesiyle uyumlu olacak.",
+        "- Uzunluk: Hedef sayfa sayısına göre bölüm, kelime veya kısa metin dağılımı yapılacak; hedef tutmadan çalışma bitmiş sayılmayacak.",
         "- Okur çıktısı: EP001, sahne etiketi, ajan notu, yayın notu, teknik rapor veya kodsal iz okuyucu metnine girmeyecek.",
         "- Yayın paketi: DOCX, ön bölüm, içindekiler, kapak briefi, arka kapak yazısı ve final kontrol raporları üretilecek."
       ].join("\n");
@@ -9052,7 +10656,50 @@ function applyEditorialFinding(index) {
         setStatus("Motor olayı: sihirbaz tamamlanmadan kitap isteği kaydedilmedi.");
         return;
       }
-      await saveBookRequestViaBridge();
+      const savedToProject = await saveBookRequestViaBridge();
+      const savedToDesktop = await saveBookMapToDesktopViaBridge(built.text);
+      if (savedToDesktop || savedToProject) {
+        setStatus(savedToDesktop
+          ? "Motor olayı: kitap haritası kaydedildi; masaüstü dosyası hazır."
+          : "Motor olayı: kitap haritası proje içine kaydedildi.");
+      }
+    }
+
+    async function saveBookMapToDesktopViaBridge(text) {
+      const title = (wizardTitle?.value || bookTitle?.textContent || "Kitap-Haritasi").trim();
+      if (bridgeOnline) {
+        try {
+          const response = await bridgeFetch(`${bridgeUrl}/api/save-book-map-desktop`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ title, text })
+          });
+          const result = await response.json();
+          if (!result.ok) throw new Error(result.error || "desktop save failed");
+          setRunLog(`${runLogText}\nMasaüstü kitap haritası: ${result.path}`);
+          return true;
+        }
+        catch (error) {
+          setStatus(`Motor olayı: masaüstü haritası yazılamadı (${error.message})`);
+          return false;
+        }
+      }
+      try {
+        const safeTitle = title.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "") || "Kitap-Haritasi";
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+        link.download = `KitHub-Kitap-Haritasi-${safeTitle}.md`;
+        document.body.appendChild(link);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        link.remove();
+        setRunLog(`${runLogText}\nMasaüstü doğrudan erişilemedi; harita indirme olarak verildi.`);
+        return true;
+      }
+      catch (error) {
+        setStatus(`Motor olayı: kitap haritası dosyası oluşturulamadı (${error.message})`);
+        return false;
+      }
     }
 
     async function copyRunLog() {
@@ -9245,6 +10892,16 @@ setEditorText(chapter.text || "");
       }
       manuscriptText.readOnly = false;
       if (structuredEditorApi) structuredEditorApi.setEditable(true);
+      if (tab === "preview") {
+        notesPanel.classList.remove("open");
+        notesPanel.setAttribute("aria-hidden", "true");
+        document.body.classList.add("preview-focus");
+        renderPreview();
+        syncPanelButtons();
+        previewShell?.scrollIntoView({ behavior: "smooth", block: "center" });
+        setStatus("Motor olayı: büyük sayfa ön izlemesi açıldı");
+        return;
+      }
       if (tab === "writingCards") {
         renderWritingCards();
         return;
@@ -9851,7 +11508,7 @@ const recovered = await restoreRecoveryDraft(chapters[0]);
       if (flow === "plan") {
         fromPhaseSelect.value = "intake";
         toPhaseSelect.value = "design-big";
-        setRunLog(`${runLogText}\nAkış: Romanı Planla\nMotor önce isteği çözer, alternatifleri ve kitap planını üretir; gereken yerde kullanıcı onayı bekler.`);
+        setRunLog(`${runLogText}\nAkış: Kitabı Planla\nMotor önce isteği çözer, alternatifleri ve kitap planını üretir; gereken yerde kullanıcı onayı bekler.`);
       }
       else {
         fromPhaseSelect.value = "design-small";
@@ -10020,12 +11677,14 @@ const recovered = await restoreRecoveryDraft(chapters[0]);
     }
 
     function renderEntities(entities = {}) {
-      const labels = { characters: "Karakterler", locations: "Mekanlar", plot: "Olay Örgüsü", research: "Araştırma" };
+      const labels = familyAwareEntityLabels();
       document.querySelectorAll("[data-entity]").forEach(button => {
         const key = button.dataset.entity;
         const items = Array.isArray(entities[key]) ? entities[key] : [];
+        const label = button.querySelector("span:nth-of-type(2)");
         const count = button.querySelector("[data-entity-count]");
         const dot = button.querySelector(".dot");
+        if (label && labels[key]) label.textContent = labels[key];
         if (count) count.textContent = String(items.length);
         if (dot) {
           dot.classList.toggle("done", items.length > 0);
@@ -10156,8 +11815,8 @@ const recovered = await restoreRecoveryDraft(chapters[0]);
         setStatus("Motor olayı: temizlik için Studio Bridge ve gerçek proje yolu gerekli.");
         return;
       }
-      const confirmation = window.prompt("Çalışma dosyaları ancak kitabı okuduktan sonra temizlenir. Eminsen tam olarak yaz: roman bitti");
-      if (confirmation !== "roman bitti") {
+      const confirmation = window.prompt("Çalışma dosyaları ancak kitabı okuduktan sonra temizlenir. Eminsen tam olarak yaz: çalışma bitti");
+      if (confirmation !== "çalışma bitti") {
         setStatus("Motor olayı: temizlik iptal edildi; açık kullanıcı onayı yok.");
         return;
       }
@@ -10543,6 +12202,81 @@ function collectLayoutPlanFromUi() {
         : "Motor olayı: panel görünümü geri açıldı";
     }
 
+    const surfacePanelClasses = {
+      nav: "nav-collapsed",
+      type: "type-collapsed",
+      agents: "agents-collapsed"
+    };
+
+    function closeLauncher() {
+      document.body.classList.remove("launch-active");
+      modeLauncher?.setAttribute("aria-hidden", "true");
+    }
+
+    function showLauncher() {
+      closeSurfaceCards(false);
+      document.body.classList.add("launch-active");
+      modeLauncher?.removeAttribute("aria-hidden");
+      setStatus("Motor olayı: proje seçimi açıldı");
+    }
+
+    function closeSurfaceCards(updateStatus = true) {
+      Object.values(surfacePanelClasses).forEach(className => document.body.classList.add(className));
+      document.body.classList.remove("surface-open");
+      if (updateStatus) setStatus("Motor olayı: çalışma kartı kapatıldı");
+      syncPanelButtons();
+    }
+
+    function openSurfaceCard(panelName, statusText) {
+      closeLauncher();
+      Object.entries(surfacePanelClasses).forEach(([name, className]) => {
+        document.body.classList.toggle(className, name !== panelName);
+      });
+      document.body.classList.add("surface-open");
+      syncPanelButtons();
+      const panel = panelName === "nav" ? document.querySelector(".sidebar")
+        : panelName === "type" ? document.querySelector(".typography")
+        : document.querySelector(".agents");
+      panel?.querySelector("button, input, select, textarea, summary")?.focus({ preventScroll: true });
+      setStatus(statusText || "Motor olayı: geniş çalışma kartı açıldı");
+    }
+
+    function toggleSurfaceCard(panelName, statusText) {
+      const className = surfacePanelClasses[panelName];
+      if (!className) return;
+      if (document.body.classList.contains(className)) openSurfaceCard(panelName, statusText);
+      else closeSurfaceCards();
+    }
+
+    function openEditorHome(statusText = "Motor olayı: kitap editörü açıldı") {
+      closeLauncher();
+      closeSurfaceCards(false);
+      selectWorkflowStep("write", false);
+      renderSupportTab("manuscript");
+      structuredEditorMode === "rich" ? structuredEditor.focus() : manuscriptText.focus();
+      setStatus(statusText);
+    }
+
+    async function activateLaunchMode(mode) {
+      closeLauncher();
+      if (mode === "new") {
+        selectWorkflowStep("plan", false);
+        openSurfaceCard("nav", "Motor olayı: yeni kitap başlangıç ve plan kartı açıldı");
+        wizardType.focus({ preventScroll: true });
+        return;
+      }
+      if (mode === "open") {
+        const beforeProject = currentProjectPathHint;
+        if (typeof bindProject === "function") {
+          await bindProject();
+        }
+        const projectReady = bridgeProjectActive || projectHandle || currentProjectPathHint !== beforeProject;
+        if (projectReady) openEditorHome("Motor olayı: mevcut proje editörde açılıyor");
+        else showLauncher();
+        return;
+      }
+    }
+
     function syncPanelButtons() {
       const navCollapsed = document.body.classList.contains("nav-collapsed");
       const typeCollapsed = document.body.classList.contains("type-collapsed");
@@ -10675,6 +12409,11 @@ if (shortcut && key === "h") {
         closeFindPanel();
         return;
       }
+      if (event.key === "Escape" && document.body.classList.contains("surface-open")) {
+        event.preventDefault();
+        closeSurfaceCards();
+        return;
+      }
       if (event.key === "Escape" && document.body.classList.contains("focus-writing")) {
         event.preventDefault();
         document.body.classList.remove("focus-writing");
@@ -10692,33 +12431,40 @@ if (shortcut && key === "h") {
     });
 
     toggleNav.addEventListener("click", () => {
-      togglePanel("nav-collapsed", toggleNav);
-      syncPanelButtons();
+      toggleSurfaceCard("nav", "Motor olayı: kitap haritası kartı açıldı");
     });
 
     sideCollapseBtn.addEventListener("click", () => {
-      togglePanel("nav-collapsed", toggleNav);
-      syncPanelButtons();
+      closeSurfaceCards();
     });
 
     toggleAgents.addEventListener("click", () => {
-      togglePanel("agents-collapsed", toggleAgents);
-      syncPanelButtons();
+      if (!["edit", "publish", "status"].includes(activeWorkflowStep)) {
+        selectWorkflowStep("status", false);
+      }
+      toggleSurfaceCard("agents", "Motor olayı: işlem durumu kartı açıldı");
     });
 
     collapseAgents.addEventListener("click", () => {
-      togglePanel("agents-collapsed", toggleAgents);
-      syncPanelButtons();
+      closeSurfaceCards();
     });
 
     toggleType.addEventListener("click", () => {
-      togglePanel("type-collapsed", toggleType);
-      syncPanelButtons();
+      if (activeWorkflowStep !== "design") {
+        selectWorkflowStep("design", false);
+      }
+      toggleSurfaceCard("type", "Motor olayı: sayfa tasarımı kartı açıldı");
     });
 
     drawerToggle.addEventListener("click", () => {
-      togglePanel("type-collapsed", toggleType);
-      syncPanelButtons();
+      closeSurfaceCards();
+    });
+
+    surfaceBackdrop?.addEventListener("click", () => closeSurfaceCards());
+    modeLauncher?.addEventListener("click", event => {
+      const button = event.target.closest("[data-launch-mode]");
+      if (!button) return;
+      activateLaunchMode(button.dataset.launchMode);
     });
 
     focusModeBtn.addEventListener("click", () => {
@@ -11089,6 +12835,7 @@ closeNotesBtn.addEventListener("click", () => renderSupportTab("manuscript"));
       if (!button) return;
       focusTypeSection(button.dataset.typeSection);
     });
+    focusTypeSection("page");
     pageStage.addEventListener("click", event => {
       const button = event.target.closest("[data-preview-show-all]");
       if (!button) return;
@@ -11246,11 +12993,16 @@ findScope.addEventListener("change", () => {
     cleanupProjectBtn.addEventListener("click", cleanupProjectViaBridge);
     buildRequestBtn.addEventListener("click", buildWizardRequestText);
     saveWizardBtn.addEventListener("click", saveWizardRequest);
-    [wizardType, wizardPages, wizardReader, wizardCharacters, wizardNarrator, wizardPremise, wizardSetting, wizardEnding, wizardStyle, wizardBoundaries].forEach(input => {
-      input.addEventListener("input", () => validateWizard());
-      input.addEventListener("change", () => {
+    [wizardTitle, wizardAuthor, wizardOutput, wizardStructure, wizardPurpose, wizardAudienceLevel, wizardSourcePolicy, wizardSuccessCriteria, wizardType, wizardPages, wizardReader, wizardCharacters, wizardNarrator, wizardPremise, wizardSetting, wizardEnding, wizardStyle, wizardBoundaries].forEach(input => {
+      if (!input) return;
+      input.addEventListener("input", () => {
         validateWizard();
+        updateWizardVisualState();
+      });
+      input.addEventListener("change", () => {
         if (input === wizardType) applyGenreMode();
+        validateWizard();
+        updateWizardVisualState();
       });
     });
     exportBtn.addEventListener("click", () => {
@@ -11335,5 +13087,6 @@ findScope.addEventListener("change", () => {
       event.returnValue = "";
     });
   </script>
+  <!-- Legacy guided wizard is intentionally not loaded: the new mode launcher owns onboarding and large action cards. -->
 </body>
 </html>

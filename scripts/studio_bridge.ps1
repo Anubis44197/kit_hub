@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
   [int]$Port = 8765,
   [string]$SessionToken = "",
@@ -12,6 +12,10 @@ if (-not $SessionToken.Trim()) {
   $SessionToken = [Convert]::ToBase64String($tokenBytes)
 }
 $script:SessionToken = $SessionToken
+
+# İnsan-Ajan İşbirliği Görev Motoru (task feed, kuyruk, mention, onay -> tetikleyici)
+. (Join-Path $PSScriptRoot "task_engine.ps1")
+. (Join-Path $PSScriptRoot "book_contract.ps1")
 
 function Resolve-ExistingDirectory {
   param([string]$Path)
@@ -351,6 +355,12 @@ function Set-ProviderEnvironment {
   if ($ApiKey.Trim()) {
     $env:KITHUB_API_KEY = $ApiKey
   }
+  # Yerel model (Ollama / LM Studio / llama.cpp) boş API anahtarı kabul eder
+  if (([string]$Settings.baseUrl) -match '(?i)(localhost|127\.0\.0\.1|\.local)') {
+    $env:KITHUB_API_ALLOW_EMPTY_KEY = "1"
+  } else {
+    Remove-Item Env:KITHUB_API_ALLOW_EMPTY_KEY -ErrorAction SilentlyContinue
+  }
   if (-not ([string]$env:KITHUB_PROVIDER_ARGS).Trim()) {
     $env:KITHUB_PROVIDER_ARGS = "--project-root `"{project_root}`" --phase {phase} --run-id `"{run_id}`" --prompt-file `"{prompt_file}`""
   }
@@ -361,8 +371,9 @@ function Test-ProviderConnection {
   $provider = [string]$Settings.provider
   $model = [string]$Settings.model
   $baseUrl = [string]$Settings.baseUrl
+  $isLocal = ([string]$baseUrl) -match '(?i)(localhost|127\.0\.0\.1|\.local)'
   if (-not $model.Trim()) { throw "API model is required." }
-  if (-not $ApiKey.Trim()) { throw "API key is required." }
+  if (-not $ApiKey.Trim() -and -not $isLocal) { throw "API key is required." }
   if (-not $baseUrl.Trim()) {
     if ($provider -eq "anthropic") { $baseUrl = "https://api.anthropic.com/v1/messages" }
     elseif ($provider -eq "gemini") { $baseUrl = "https://generativelanguage.googleapis.com/v1beta" }
@@ -383,7 +394,8 @@ function Test-ProviderConnection {
     return $true
   }
 
-  $headers = @{ Authorization = "Bearer $ApiKey"; "content-type" = "application/json" }
+  $headers = @{ "content-type" = "application/json" }
+  if ($ApiKey.Trim()) { $headers["Authorization"] = "Bearer $ApiKey" }
   if ($provider -eq "openrouter") {
     $headers["HTTP-Referer"] = "http://127.0.0.1:8765"
     $headers["X-Title"] = "KitHub Studio"
@@ -409,13 +421,17 @@ function Save-ProviderSettings {
   $existing = Read-Utf8JsonIfExists -Path $path
   $existingProvider = if ($existing) { [string]$existing.provider } else { "" }
   $existingBaseUrl = if ($existing) { [string]$existing.baseUrl } else { "" }
+  $isLocalBase = ([string]$baseUrl) -match '(?i)(localhost|127\.0\.0\.1|\.local)'
   if ($baseUrl.Trim()) {
     try { $uri = [Uri]$baseUrl } catch { throw "Invalid API endpoint URL." }
-    if ($uri.Scheme -ne "https" -or -not $uri.Host -or $uri.UserInfo) { throw "API endpoint must be an HTTPS URL without embedded credentials." }
+    if ($isLocalBase) {
+      if ($uri.UserInfo) { throw "API endpoint must not embed credentials." }
+    }
+    elseif ($uri.Scheme -ne "https" -or -not $uri.Host -or $uri.UserInfo) { throw "API endpoint must be an HTTPS URL without embedded credentials." }
   }
-  if (-not $apiKey.Trim() -and $existing -and ($existingProvider -ne $provider -or $existingBaseUrl -ne $baseUrl)) { throw "Changing provider or endpoint requires entering a new API key." }
+  if (-not $apiKey.Trim() -and $existing -and ($existingProvider -ne $provider -or $existingBaseUrl -ne $baseUrl) -and -not $isLocalBase) { throw "Changing provider or endpoint requires entering a new API key." }
   $protected = if ($apiKey.Trim()) { Protect-ProviderSecret -Secret $apiKey } elseif ($existing) { [string]$existing.apiKeyProtected } else { "" }
-  if (-not $protected.Trim()) { throw "API key is required for API mode." }
+  if (-not $protected.Trim() -and -not $isLocalBase) { throw "API key is required for API mode." }
 
   $settings = [ordered]@{
     provider = $provider
@@ -425,7 +441,7 @@ function Save-ProviderSettings {
     updatedAt = (Get-Date).ToString("o")
   }
   Write-Utf8Json -Path $path -Value $settings
-  $plainKey = if ($apiKey.Trim()) { $apiKey } else { Unprotect-ProviderSecret -ProtectedSecret $protected }
+  $plainKey = if ($apiKey.Trim()) { $apiKey } elseif ($protected.Trim()) { Unprotect-ProviderSecret -ProtectedSecret $protected } else { "" }
   Set-ProviderEnvironment -Settings $settings -ApiKey $plainKey
   $tested = $false
   if ($Payload.test -eq $true) {
@@ -437,7 +453,7 @@ function Save-ProviderSettings {
     provider = $provider
     model = $model
     baseUrl = $baseUrl
-    hasApiKey = $true
+    hasApiKey = $false
     tested = $tested
     settingsPath = $path
   }
@@ -465,8 +481,9 @@ function Invoke-ProviderTextRewrite {
   $provider = [string]$Settings.provider
   $model = [string]$Settings.model
   $baseUrl = [string]$Settings.baseUrl
+  $isLocal = ([string]$baseUrl) -match '(?i)(localhost|127\.0\.0\.1|\.local)'
   if (-not $model.Trim()) { throw "API model is required." }
-  if (-not $ApiKey.Trim()) { throw "API key is required." }
+  if (-not $ApiKey.Trim() -and -not $isLocal) { throw "API key is required." }
   if (-not $baseUrl.Trim()) {
     if ($provider -eq "anthropic") { $baseUrl = "https://api.anthropic.com/v1/messages" }
     elseif ($provider -eq "gemini") { $baseUrl = "https://generativelanguage.googleapis.com/v1beta" }
@@ -485,7 +502,8 @@ function Invoke-ProviderTextRewrite {
     return Invoke-RestMethod -Method Post -Uri $uri -ContentType "application/json" -Body $body -TimeoutSec 120
   }
 
-  $headers = @{ Authorization = "Bearer $ApiKey"; "content-type" = "application/json" }
+  $headers = @{ "content-type" = "application/json" }
+  if ($ApiKey.Trim()) { $headers["Authorization"] = "Bearer $ApiKey" }
   if ($provider -eq "openrouter") {
     $headers["HTTP-Referer"] = "http://127.0.0.1:8765"
     $headers["X-Title"] = "KitHub Studio"
@@ -1026,11 +1044,49 @@ function Test-Approved {
 
 function Get-BookRequestChecklist {
   param([string]$Text)
+  $contract = Get-KitHubWritingContractFromText -Text $Text
+  $titleOk = ($Text -match "(?im)^\s*-\s*(Çalışma ad.{0,2}|Calisma adi)\s*:[ \t]*\S")
+  $authorOk = ($Text -match "(?im)^\s*-\s*Yazar[^\r\n:]*:[ \t]*\S")
+  $commonChecks = @(
+    [ordered]@{ key = "title"; label = "Çalışma adı"; ok = $titleOk },
+    [ordered]@{ key = "author"; label = "Yazar / imza"; ok = $authorOk },
+    [ordered]@{ key = "writing_type"; label = "Tür"; ok = -not [string]::IsNullOrWhiteSpace($contract.writing_type) },
+    [ordered]@{ key = "output_target"; label = "Çıktı hedefi"; ok = -not [string]::IsNullOrWhiteSpace($contract.output_target) },
+    [ordered]@{ key = "structure_template"; label = "Yapı"; ok = -not [string]::IsNullOrWhiteSpace($contract.structure_template) },
+    [ordered]@{ key = "target_pages"; label = "Hedef sayfa"; ok = -not [string]::IsNullOrWhiteSpace($contract.target_pages) },
+    [ordered]@{ key = "target_reader"; label = "Hedef okur"; ok = -not [string]::IsNullOrWhiteSpace($contract.target_reader) },
+    [ordered]@{ key = "audience_level"; label = "Okur seviyesi"; ok = -not [string]::IsNullOrWhiteSpace($contract.audience_level) },
+    [ordered]@{ key = "book_purpose"; label = "Kitap amacı"; ok = -not [string]::IsNullOrWhiteSpace($contract.book_purpose) },
+    [ordered]@{ key = "premise"; label = "Konu"; ok = -not [string]::IsNullOrWhiteSpace($contract.premise) },
+    [ordered]@{ key = "evidence_or_character_policy"; label = $(if ($contract.writing_family -in @("fiction", "screenplay")) { "Karakterler" } else { "Kaynak / kanıt / örnek" }); ok = -not [string]::IsNullOrWhiteSpace($contract.evidence_or_character_policy) },
+    [ordered]@{ key = "style_tone"; label = "Üslup"; ok = -not [string]::IsNullOrWhiteSpace($contract.style_tone) },
+    [ordered]@{ key = "boundaries"; label = "Sınırlar"; ok = -not [string]::IsNullOrWhiteSpace($contract.boundaries) },
+    [ordered]@{ key = "source_policy"; label = "Kaynak / gerçeklik kuralı"; ok = -not [string]::IsNullOrWhiteSpace($contract.source_policy) }
+  )
+  if ($contract.writing_family -notin @("article", "poetry")) {
+    $commonChecks += [ordered]@{ key = "scope_or_setting"; label = "Kapsam / mekân / seviye"; ok = -not [string]::IsNullOrWhiteSpace($contract.scope_or_setting) }
+  }
+  if ($contract.writing_family -ne "screenplay") {
+    $commonChecks += [ordered]@{ key = "method_or_narration"; label = "Yöntem / anlatım"; ok = -not [string]::IsNullOrWhiteSpace($contract.method_or_narration) }
+  }
+  if ($contract.writing_family -notin @("research", "academic", "article", "poetry")) {
+    $commonChecks += [ordered]@{ key = "ending_or_outcome"; label = "Sonuç / final / çıktı"; ok = -not [string]::IsNullOrWhiteSpace($contract.ending_or_outcome) }
+  }
+  $familyMissing = @($commonChecks | Where-Object { $_.ok -ne $true } | ForEach-Object { $_.label })
+  return [ordered]@{
+    complete = ($familyMissing.Count -eq 0)
+    missing = $familyMissing
+    checks = $commonChecks
+  }
   $checks = @(
+    [ordered]@{ key = "title"; label = "Çalışma adı"; ok = ($Text -match "(?im)^\s*-\s*(Çalışma ad.{0,2}|Calisma adi)\s*:[ \t]*\S") },
+    [ordered]@{ key = "author"; label = "Yazar / imza"; ok = ($Text -match "(?im)^\s*-\s*Yazar[^\r\n:]*:[ \t]*\S") },
     [ordered]@{ key = "writing_type"; label = "Tür"; ok = ($Text -match "(?im)^\s*-\s*T.{0,2}r\s*:[ \t]*\S") },
+    [ordered]@{ key = "output_target"; label = "Çıktı hedefi"; ok = ($Text -match "(?im)^\s*-\s*(Ç.{0,2}kt.{0,2} hedefi|Cikti hedefi)\s*:[ \t]*\S") },
+    [ordered]@{ key = "structure_template"; label = "Yapı"; ok = ($Text -match "(?im)^\s*-\s*(Yap.{0,2}|Yapi)[^\r\n:]*:[ \t]*\S") },
     [ordered]@{ key = "target_pages"; label = "Hedef sayfa"; ok = ($Text -match "(?im)^\s*-\s*Hedef sayfa\s*:[ \t]*\S") },
     [ordered]@{ key = "target_reader"; label = "Hedef okur"; ok = ($Text -match "(?im)^\s*-\s*Hedef okur\s*:[ \t]*\S") },
-    [ordered]@{ key = "premise"; label = "Konu"; ok = ($Text -match "(?im)^\s*-\s*Konu\s*:[ \t]*\S") },
+    [ordered]@{ key = "premise"; label = "Konu"; ok = ($Text -match "(?im)^\s*-\s*Konu[^\r\n:]*:[ \t]*\S") },
     [ordered]@{ key = "characters"; label = "Karakterler"; ok = ($Text -match "(?im)^\s*-\s*Karakter[^\r\n]*:[ \t]*\S") },
     [ordered]@{ key = "setting"; label = "Dönem ve mekân"; ok = ($Text -match "(?im)^\s*-\s*D.{0,2}nem[^\r\n]*:[ \t]*\S") },
     [ordered]@{ key = "narration"; label = "Anlatıcı"; ok = ($Text -match "(?im)^\s*-\s*Anlat[^\r\n]*:[ \t]*\S") },
@@ -1045,6 +1101,29 @@ function Get-BookRequestChecklist {
     missing = $missing
     checks = $checks
   }
+}
+
+function Save-BookMapDesktop {
+  param([object]$Payload)
+  $text = [string]$Payload.text
+  if (-not $text.Trim()) {
+    throw "Book map text is empty."
+  }
+  $desktop = [Environment]::GetFolderPath("Desktop")
+  if (-not $desktop -or -not (Test-Path -LiteralPath $desktop -PathType Container)) {
+    $desktop = Join-Path $env:USERPROFILE "Desktop"
+  }
+  if (-not (Test-Path -LiteralPath $desktop -PathType Container)) {
+    throw "Desktop folder could not be resolved."
+  }
+  $title = [string]$Payload.title
+  $safeTitle = ([regex]::Replace($title, '[^\p{L}\p{N}]+', '-')).Trim('-')
+  if (-not $safeTitle) { $safeTitle = "Kitap-Haritasi" }
+  if ($safeTitle.Length -gt 80) { $safeTitle = $safeTitle.Substring(0, 80).Trim('-') }
+  $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+  $path = Join-Path $desktop "KitHub-Kitap-Haritasi-$safeTitle-$stamp.md"
+  [System.IO.File]::WriteAllText($path, $text, [System.Text.UTF8Encoding]::new($true))
+  return [ordered]@{ ok = $true; path = $path; bytes = (Get-Item -LiteralPath $path).Length }
 }
 
 function Get-QualityAudit {
@@ -1899,12 +1978,13 @@ function Save-BookRequest {
   if ($checklist.complete -ne $true) { throw "Book request is incomplete: $($checklist.missing -join ", ")" }
   $pagesMatch = [regex]::Match($text, "(?im)^\s*-\s*Hedef sayfa\s*:\s*(\d+)")
   if (-not $pagesMatch.Success -or [int]$pagesMatch.Groups[1].Value -lt 1 -or [int]$pagesMatch.Groups[1].Value -gt 10000) { throw "Target pages must be an integer between 1 and 10000." }
-  $charactersMatch = [regex]::Match($text, "(?im)^\s*-\s*Karakter[^\r\n]*:\s*(.+?)\s*$")
-  if (-not $charactersMatch.Success -or -not $charactersMatch.Groups[1].Value.Trim()) { throw "Characters must include at least one name or a character policy." }
-  if ($charactersMatch.Groups[1].Value.Length -gt 4000) { throw "Characters must be 4000 characters or fewer." }
+  $contractPreview = Get-KitHubWritingContractFromText -Text $text
+  if ([string]::IsNullOrWhiteSpace($contractPreview.evidence_or_character_policy)) { throw "Book map must include character, source, evidence, data, or example policy." }
+  if ($contractPreview.evidence_or_character_policy.Length -gt 4000) { throw "Character/source/evidence policy must be 4000 characters or fewer." }
   [System.IO.File]::WriteAllText((Join-Path $runtimeDir "book-request.md"), $text, [System.Text.UTF8Encoding]::new($true))
+  $contract = Save-KitHubBookContract -ProjectRoot $projectRoot -Text $text
   $snapshot = New-ProjectVersionSnapshot -ProjectRoot $projectRoot -Reason "Kitap isteği kaydedildi" -Title "Kitap isteği"
-  return [ordered]@{ ok = $true; relativePath = "runtime/book-request.md"; characters = $text.Length; words = Get-WordCount -Text $text; checklist = $checklist; version = $snapshot }
+  return [ordered]@{ ok = $true; relativePath = "runtime/book-request.md"; contractPath = "runtime/book-contract.json"; writingFamily = $contract.writing_family; characters = $text.Length; words = Get-WordCount -Text $text; checklist = $checklist; version = $snapshot }
 }
 
 function Get-PageNotesPath {
@@ -2893,8 +2973,8 @@ function Approve-Cleanup {
 
   $projectRoot = Resolve-ExistingDirectory -Path ([string]$Payload.projectRoot)
   $confirmation = [string]$Payload.confirmation
-  if ($confirmation.Trim().ToLowerInvariant() -notin @("roman bitti", "kitap bitti", "bitti", "temizle")) {
-    throw "Cleanup approval requires explicit confirmation text: roman bitti"
+  if ($confirmation.Trim().ToLowerInvariant() -notin @("çalışma bitti", "calisma bitti", "kitap bitti", "bitti", "temizle")) {
+    throw "Cleanup approval requires explicit confirmation text: çalışma bitti"
   }
 
   $approvalDir = Join-Path $projectRoot "runtime/approvals"
@@ -3014,6 +3094,8 @@ function Write-HttpResponse {
     "HTTP/1.1 $StatusCode $reason",
     "Content-Type: $ContentType",
     "Content-Length: $($BodyBytes.Length)",
+    "Cache-Control: no-store, max-age=0",
+    "Pragma: no-cache",
     "Access-Control-Allow-Methods: GET,POST,OPTIONS",
     "Access-Control-Allow-Headers: content-type, x-kithub-session",
     "Connection: close",
@@ -3068,6 +3150,9 @@ try {
   while ($true) {
     $client = $listener.AcceptTcpClient()
     try {
+      $client.ReceiveTimeout = 2000
+      $client.SendTimeout = 10000
+      $client.NoDelay = $true
       $stream = $client.GetStream()
       try {
         $request = Read-HttpRequest -Stream $stream
@@ -3119,6 +3204,17 @@ try {
           continue
         }
 
+        if ($method -eq "GET" -and $path -eq "/assets/studio-wizard.js") {
+          $wizardBundlePath = Join-Path $RepoRoot "assets/studio-wizard.js"
+          if (Test-Path -LiteralPath $wizardBundlePath -PathType Leaf) {
+            Write-FileHttpResponse -Stream $stream -Path $wizardBundlePath -ContentType "text/javascript; charset=utf-8"
+          }
+          else {
+            Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $false; error = "Studio wizard bundle is missing." }) -StatusCode 404
+          }
+          continue
+        }
+
         if ($method -eq "GET" -and $path -eq "/assets/studio-professional.js") {
           $assetPath = Join-Path $RepoRoot "assets/studio-professional.js"
           if (Test-Path -LiteralPath $assetPath -PathType Leaf) { Write-FileHttpResponse -Stream $stream -Path $assetPath -ContentType "text/javascript; charset=utf-8" }
@@ -3147,6 +3243,12 @@ try {
           Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true; token = $script:SessionToken })
           continue
         }
+        if ($method -eq "GET" -and $path -eq "/api/adapter-inventory") {
+          $json = & (Join-Path $RepoRoot "scripts/adapter_inventory_check.ps1") -ProjectRoot $RepoRoot | Out-String
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true; adapters = ($json | ConvertFrom-Json) })
+          continue
+        }
+
         if ($path -like "/api/*" -and $path -notin @("/api/health", "/api/session")) {
           $providedToken = [string]$request.Headers["X-KitHub-Session"]
           if (-not $providedToken -or $providedToken -ne $script:SessionToken) {
@@ -3174,6 +3276,122 @@ try {
         if ($method -eq "POST" -and $path -eq "/api/live-edit-applied") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           Write-JsonHttpResponse -Stream $stream -Value (Confirm-LiveEditApplied -Payload $payload)
+          continue
+        }
+
+
+        if ($method -eq "POST" -and $path -eq "/api/task-summary") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+          & (Join-Path $RepoRoot "scripts/task_supervisor.ps1") -ProjectRoot $projectRoot | Out-Null
+          Write-JsonHttpResponse -Stream $stream -Value (Get-TaskSummary -ProjectRoot $projectRoot)
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/task-agents") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true; agents = (Get-TaskAgentIdentities -ProjectRoot $projectRoot) })
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/task-create") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+          $mentionNames = @()
+          if ($payload.mentionText) {
+            $mentionNames = Resolve-TaskMentions -Text ([string]$payload.mentionText)
+          }
+          $targetAgent = if ($payload.agent) { [string]$payload.agent } else { if ($mentionNames.Count -gt 0) { $mentionNames[0] } else { "" } }
+          if (-not $targetAgent.Trim()) { throw "Task agent is required (payload.agent or @mention in mentionText)." }
+          $mention = $null
+          if ($payload.mentionText) {
+            $mention = [ordered]@{ author = [string]$payload.mentionAuthor; channel = [string]$payload.mentionChannel; text = [string]$payload.mentionText }
+          }
+          $requiresApproval = if ($null -ne $payload.requiresApproval) { [bool]$payload.requiresApproval } else { $true }
+          $task = New-TaskItem -ProjectRoot $projectRoot -Agent $targetAgent -Title ([string]$payload.title) -Phase ([string]$payload.phase) -Scope $payload.scope -Source ([string]$payload.source) -Mention $mention -Priority ([string]$payload.priority) -RequiresApproval $requiresApproval
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true; task = $task; mentions = $mentionNames })
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/task-run") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+          $taskId = [string]$payload.taskId
+          $queue = Get-TaskQueue -ProjectRoot $projectRoot
+          $task = @($queue.tasks | Where-Object { [string]$_.id -eq $taskId } | Select-Object -First 1)[0]
+          if (-not $task) { throw "Task not found: $taskId" }
+          if ([string]$task.status -notin @("pending", "failed")) { throw "Only pending or failed tasks can be started: $taskId" }
+          $task = Register-TaskAttempt -ProjectRoot $projectRoot -TaskId $taskId
+          $phaseForRun = [string]$task.phase
+          if (-not $phaseForRun.Trim()) { throw "Task phase is required: $taskId" }
+          $providerSettings = Read-Utf8JsonIfExists -Path (Get-ProviderSettingsPath)
+          if (-not $providerSettings -or -not ([string]$providerSettings.provider).Trim() -or -not ([string]$providerSettings.model).Trim()) { throw "No provider and model are configured for this task." }
+          $isLocalProvider = ([string]$providerSettings.baseUrl) -match '(?i)(localhost|127\.0\.0\.1|\.local)'
+          $protectedKey = [string]$providerSettings.apiKeyProtected
+          if (-not $isLocalProvider -and -not $protectedKey.Trim()) { throw "This provider requires an API key before a task can start." }
+          $apiKey = if ($protectedKey.Trim()) { Unprotect-ProviderSecret -ProtectedSecret $protectedKey } else { "" }
+          Set-ProviderEnvironment -Settings $providerSettings -ApiKey $apiKey
+          $providerScript = Join-Path $RepoRoot "scripts/provider_phase.ps1"
+          $logDir = Join-Path $projectRoot "runtime/provider-logs"
+          if (-not (Test-Path -LiteralPath $logDir -PathType Container)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+          $stamp = (Get-Date).ToString("yyyyMMdd-HHmmss")
+          $logOut = Join-Path $logDir ("{0}_{1}_{2}.out.log" -f $taskId, $phaseForRun, $stamp)
+          $logErr = Join-Path $logDir ("{0}_{1}_{2}.err.log" -f $taskId, $phaseForRun, $stamp)
+          $run = New-AgentRun -ProjectRoot $projectRoot -TaskId $taskId -Phase $phaseForRun -Provider ([string]$providerSettings.provider) -LogOut $logOut -LogErr $logErr
+          try {
+            $taskRunnerScript = Join-Path $RepoRoot "scripts/run_task_provider.ps1"
+            $process = Start-Process -FilePath "powershell" -ArgumentList @("-NoProfile","-ExecutionPolicy","Bypass","-File",$taskRunnerScript,"-ProviderScript",$providerScript,"-ProjectRoot",$projectRoot,"-Phase",$phaseForRun,"-RunId",$run.runId,"-TaskId",$taskId) -WindowStyle Hidden -RedirectStandardOutput $logOut -RedirectStandardError $logErr -PassThru
+            $run = Update-AgentRun -ProjectRoot $projectRoot -RunId $run.runId -Status "running" -ProcessId $process.Id
+            $task = Attach-AgentRunToTask -ProjectRoot $projectRoot -TaskId $taskId -RunId $run.runId
+            $task = Set-TaskStatus -ProjectRoot $projectRoot -TaskId $taskId -Status "in_flight"
+          } catch {
+            $null = Update-AgentRun -ProjectRoot $projectRoot -RunId $run.runId -Status "failed" -ErrorText $_.Exception.Message
+            throw
+          }
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true; task = $task; launched = $true; run = $run })
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/task-complete") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+          $summary = if ($payload.summary) { [string]$payload.summary } else { "Kullanıcı görevi tamamlandı olarak işaretledi." }
+          $task = Set-TaskStatus -ProjectRoot $projectRoot -TaskId ([string]$payload.taskId) -Status "completed" -Result ([ordered]@{ summary = $summary; verdict = $null; issues = $null; artifacts = @() })
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true; task = $task })
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/task-approve") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+          $result = Approve-TaskItem -ProjectRoot $projectRoot -TaskId ([string]$payload.taskId) -Approval ([string]$payload.approval) -By ([string]$payload.by)
+          Write-JsonHttpResponse -Stream $stream -Value $result
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/task-cancel") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+          Write-JsonHttpResponse -Stream $stream -Value (Cancel-TaskItem -ProjectRoot $projectRoot -TaskId ([string]$payload.taskId) -By ([string]$payload.by))
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/task-triggers/read") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true; triggers = (Get-TaskTriggers -ProjectRoot $projectRoot) })
+          continue
+        }
+
+        if ($method -eq "POST" -and $path -eq "/api/task-triggers/save") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+          $current = Get-TaskTriggers -ProjectRoot $projectRoot
+          $current.enabled = [bool]$payload.enabled
+          if ($payload.rules) { $current.rules = $payload.rules }
+          Save-TaskTriggers -ProjectRoot $projectRoot -Triggers $current
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $true; triggers = $current })
           continue
         }
 
@@ -3242,6 +3460,12 @@ try {
           continue
         }
 
+        if ($method -eq "POST" -and $path -eq "/api/save-book-map-desktop") {
+          $payload = Read-RequestBodyJson -Body ([string]$request.Body)
+          Write-JsonHttpResponse -Stream $stream -Value (Save-BookMapDesktop -Payload $payload)
+          continue
+        }
+
         if ($method -eq "POST" -and $path -eq "/api/diagnostics") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
           Write-JsonHttpResponse -Stream $stream -Value (Get-ProjectDiagnostics -Payload $payload)
@@ -3259,7 +3483,14 @@ try {
         }
         if ($method -eq "POST" -and $path -eq "/api/save-episode") {
           $payload = Read-RequestBodyJson -Body ([string]$request.Body)
-          Write-JsonHttpResponse -Stream $stream -Value (Save-Episode -Payload $payload)
+          $result = Save-Episode -Payload $payload
+          $triggered = @()
+          if ($result.ok) {
+            $projectRoot = Resolve-ExistingDirectory -Path ([string]$payload.projectRoot)
+            $episodeName = [string]$result.relativePath
+            $triggered = @(Evaluate-TaskTriggers -ProjectRoot $projectRoot -EventName "episode.saved" -Episode $episodeName)
+          }
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $result.ok; result = $result; triggered = $triggered })
           continue
         }
 if ($method -eq "POST" -and $path -eq "/api/manage-chapter") {

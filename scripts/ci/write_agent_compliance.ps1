@@ -20,7 +20,14 @@
   [string[]]$MissingItems = @()
 )
 
+# NOTE: This script must be invoked in-session, e.g. `& ./write_agent_compliance.ps1 -RequiredAgents $array`.
+# Passing arrays via `powershell -File` flattens them into positional arguments and fails
+# ("A positional parameter cannot be found that accepts argument 'episode-creator'").
+
 $ErrorActionPreference = "Stop"
+
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+try { $OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 
 function Ensure-Dir {
   param([string]$Path)

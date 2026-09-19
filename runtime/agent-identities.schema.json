@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kithub.local/schema/agent-identities.schema.json",
+  "title": "Ajan Kimlik Kartları",
+  "description": "KitHub ajanlarının Studio içindeki kimlik kartları. Kaynak yetki tanımları runtime/agent-registry.json'dur; bu dosya yalnızca görünüm/etkinlik özelleştirmelerini tutar.",
+  "type": "object",
+  "required": ["schema_version", "updated_at", "agents"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "enabled"],
+        "properties": {
+          "id": { "type": "string", "description": "runtime/agent-registry.json içindeki ajan adı (ör. tdk-polisher)" },
+          "label": { "type": "string", "description": "Studio'da gösterilen Türkçe ad (ör. TDK Düzenleyici)" },
+          "group": { "type": "string", "enum": ["planlama", "yazim", "duzenleme", "dogrulama", "export", "koordinasyon"] },
+          "enabled": { "type": "boolean", "description": "Kullanıcı bu ajanı @mention ile çağırabilir mi?" },
+          "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "description": "UI rozet rengi" },
+          "short": { "type": "string", "maxLength": 8, "description": "Kısa etiket (ör. TDK)" },
+          "notes": { "type": "string", "maxLength": 500 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

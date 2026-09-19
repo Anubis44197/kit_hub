@@ -1,0 +1,80 @@
+﻿{
+    "schema_version":  "1.0.0",
+    "run_id":  "RUN-IDE-TEST-001",
+    "profile_status":  "READY_FOR_APPROVAL",
+    "print_target":  "A5_DOCX",
+    "book_template":  "novel-standard",
+    "book_template_label":  "Standart Roman / A5",
+    "trim_size":  "A5",
+    "font_family":  "Times New Roman",
+    "body_font_size_pt":  11,
+    "line_spacing":  1.15,
+    "paragraph_alignment":  "justified",
+    "paragraph_spacing_policy":  "no_blank_line_between_body_paragraphs",
+    "chapter_start_policy":  "new_page",
+    "delivery_profiles":  {
+                              "publisher_submission":  {
+                                                           "enabled":  true,
+                                                           "purpose":  "clean Word file for editor/publisher review",
+                                                           "decoration":  "minimal",
+                                                           "page_numbers":  "omit_or_editor_added",
+                                                           "print_ready_claim_allowed":  false
+                                                       },
+                              "print_preview":  {
+                                                    "enabled":  true,
+                                                    "purpose":  "A5 book-like proof for reading and layout inspection",
+                                                    "chapter_start":  "new_page",
+                                                    "page_numbers":  "allowed_when_encoded",
+                                                    "print_ready_claim_allowed":  false
+                                                }
+                          },
+    "page_setup":  {
+                       "trim_size":  "A5",
+                       "width_mm":  148,
+                       "height_mm":  210,
+                       "margin_top_mm":  20,
+                       "margin_bottom_mm":  20,
+                       "margin_inside_mm":  18,
+                       "margin_outside_mm":  18,
+                       "source_note":  "Publisher-specific rules override this default profile."
+                   },
+    "typography":  {
+                       "body_style":  "KitHubBody",
+                       "chapter_title_style":  "KitHubChapterTitle",
+                       "front_matter_style":  "KitHubFrontMatter",
+                       "toc_style":  "KitHubToc",
+                       "paragraph_first_line_indent_cm":  0.6,
+                       "paragraph_spacing_after_pt":  0,
+                       "justification":  "both",
+                       "widow_orphan_control":  true,
+                       "heading_hierarchy_policy":  "chapter_title_then_body",
+                       "chapter_start_policy":  "new_page",
+                       "running_header_policy":  "none_for_submission_optional_for_preview"
+                   },
+    "front_matter":  {
+                         "title_page":  "required",
+                         "copyright_page":  "required_with_placeholder_metadata",
+                         "preface":  "included_when_requested",
+                         "table_of_contents":  "required_for_longform"
+                     },
+    "back_matter":  {
+                        "author_bio":  "optional",
+                        "acknowledgements":  "optional",
+                        "back_cover_copy":  "required_for_book_package"
+                    },
+    "page_numbering":  {
+                           "policy":  "front matter roman or unnumbered; body arabic",
+                           "front_matter":  "roman_or_unnumbered",
+                           "body":  "arabic_start_at_1"
+                       },
+    "cover":  {
+                  "front_cover_brief":  "required",
+                  "back_cover_copy":  "required_for_book_package",
+                  "spine_guidance":  "derive_after_page_count"
+              },
+    "rule_sources":  [
+                         "TDK yazim ve noktalama kurallari",
+                         "Ankara Nobel kitap yazim kilavuzu: Word, Times New Roman, 11 punto, iki yana yasli metin, baslik duzeni",
+                         "Publication metadata checklist: ISBN, kunye, bandrol and barcode are external/final publisher tasks"
+                     ]
+}

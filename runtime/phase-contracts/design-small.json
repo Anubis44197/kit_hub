@@ -14,6 +14,7 @@
                                 "skills/polish/references/source-citation-style-tdk.md"
                             ],
     "required_state_files":  [
+                                 "runtime/book-contract.json",
                                  "runtime/book-brief.json",
                                  "runtime/book-dna.json",
                                  "runtime/layout-profile.json",

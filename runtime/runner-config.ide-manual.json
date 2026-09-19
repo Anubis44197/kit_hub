@@ -1,0 +1,95 @@
+{
+  "execution_mode": "manual",
+  "adapter": {
+    "strategy": "manual_ide_agent",
+    "command_template": ""
+  },
+  "phase_commands": {
+    "intake": "",
+    "propose": "",
+    "design-big": "",
+    "design-small": "",
+    "create": "",
+    "polish": "",
+    "rewrite": "",
+    "export": ""
+  },
+  "phase_prompts": {
+    "intake": "Use agents/brief-interviewer.md, agents/book-dna-locker.md, and agents/layout-profile-planner.md. Ask/structure the pre-writing brief and layout package before any story proposal or manuscript writing.",
+    "propose": "Use agents/proposal-generator.md and write _workspace/01_proposals.md plus a *_proposal.md file.",
+    "design-big": "Use concept/character/plot/book structure agents. Write novel-config.md, design/01_concept_bootstrap.md, design/02_character_core.md, design/03_macro_plot_hooks.md, design/04_book_plan.md, design/05_chapter_plan.md, design/06_layout_plan.md, and matching revision/_state plan JSON files.",
+    "design-small": "After book-plan-approval.json is approved, write design/EP001-EP00N_scene_plan.md, character detail, and plot detail files for the selected chapter range.",
+    "create": "Write episode/epNNN.md files and required quality/TDK/layout artifacts under revision/_workspace/.",
+    "polish": "Run editorial agents, TDK/layout checks, and write revision reviewer plus editor reports.",
+    "rewrite": "Rewrite only when required, preserve state ledgers, and write rewrite plus quality-verifier artifacts.",
+    "export": "Build front matter, cover brief, publication-compliance artifacts, export manifest, and DOCX."
+  },
+  "quality_flags": {
+    "enable_dictionary_check": true,
+    "dictionary_check_command": "powershell -ExecutionPolicy Bypass -File scripts/ci/tdk_dict_check.ps1 -ProjectRoot \"{project_root}\" -Phase {phase} -RunId {run_id} {require_provider_arg}",
+    "require_dictionary_provider": false,
+    "require_phase_evidence": true,
+    "execution_claim_mode": "simulated",
+    "require_user_approvals": true,
+    "enforce_phase_contracts": true,
+    "enable_negative_enforcement": true,
+    "enable_text_quality_gates": true,
+    "require_executed_claims_for_critical_phases": false,
+    "enable_command_safety": true,
+    "enable_artifact_size_budget": true,
+    "max_text_artifact_bytes": 1500000,
+    "approval_files": {
+      "propose": "runtime/approvals/book-brief-approval.json",
+      "design-big": "runtime/approvals/story-choice.json",
+      "design-small": "runtime/approvals/book-plan-approval.json",
+      "create": "runtime/approvals/design-freeze.json",
+      "rewrite": "runtime/approvals/rewrite-approval.json",
+      "export": "runtime/approvals/export-approval.json"
+    },
+    "forbidden_content_patterns": [
+      "(?i)TL;DR",
+      "(?im)^\\s*Ozet\\s*:",
+      "(?im)^\\s*Summary\\s*:",
+      "\\[TODO\\]",
+      "(?i)lorem ipsum"
+    ],
+    "text_quality_gates": {
+      "max_duplicate_line_ratio": 0.28,
+      "max_repeated_paragraph_prefix": 1,
+      "paragraph_prefix_length": 95,
+      "tell_sensory_ratio_max": 2.4,
+      "require_dash_dialogue": true,
+      "forbid_mixed_dialogue_styles": true,
+      "min_psychological_markers": 6
+    },
+    "cross_chapter_gates": {
+      "max_chapter_similarity": 0.72,
+      "max_opening_prefix_repeat": 1,
+      "min_event_markers_per_chapter": 4
+    },
+    "retention": {
+      "enabled": true,
+      "max_runs": 20
+    }
+  },
+  "notes": [
+    "Use this profile when a human-operated IDE agent such as Cursor, Windsurf, Continue, Claude Code, or Codex writes files directly.",
+    "In IDE manual mode, the IDE agent or human operator writes creative content; kit_hub validates, tracks, and exports it.",
+    "Do not claim autonomous app authorship unless a provider/API/CLI command actually executed the phase.",
+    "Do not claim internet research occurred unless source artifacts were produced.",
+    "The runner waits after each phase, then validates the artifacts produced by the IDE agent.",
+    "No external API key is required by this repository in manual IDE mode.",
+    "Because the IDE agent is external to this runner, execution_claim_mode remains simulated, but artifact gates still run.",
+    "intake must present book-brief, book-dna, and layout-profile; propose is blocked until the user approves book-brief-approval.json.",
+    "design-big must present book, chapter, and layout plans; design-small is blocked until the user approves book-plan-approval.json.",
+    "Agent compliance manifests must include concrete output_artifacts plus matching artifact_hashes.",
+    "Agent compliance manifests must include contract_hashes for the current agent registry, status contract, and phase contract.",
+    "Agent orchestration is governed by runtime/agent-registry.json, runtime/agent-status-contract.json, and runtime/phase-contracts/*.json.",
+    "Agent compliance manifests must include agent_statuses; required agents must be completed.",
+    "Configured phase commands pass a fail-closed safety gate before execution.",
+    "Large text/JSON/Markdown artifacts are rejected unless split into bounded evidence.",
+    "The runner writes runtime/runs/{run_id}/run-journal.jsonl for phase audit events.",
+    "Exported DOCX text must match the current episode source files.",
+    "For machine-verifiable executed evidence, use runtime/runner-config.json command mode instead."
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "shots": [
+    "C:\\Users\\90535\\Desktop\\kit_hub-main\\_planlar\\ui-audit-2026-08-26\\06-editor-preview.png",
+    "C:\\Users\\90535\\Desktop\\kit_hub-main\\_planlar\\ui-audit-2026-08-26\\07-preview-tab.png",
+    "C:\\Users\\90535\\Desktop\\kit_hub-main\\_planlar\\ui-audit-2026-08-26\\08-engine-bottom.png"
+  ],
+  "audit": {
+    "editor": {
+      "x": 293,
+      "y": 65,
+      "width": 1071,
+      "height": 702,
+      "visible": true
+    },
+    "previewShell": {
+      "x": 809,
+      "y": 136,
+      "width": 540,
+      "height": 584,
+      "visible": true
+    },
+    "pageStage": {
+      "x": 810,
+      "y": 137,
+      "width": 538,
+      "height": 544,
+      "visible": true
+    },
+    "sidebarScrollTop": 759,
+    "sidebarScrollHeight": 1413,
+    "sidebarHeight": 654,
+    "advancedPanel": {
+      "x": 139,
+      "y": 380,
+      "width": 1078,
+      "height": 302,
+      "visible": true
+    },
+    "advancedOpen": true,
+    "topExportVisible": false
+  }
+}

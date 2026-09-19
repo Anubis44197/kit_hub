@@ -43,10 +43,18 @@ function Invoke-StudioJson {
 
 try {
   New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
-  $bridgeProcess = Start-Process -FilePath "powershell.exe" -ArgumentList @(
-    "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $bridgeScript,
-    "-RepoRoot", $ProjectRoot, "-Port", $port
-  ) -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -WindowStyle Hidden -PassThru
+  $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+  $startInfo.FileName = "powershell.exe"
+  $startInfo.Arguments = @(
+    "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$bridgeScript`"",
+    "-RepoRoot", "`"$ProjectRoot`"", "-Port", $port
+  ) -join " "
+  $startInfo.WorkingDirectory = $ProjectRoot
+  $startInfo.UseShellExecute = $false
+  $startInfo.CreateNoWindow = $true
+  $startInfo.RedirectStandardOutput = $true
+  $startInfo.RedirectStandardError = $true
+  $bridgeProcess = [System.Diagnostics.Process]::Start($startInfo)
 
   $ready = $false
   for ($attempt = 0; $attempt -lt 40; $attempt++) {
@@ -84,9 +92,15 @@ try {
 # Kitap Istegi
 
 ## Zorunlu Cevaplar
+- Calisma adi: Sifreli Defter
+- Yazar / imza: KitHub Test
 - Tur: Psikolojik gizem romani
+- Cikti hedefi: Kitap dosyasi
+- Yapi / plan sablonu: 3 Perde Yapisi
 - Hedef sayfa: 24
 - Hedef okur: Yetiskin psikolojik gizem okurlari
+- Okur seviyesi: Yetiskin
+- Kitap amaci: Psikolojik gizem romani icin tutarli plan olusturmak
 - Konu: Sifreli bir defterin aile sirrini aciga cikarmasi.
 - Karakterler: Defne Aral, sahaf Rauf, gazeteci Cem ve Nermin.
 - Donem ve mekan: Gunumuz Istanbul'u; Beyoglu ve Balat.
@@ -94,6 +108,7 @@ try {
 - Final: Defne gercegi ogrenir ve annesiyle yuzlesir.
 - Uslup: Edebi, akici ve psikolojik gerilim odakli.
 - Sinirlar: Grafik siddet ve gercek kisi iddialari yok.
+- Kaynak / gerceklik kurali: Gercek kisi iddiasi uretme
 - Yayin paketi: A5 DOCX, baslik sayfasi, icindekiler ve kapak briefi.
 "@
   $saveResponse = Invoke-StudioJson -Path "/api/save-book-request" -Method "POST" -SessionToken $session.token -Body @{
@@ -104,9 +119,13 @@ try {
   if ($saveResponse.StatusCode -ne 200 -or -not $save.ok) { throw "Named character request was not accepted." }
 
   $savedPath = Join-Path $runtimeDir "book-request.md"
+  $contractPath = Join-Path $runtimeDir "book-contract.json"
   if (-not (Test-Path -LiteralPath $savedPath -PathType Leaf)) { throw "runtime/book-request.md was not written." }
+  if (-not (Test-Path -LiteralPath $contractPath -PathType Leaf)) { throw "runtime/book-contract.json was not written." }
   $savedText = [System.IO.File]::ReadAllText($savedPath, [System.Text.Encoding]::UTF8)
   if ($savedText -ne $requestText) { throw "Saved book request does not match the submitted text." }
+  $contract = [System.IO.File]::ReadAllText($contractPath, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+  if ($contract.writing_family -ne "fiction") { throw "Expected fiction writing contract, got '$($contract.writing_family)'." }
 
   $invalidText = $requestText -replace '(?m)^- Karakterler:.*$', '- Karakterler: '
   $invalidRejected = $false

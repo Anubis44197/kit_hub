@@ -1,9 +1,18 @@
 param(
   [string]$ProjectRoot = (Get-Location).Path,
-  [string[]]$RequiredPhases = @("create","polish","rewrite","export")
+  [string[]]$RequiredPhases = @("create","polish","rewrite","export"),
+  [switch]$AllowSimulatedClaim
 )
 
 $ErrorActionPreference = "Stop"
+
+function Resolve-AbsolutePath {
+  param([string]$Root, [string]$Path)
+  if ([System.IO.Path]::IsPathRooted($Path)) {
+    return [System.IO.Path]::GetFullPath($Path)
+  }
+  return [System.IO.Path]::GetFullPath((Join-Path $Root $Path))
+}
 
 function Read-Utf8 {
   param([string]$Path)
@@ -32,10 +41,10 @@ Ensure-True -Condition ($pointer.PSObject.Properties.Name -contains "run_id") -M
 Ensure-True -Condition ($pointer.PSObject.Properties.Name -contains "summary_path") -Message "current-run.json missing summary_path"
 Ensure-True -Condition ($pointer.PSObject.Properties.Name -contains "run_journal_path") -Message "current-run.json missing run_journal_path"
 
-$summaryPath = Join-Path $ProjectRoot $pointer.summary_path
+$summaryPath = Resolve-AbsolutePath -Root $ProjectRoot -Path $pointer.summary_path
 Ensure-File $summaryPath
 $summary = Read-Utf8 -Path $summaryPath | ConvertFrom-Json
-$journalPath = Join-Path $ProjectRoot $pointer.run_journal_path
+$journalPath = Resolve-AbsolutePath -Root $ProjectRoot -Path $pointer.run_journal_path
 Ensure-File $journalPath
 $journalRaw = Read-Utf8 -Path $journalPath
 Ensure-True -Condition ($journalRaw -match '"event_type":"phase\.started"') -Message "run journal missing phase.started event"
@@ -52,17 +61,19 @@ foreach ($phase in $RequiredPhases) {
   Ensure-True -Condition ($phaseStep.status -eq "completed") -Message "Required phase not completed: $phase"
   Ensure-True -Condition ($phaseStep.PSObject.Properties.Name -contains "evidence_path") -Message "Phase step missing evidence_path: $phase"
 
-  $evidencePath = Join-Path $ProjectRoot $phaseStep.evidence_path
+  $evidencePath = Resolve-AbsolutePath -Root $ProjectRoot -Path $phaseStep.evidence_path
   Ensure-File $evidencePath
   $evidence = Read-Utf8 -Path $evidencePath | ConvertFrom-Json
 
   Ensure-True -Condition ($evidence.status -eq "completed") -Message "Phase evidence status is not completed: $phase"
   Ensure-True -Condition ($evidence.artifact_gate_passed -eq $true) -Message "artifact_gate_passed is false: $phase"
-  Ensure-True -Condition ($evidence.execution_claim_mode -eq "executed") -Message "execution_claim_mode is not executed: $phase"
+  if (-not $AllowSimulatedClaim) {
+    Ensure-True -Condition ($evidence.execution_claim_mode -eq "executed") -Message "execution_claim_mode is not executed: $phase"
+  }
   Ensure-True -Condition ($evidence.output_artifacts.Count -gt 0) -Message "No output_artifacts recorded for phase: $phase"
 
   foreach ($artifact in $evidence.output_artifacts) {
-    $artifactPath = Join-Path $ProjectRoot $artifact
+    $artifactPath = Resolve-AbsolutePath -Root $ProjectRoot -Path $artifact
     Ensure-File $artifactPath
   }
 }

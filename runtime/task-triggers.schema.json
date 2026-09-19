@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kithub.local/schema/task-triggers.schema.json",
+  "title": "Görev Tetikleyicileri (Task Triggers)",
+  "description": "Olay-güdümlü kurallar. Buzz buzz-workflow deseninden esinlenir (message_posted / reaction_added / schedule / webhook). KitHub karşılığı: episode.saved, approval.granted, phase.completed, mention, schedule. Bir kural tetiklendiğinde görev kuyruğuna görev ekler veya faz başlatır.",
+  "type": "object",
+  "required": ["schema_version", "updated_at", "enabled", "rules"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "enabled": { "type": "boolean", "description": "Tüm kurallar için ana anahtar" },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "on", "action"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^trigger-[0-9]+$" },
+          "name": { "type": "string", "maxLength": 200 },
+          "on": {
+            "type": "string",
+            "enum": ["episode.saved", "approval.granted", "phase.completed", "mention", "schedule"]
+          },
+          "match": {
+            "type": "object",
+            "description": "Kuralın çalışması için eşleşmesi gereken koşullar",
+            "properties": {
+              "phase": { "type": "string" },
+              "agent": { "type": "string", "description": "@mention ile oluşan görevlerde hedef ajan" },
+              "episode_pattern": { "type": "string", "description": "episode/ep*.md gibi glob" },
+              "approval": { "type": "string", "description": "onay dosyası adı (ör. design-freeze.json)" },
+              "not": { "type": "array", "items": { "type": "string" }, "description": "Hariç tutulan fazlar" }
+            },
+            "additionalProperties": false
+          },
+          "action": {
+            "type": "object",
+            "properties": {
+              "create_task": {
+                "type": "object",
+                "properties": {
+                  "agent": { "type": "string" },
+                  "title": { "type": "string" },
+                  "phase": { "type": "string" },
+                  "scope_kind": { "type": "string", "enum": ["phase", "episode", "chapter_range", "book"] },
+                  "requires_approval": { "type": "boolean", "default": true }
+                },
+                "required": ["agent"],
+                "additionalProperties": false
+              },
+              "run_phase": { "type": "string", "description": "run_pipeline.ps1 ile başlatılacak faz" }
+            },
+            "anyOf": [
+              { "required": ["create_task"] },
+              { "required": ["run_phase"] }
+            ],
+            "additionalProperties": false
+          },
+          "enabled": { "type": "boolean", "default": true }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

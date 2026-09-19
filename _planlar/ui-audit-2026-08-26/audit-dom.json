@@ -1,0 +1,66 @@
+{
+  "shots": [
+    "C:\\Users\\90535\\Desktop\\kit_hub-main\\_planlar\\ui-audit-2026-08-26\\01-start.png",
+    "C:\\Users\\90535\\Desktop\\kit_hub-main\\_planlar\\ui-audit-2026-08-26\\02-new-book-card.png",
+    "C:\\Users\\90535\\Desktop\\kit_hub-main\\_planlar\\ui-audit-2026-08-26\\03-advanced-engine-open.png",
+    "C:\\Users\\90535\\Desktop\\kit_hub-main\\_planlar\\ui-audit-2026-08-26\\04-page-design-card.png",
+    "C:\\Users\\90535\\Desktop\\kit_hub-main\\_planlar\\ui-audit-2026-08-26\\05-ai-publish-status-card.png"
+  ],
+  "audit": {
+    "bodyClass": "surface-open nav-collapsed type-collapsed",
+    "launcher": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "visible": false
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "visible": false
+    },
+    "typography": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "visible": false
+    },
+    "agents": {
+      "x": 93,
+      "y": 56,
+      "width": 1180,
+      "height": 656,
+      "visible": true
+    },
+    "workspace": {
+      "x": 1,
+      "y": 65,
+      "width": 943,
+      "height": 702,
+      "visible": true
+    },
+    "previewShell": {
+      "x": 457,
+      "y": 136,
+      "width": 472,
+      "height": 584,
+      "visible": true
+    },
+    "visibleContextButtons": [],
+    "workflowLabels": [
+      "Yaz",
+      "Plan",
+      "AI Düzelt",
+      "Sayfa Tasarla",
+      "Yayına Hazırla",
+      "İşlem Durumu"
+    ],
+    "utilitySectionsVisible": 0,
+    "advancedOpen": true,
+    "chapterActionMenuHidden": true
+  }
+}

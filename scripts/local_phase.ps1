@@ -5,10 +5,16 @@
   [ValidateSet("intake","propose","design-big","design-small","create","polish","rewrite","export")]
   [string]$Phase,
   [Parameter(Mandatory = $true)]
-  [string]$RunId
+  [string]$RunId,
+  [switch]$CopyToDesktop
 )
 
 $ErrorActionPreference = "Stop"
+
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+try { $OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+
+. (Join-Path $PSScriptRoot "book_contract.ps1")
 
 function Ensure-Dir {
   param([string]$Path)
@@ -112,10 +118,10 @@ function Get-RelativePath {
 
 function Get-BookSeed {
   $requestPath = Join-Path $ProjectRoot "runtime/book-request.md"
-  Ensure-File -Path $requestPath -Message "Book request missing: runtime/book-request.md içine önce kullanıcı konusunu yazın. Konu olmadan varsayılan roman üretilmez."
+  Ensure-File -Path $requestPath -Message "Book request missing: runtime/book-request.md içine önce kullanıcı konusunu ve kitap haritasını yazın. Konu olmadan varsayılan içerik üretilmez."
   $raw = (Read-Utf8 -Path $requestPath).Trim()
   if (-not $raw -or $raw -match "(?i)^\s*(#\s*)?(konu bekleniyor|topic pending|todo|buraya.*konu)") {
-    throw "Book request missing: runtime/book-request.md içine önce kullanıcı konusunu yazın. Konu olmadan varsayılan roman üretilmez."
+    throw "Book request missing: runtime/book-request.md içine önce kullanıcı konusunu ve kitap haritasını yazın. Konu olmadan varsayılan içerik üretilmez."
   }
   return $raw
 }
@@ -609,7 +615,7 @@ $seed
 - Risk: Olay ilerlemesi yavaşlayabilir; her sahne dramatik işlev taşımalıdır.
 
 ## Zorunlu Sonraki Adım
-Bu aşama roman yazmaz. Kullanıcı runtime/approvals/story-choice.json dosyasında bir öneriyi seçip approved=true yapmadan tasarım ve yazım aşaması başlamaz.
+Bu aşama nihai metin yazmaz. Kullanıcı runtime/approvals/story-choice.json dosyasında bir yön önerisini seçip approved=true yapmadan tasarım ve yazım aşaması başlamaz.
 "@
 
   Write-Utf8 -Path (Join-Path $workspace "01_proposals.md") -Content $proposal
@@ -623,7 +629,7 @@ Bu aşama roman yazmaz. Kullanıcı runtime/approvals/story-choice.json dosyası
       selected_option = ""
       approved_by = ""
       approved_at = ""
-      note = "Set approved=true and selected_option to 1, 2, or 3 only after the user chooses the story direction."
+        note = "Set approved=true and selected_option to 1, 2, or 3 only after the user chooses the content direction."
     })
   }
 
@@ -632,33 +638,45 @@ Bu aşama roman yazmaz. Kullanıcı runtime/approvals/story-choice.json dosyası
 
 function Get-BookRequestField {
   param([string]$Text, [string[]]$Labels)
-  foreach ($label in $Labels) {
-    $pattern = "(?im)^\s*-\s*" + [regex]::Escape($label) + "\s*:\s*(.+?)\s*$"
-    $match = [regex]::Match($Text, $pattern)
-    if ($match.Success) { return $match.Groups[1].Value.Trim() }
-  }
-  return ""
+  return Get-KitHubBookRequestField -Text $Text -Labels $Labels
 }
 
 function Invoke-Intake {
   $seed = Get-BookSeed
+  $contract = Save-KitHubBookContract -ProjectRoot $ProjectRoot -Text $seed -RunId $RunId
   $approvalDir = Join-Path $ProjectRoot "runtime/approvals"
   Ensure-Dir $approvalDir
 
   $writingType = Get-BookRequestField -Text $seed -Labels @("Tür", "Tur", "Yazı türü", "Yazi turu")
   $targetPages = Get-BookRequestField -Text $seed -Labels @("Hedef sayfa")
   $targetLength = if ($targetPages) { "$targetPages sayfa" } else { Get-BookRequestField -Text $seed -Labels @("Hedef uzunluk", "Uzunluk") }
-  $premise = Get-BookRequestField -Text $seed -Labels @("Konu", "Ana konu")
-  $characters = Get-BookRequestField -Text $seed -Labels @("Karakterler", "Karakter politikası", "Karakter politikasi")
+  $premise = Get-BookRequestField -Text $seed -Labels @("Konu", "Ana konu", "Araştırma Sorusu", "Öğrenme Hedefi", "Problem")
+  $characters = Get-BookRequestField -Text $seed -Labels @("Karakterler", "Karakter politikası", "Karakter politikasi", "Kaynaklar", "Kanıt", "Veri", "Örnekler")
   $targetReader = Get-BookRequestField -Text $seed -Labels @("Hedef okur", "Okur")
   $genre = Get-BookRequestField -Text $seed -Labels @("Alt tür", "Alt tur", "Tür", "Tur")
-  $settingPeriod = Get-BookRequestField -Text $seed -Labels @("Dönem ve mekân", "Donem ve mekan", "Mekân ve dönem", "Mekan ve donem")
-  $povTense = Get-BookRequestField -Text $seed -Labels @("Anlatıcı", "Anlatici", "Bakış açısı ve zaman", "Bakis acisi ve zaman")
+  $settingPeriod = Get-BookRequestField -Text $seed -Labels @("Dönem ve mekân", "Donem ve mekan", "Mekân ve dönem", "Mekan ve donem", "Kapsam", "Seviye")
+  $povTense = Get-BookRequestField -Text $seed -Labels @("Anlatıcı", "Anlatici", "Bakış açısı ve zaman", "Bakis acisi ve zaman", "Yöntem", "Yontem", "Analiz Yöntemi", "Öğretim Yaklaşımı")
   $styleTone = Get-BookRequestField -Text $seed -Labels @("Üslup", "Uslup")
-  $boundaries = Get-BookRequestField -Text $seed -Labels @("Sınırlar", "Sinirlar")
-  $publicationPackage = Get-BookRequestField -Text $seed -Labels @("Yayın paketi", "Yayin paketi")
-  $characterPolicy = if ($characters) { "Kullanıcı tarafından verilen karakterler kullanılacak: $characters" } else { "" }
-  $answersComplete = [bool]($writingType -and $premise -and $targetLength -and $targetReader -and $genre -and $characterPolicy -and $settingPeriod -and $povTense -and $styleTone -and $boundaries -and $publicationPackage)
+  $boundaries = Get-BookRequestField -Text $seed -Labels @("Sınırlar", "Sinirlar", "Atıf", "Varsayım", "Güvenlik")
+  $publicationPackage = Get-BookRequestField -Text $seed -Labels @("Yayın paketi", "Yayin paketi", "Çıktı hedefi", "Cikti hedefi")
+  $structureTemplate = Get-BookRequestField -Text $seed -Labels @("Yapı", "Yapi")
+  $focusPolicyLabel = if ($contract.writing_family -in @("fiction", "screenplay")) { "character_policy" } elseif ($contract.writing_family -eq "academic") { "literature_policy" } elseif ($contract.writing_family -eq "report") { "evidence_policy" } elseif ($contract.writing_family -eq "instructional") { "example_exercise_policy" } elseif ($contract.writing_family -eq "poetry") { "voice_image_policy" } else { "source_example_policy" }
+  $focusPolicyQuestion = if ($contract.writing_family -in @("fiction", "screenplay")) {
+    "Karakterleri siz mi vereceksiniz, yoksa sistem karakter onerisi sunsun mu?"
+  } elseif ($contract.writing_family -eq "academic") {
+    "Literatur, atif stili, veri/evren-orneklem ve kaynak siniri nasil uygulanacak?"
+  } elseif ($contract.writing_family -eq "report") {
+    "Veri, kanit, varsayim ve oneriler hangi sinirlarla kullanilacak?"
+  } elseif ($contract.writing_family -eq "instructional") {
+    "Ornekler, alistirmalar, seviye ve uygulama ciktilari nasil planlanacak?"
+  } elseif ($contract.writing_family -eq "poetry") {
+    "Siirsel ses, imge alani, tema ve bicim sinirlari nasil korunacak?"
+  } else {
+    "Kaynak, ornek, vaka veya ana odak politikasi nasil uygulanacak?"
+  }
+  $focusPolicy = if ($characters) { "$($contract.family_title): $characters" } else { "" }
+  $characterPolicy = $focusPolicy
+  $answersComplete = [bool]($writingType -and $premise -and $targetLength -and $targetReader -and $genre -and $focusPolicy -and $settingPeriod -and $povTense -and $styleTone -and $boundaries -and $publicationPackage)
   $briefStatus = if ($answersComplete) { "READY_FOR_APPROVAL" } else { "QUESTIONS_PENDING" }
 
   Write-Json -Path (Join-Path $ProjectRoot "runtime/book-brief.json") -Value ([ordered]@{
@@ -668,12 +686,15 @@ function Invoke-Intake {
     brief_status = $briefStatus
     intake_policy = "Do not propose, plan, write, polish, rewrite, or export until required_user_questions are answered or explicitly accepted by the user."
     writing_intent = [ordered]@{
-      writing_type = "ask_user"
-      genre = "ask_user_or_suggest"
-      target_reader = "ask_user"
-      target_pages = "ask_user"
+      writing_type = $writingType
+      writing_family = $contract.writing_family
+      genre = $genre
+      target_reader = $targetReader
+      target_pages = $targetPages
       target_words = "derive_after_target_pages"
       target_chapters = "derive_after_target_pages"
+      output_target = $contract.output_target
+      structure_template = $contract.structure_template
     }
     required_user_questions = @(
       [ordered]@{ id = "writing_type"; question = "Ne yazmak istiyorsunuz: roman, hikaye, novella, deneme, biyografi, ani, arastirma kitabi, cocuk kitabi veya baska bir tur mu?"; required = $true; answer_required_for_approval = $true },
@@ -681,7 +702,7 @@ function Invoke-Intake {
       [ordered]@{ id = "target_length"; question = "Hedef uzunluk nedir: sayfa, kelime veya bolum sayisi? Ornek: 10 sayfa, 270 sayfa, 500 sayfa."; required = $true; answer_required_for_approval = $true },
       [ordered]@{ id = "target_reader"; question = "Hedef okur kim?"; required = $true; answer_required_for_approval = $true },
       [ordered]@{ id = "genre"; question = "Tur/alt tur nedir veya sistem hangi turleri onersin?"; required = $true; answer_required_for_approval = $true },
-      [ordered]@{ id = "character_policy"; question = "Karakterleri siz mi vereceksiniz, yoksa sistem karakter onerisi sunsun mu?"; required = $true; answer_required_for_approval = $true },
+      [ordered]@{ id = $focusPolicyLabel; question = $focusPolicyQuestion; required = $true; answer_required_for_approval = $true },
       [ordered]@{ id = "setting_period"; question = "Mekan, donem ve gercek bilgi/kaynak gereksinimi var mi?"; required = $true; answer_required_for_approval = $true },
       [ordered]@{ id = "pov_tense"; question = "Bakis acisi ve anlatim zamani tercihiniz var mi?"; required = $true; answer_required_for_approval = $true },
       [ordered]@{ id = "style_tone"; question = "Uslup nasil olsun: sade, edebi, yogun betimlemeli, hizli tempolu, akademik veya baska?"; required = $true; answer_required_for_approval = $true },
@@ -695,13 +716,20 @@ function Invoke-Intake {
       target_pages = $targetPages
       target_reader = $targetReader
       genre = $genre
-      character_policy = $characterPolicy
+      character_policy = $focusPolicy
+      focus_policy_key = $focusPolicyLabel
+      focus_policy = $focusPolicy
       setting_period = $settingPeriod
       pov_tense = $povTense
       style_tone = $styleTone
       boundaries = $boundaries
       publication_package = $publicationPackage
+      writing_family = $contract.writing_family
+      family_title = $contract.family_title
+      structure_template = $structureTemplate
+      output_target = $contract.output_target
     }
+    writing_contract = $contract
     suggested_defaults = [ordered]@{
       target_length = "Ask the user; do not assume. If the user says 'sen sec', choose a length and record that approval."
       publication_package = "publisher_submission_docx, print_preview_docx, title page, copyright placeholder, preface optional, table of contents, cover brief, back cover copy"
@@ -712,7 +740,7 @@ function Invoke-Intake {
       "answers.target_length or answers.target_pages must be filled",
       "answers.target_reader must be filled",
       "answers.genre must be filled or explicitly delegated to the system",
-      "answers.character_policy must be filled",
+      "answers.focus_policy must be filled for the selected writing family",
       "answers.style_tone must be filled",
       "answers.publication_package must be filled"
     )
@@ -727,12 +755,15 @@ function Invoke-Intake {
     locked = $false
     source_prompt = $seed
     continuity_policy = "No chapter writing before approved brief, approved book plan, and approved layout profile."
-    required_locks = @("writing_type", "genre", "target_length", "pov", "tense", "character_policy", "setting_policy", "style_policy", "source_policy", "front_matter_policy", "cover_policy")
-    locked_answers_required = @("writing_type", "premise", "target_length", "target_reader", "genre", "character_policy", "setting_period", "pov_tense", "style_tone", "boundaries", "publication_package")
+    required_locks = @("writing_type", "genre", "target_length", "pov", "tense", "focus_policy", "setting_policy", "style_policy", "source_policy", "front_matter_policy", "cover_policy")
+    locked_answers_required = @("writing_type", "premise", "target_length", "target_reader", "genre", "focus_policy", "setting_period", "pov_tense", "style_tone", "boundaries", "publication_package")
     user_supplied_characters = if ($characters) { @($characters) } else { @() }
-    proposed_characters_allowed = (-not [bool]$characters)
+    proposed_characters_allowed = ($contract.writing_family -eq "fiction" -and -not [bool]$characters)
+    writing_contract = $contract
+    writing_family = $contract.writing_family
+    generation_rule = $contract.generation_rule
     factual_source_policy = "Biografi, arastirma, tarih, saglik, hukuk, teknik ve gercek kisi/kurum anlatilarinda kaynak artefakti olmadan dogruluk iddiasi kurulamaz."
-    plan_before_writing_policy = "The system must present story direction, book plan, chapter plan, continuity model, and layout plan for user approval before any manuscript text is created."
+    plan_before_writing_policy = "The system must present content direction, book plan, chapter/section plan, continuity model, and layout plan for user approval before any manuscript text is created."
   })
 
   Write-Json -Path (Join-Path $ProjectRoot "runtime/layout-profile.json") -Value ([ordered]@{
@@ -740,8 +771,11 @@ function Invoke-Intake {
     run_id = $RunId
     profile_status = $briefStatus
     print_target = "A5_DOCX"
-    book_template = "novel-standard"
-    book_template_label = "Standart Roman / A5"
+    writing_family = $contract.writing_family
+    output_target = $contract.output_target
+    structure_template = $contract.structure_template
+    book_template = if ($contract.writing_family -eq "fiction") { "novel-standard" } elseif ($contract.writing_family -eq "academic") { "academic-document" } elseif ($contract.writing_family -eq "article") { "article-document" } elseif ($contract.writing_family -eq "instructional") { "instructional-guide" } elseif ($contract.writing_family -eq "report") { "report-whitepaper" } else { "publication-standard" }
+    book_template_label = "$($contract.family_title) / A5"
     trim_size = "A5"
     font_family = "Times New Roman"
     body_font_size_pt = 11
@@ -832,11 +866,13 @@ function Invoke-Intake {
     })
   }
 
-  Write-AgentCompliance -PhaseName "intake" -RequiredAgents @("brief-interviewer", "book-dna-locker", "layout-profile-planner") -RequiredReferences @("skills/intake/SKILL.md", "skills/polish/references/writing-type-profiles.md", "skills/polish/references/docx-professional-style-contract.md") -LoadedStateFiles @("runtime/book-request.md") -OutputArtifacts @("runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json")
+  Write-AgentCompliance -PhaseName "intake" -RequiredAgents @("brief-interviewer", "book-dna-locker", "layout-profile-planner") -RequiredReferences @("skills/intake/SKILL.md", "skills/polish/references/writing-type-profiles.md", "skills/polish/references/docx-professional-style-contract.md") -LoadedStateFiles @("runtime/book-request.md") -OutputArtifacts @("runtime/book-contract.json", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json")
 }
 
 function Invoke-DesignBig {
   $seed = Get-BookSeed
+  $contractPath = Join-Path $ProjectRoot "runtime/book-contract.json"
+  $contract = if (Test-Path -LiteralPath $contractPath -PathType Leaf) { Read-Json -Path $contractPath } else { Save-KitHubBookContract -ProjectRoot $ProjectRoot -Text $seed -RunId $RunId }
   Ensure-Approved -RelativePath "runtime/approvals/book-brief-approval.json" -GateName "Book brief approval" | Out-Null
   $choice = Get-StoryChoice
   $layoutProfile = Read-Json -Path (Join-Path $ProjectRoot "runtime/layout-profile.json")
@@ -853,10 +889,13 @@ function Invoke-DesignBig {
   $scaleTier = [string]$scale.scale_tier
   $maxChaptersPerBatch = [int]$scale.max_chapters_per_batch
   $auditIntervalChapters = [int]$scale.audit_interval_chapters
-  $protagonistName = "$projectName yolcusu"
+  if ($contract.structure_template) { $structureModel = [string]$contract.structure_template }
+  $protagonistName = if ($contract.writing_family -eq "fiction") { "$projectName yolcusu" } elseif ($contract.writing_family -eq "report") { "$projectName karar odağı" } elseif ($contract.writing_family -eq "academic") { "$projectName araştırma odağı" } elseif ($contract.writing_family -eq "instructional") { "$projectName öğrenme odağı" } else { "$projectName ana odağı" }
   if ($protagonistName.Length -gt 70) { $protagonistName = $protagonistName.Substring(0, 70).Trim() }
-  $genreLabel = if ($targetChapters -le 5) { "edebi hikaye" } else { "uzun roman" }
-  $themeLabel = "hafiza, karar ve sonuclar"
+  $genreLabel = if ($contract.writing_type) { [string]$contract.writing_type } elseif ($targetChapters -le 5) { "kısa çalışma" } else { "uzun kitap çalışması" }
+  $themeLabel = if ($contract.premise) { [string]$contract.premise } else { "hafiza, karar ve sonuclar" }
+  $unitProgressRule = if ($contract.writing_family -eq "fiction") { "olay, karakter veya tema açısından ölçülebilir yeni ilerleme" } elseif ($contract.writing_family -eq "academic") { "araştırma sorusu, yöntem, literatür veya tartışma açısından ölçülebilir yeni ilerleme" } elseif ($contract.writing_family -eq "instructional") { "öğrenme hedefi, örnek, alıştırma veya uygulama çıktısı açısından ölçülebilir yeni ilerleme" } elseif ($contract.writing_family -eq "report") { "karar sorusu, kanıt, bulgu veya öneri açısından ölçülebilir yeni ilerleme" } else { "ana amaç, kapsam, kanıt veya okur çıktısı açısından ölçülebilir yeni ilerleme" }
+  $advanceAxes = if ($contract.writing_family -eq "fiction") { @("plot", "character", "theme") } elseif ($contract.writing_family -eq "academic") { @("research_question", "methodology", "evidence") } elseif ($contract.writing_family -eq "instructional") { @("learning_objective", "example", "exercise") } elseif ($contract.writing_family -eq "report") { @("decision_question", "evidence", "recommendation") } else { @("argument", "evidence", "reader_value") }
   $design = Join-Path $ProjectRoot "design"
   $state = Get-StateDir
   Ensure-Dir $design
@@ -874,36 +913,45 @@ $seed
 Öneri $($choice.selected_option)
 
 ## Üretim Kuralı
-Bu dosya iskelet kurar; gerçek roman metni provider/IDE ajanı/human yazar tarafından üretilecektir.
+Bu dosya iskelet kurar; gerçek içerik/metin provider/IDE ajanı veya insan yazar tarafından üretilecektir.
+
+## Tür Ailesi Sözleşmesi
+- Aile: $($contract.family_title)
+- Kural: $($contract.generation_rule)
+- Yapı: $($contract.structure_template)
+- Çıktı: $($contract.output_target)
 "@
 
   Write-Utf8 -Path (Join-Path $design "02_character_core.md") -Content @"
-# Karakter Çekirdeği
+# Odak / Varlık Çekirdeği
 
 run_id: $RunId
 
 ## Zorunlu Tasarım Alanları
-- Başkarakter: ad, arzu, korku, zaaf, dönüşüm çizgisi.
-- Karşı güç: insan, durum, sır, toplum veya iç engel.
-- İlişki haritası: her önemli karakterin bildiği ve bilmediği bilgiler.
+- Kurguysa: karakter, arzu, korku, zaaf, dönüşüm çizgisi.
+- Akademik/raporsa: araştırma odağı, kaynak/kanıt politikası, yöntem, sınırlılık.
+- Eğitim/rehberse: öğrenme hedefi, seviye, örnek ve alıştırma akışı.
+- Her türde: okurun izleyeceği ana odak ve bu odağın bölüm/parça boyunca nasıl ilerlediği.
 
 Bu alanlar gerçek yazıma geçmeden önce IDE ajanı veya provider tarafından somutlaştırılmalıdır.
 "@
 
   Write-Utf8 -Path (Join-Path $design "03_macro_plot_hooks.md") -Content @"
-# Makro Plot Rehberi
+# Makro Yapı Rehberi
 
 run_id: $RunId
 
-## Zorunlu Kurgu Alanları
-- Açılış vaadi
-- Kışkırtıcı olay
-- Orta nokta dönüşü
-- En düşük nokta
-- Doruk
-- Sonuç ve kapanan vaatler
+## Tür Ailesi
+$($contract.family_title)
 
-Her bölüm önceki bölümün sonucundan doğmalı; bölüm tekrarları ve teknik sahne etiketleri yasaktır.
+## Zorunlu Yapı Alanları
+- Başlangıç vaadi / problem / araştırma sorusu
+- Gelişim: kanıt, olay, yöntem, örnek veya bulgu akışı
+- Orta dönüş: okur bilgisinin veya ana argümanın değiştiği yer
+- Sonuç: final, tartışma, karar notu, uygulama çıktısı veya okur aksiyonu
+- Kapanan vaatler ve açık kalan sınırlar
+
+Her bölüm/parça önceki bölümün sonucundan doğmalı; tekrarlar ve teknik sahne etiketleri okur çıktısına girmemelidir.
 "@
 
   $chapters = @()
@@ -915,21 +963,22 @@ Her bölüm önceki bölümün sonucundan doğmalı; bölüm tekrarları ve tekn
       id = $chapterId
       reader_label = $readerTitle
       target_words = $wordsPerChapter
-      purpose = "Bu bölüm olay, karakter veya tema açısından ölçülebilir yeni ilerleme taşımalıdır."
-      must_advance = @("plot", "character", "theme")
+      purpose = "Bu bölüm/parça $unitProgressRule taşımalıdır."
+      must_advance = $advanceAxes
     }
     $chapterPlan += [ordered]@{
       id = $chapterId
       reader_title = $readerTitle
-      purpose = "Önceki bölümün sonucundan doğan yeni olay, karar veya çatışma üret."
-      events = @("Yeni bilgi ortaya çıkar.", "Karakter bir seçim yapmak zorunda kalır.", "Bölüm sonunda geri alınamaz bir sonuç oluşur.")
-      character_focus = @("Ana karakterin arzusu, korkusu ve bilgi sınırı güncellenir.")
-      continuity_promises = @("Bölüm sonucu sonraki bölümün nedenini oluşturur.", "Tekrarlanan açılış ve teknik sahne etiketi kullanılmaz.")
+      purpose = "Önceki bölüm/parçanın sonucundan doğan yeni bilgi, karar, kanıt, örnek veya çatışma üret."
+      events = @("Yeni bilgi, kanıt, olay veya örnek ortaya çıkar.", "Okurun anlayışı veya ana odak ölçülebilir biçimde ilerler.", "Bölüm/parça sonunda geri alınamaz bir sonuç veya net ara çıktı oluşur.")
+      character_focus = @("Kurguysa karakter odağı; diğer türlerde ana konu, kaynak/kanıt veya öğrenme odağı güncellenir.")
+      continuity_promises = @("Bölüm/parça sonucu sonraki bölümün nedenini oluşturur.", "Tekrarlanan açılış ve teknik sahne etiketi kullanılmaz.")
       target_words = $wordsPerChapter
     }
   }
 
   $requiredStateFiles = @(
+    "runtime/book-contract.json",
     "revision/_state/book-plan.json",
     "revision/_state/chapter-plan.json",
     "revision/_state/layout-plan.json",
@@ -963,11 +1012,15 @@ plan_id: $planId
 $seed
 
 ## Yazım Başlamadan Önce Zorunlu Onay
-Bu plan, karakterler, olay akışı, bölüm hedefleri ve baskı sayfa hesabı kullanıcı tarafından onaylanmadan yazım fazı başlayamaz.
+Bu plan, seçilen tür ailesi, yapı, bölüm/parça hedefleri ve yayın çıktısı kullanıcı tarafından onaylanmadan yazım fazı başlayamaz.
 
 ## Çekirdek Plan
 - Çalışma adı: $projectName
-- Hedef tür: kullanıcı isteğinden türetilecek
+- Hedef tür: $genreLabel
+- Tür ailesi: $($contract.family_title)
+- Üretim kuralı: $($contract.generation_rule)
+- Çıktı hedefi: $($contract.output_target)
+- Yapı şablonu: $($contract.structure_template)
 - Hedef bölüm: $targetChapters
 - Hedef kelime: $targetWords
 - Hedef sayfa: $targetPages
@@ -990,6 +1043,7 @@ run_id: $RunId
 plan_id: $planId
 
 Her bölüm önceki bölümün sonucundan doğmalı, yeni bilgi üretmeli ve karakter/olay durumunu değiştirmelidir. Okur çıktısında EP kodu veya sahne etiketi kullanılamaz.
+Tür ailesi kuralı: $($contract.generation_rule)
 
 $chapterPlanMarkdown
 "@
@@ -1021,6 +1075,8 @@ plan_id: $planId
     title_working = $projectName
     writing_type = $genreLabel
     genre = $genreLabel
+    writing_family = $contract.writing_family
+    writing_contract = $contract
     theme = $themeLabel
     premise = $seed
     scale_tier = $scaleTier
@@ -1030,19 +1086,19 @@ plan_id: $planId
     tense = "gecmis zaman"
     characters = @(
       [ordered]@{
-        role = "protagonist"
+        role = if ($contract.writing_family -eq "fiction") { "protagonist" } else { "primary_focus" }
         name = $protagonistName
-        desire = "Verilen konunun merkezindeki ihtiyaci tamamlamak ve kendi kararinin sonucuyla yuzlesmek."
-        fear = "Gecmis kararlarinin bugunku iliskilerini ve benlik algisini bozmasi."
-        arc = "Baslangicta gozlemci ve kacingen; ortada karar vermeye zorlanan; sonda sonucu sahiplenen karakter."
+        desire = "Seçilen tür ailesinin ana amacını tamamlamak: $($contract.planning_policy)"
+        fear = "Tür dışı varsayım, uydurma kaynak, tekrarlı bölüm veya kullanıcı sınırlarını ihlal etme riski."
+        arc = "Başlangıçta kapsamı kurar; ortada kanıt/olay/öğrenme akışını ilerletir; sonda vaat edilen çıktıyı kapatır."
       }
     )
     plot_arc = [ordered]@{
-      opening_promise = "Okur, konunun merkezindeki karakterin siradan gorunen aninda sakli gerilimi sezer."
-      inciting_incident = "Karakterin rutinini bozan kucuk ama geri donulmez bir isaret veya karsilasma ortaya cikar."
-      midpoint_turn = "Karakter, dis olaydan cok kendi payini gormeye baslar ve pasif konumdan cikar."
-      climax = "Karakter, kacindigi bilgiyi veya duyguyu acik bir secimle karsilar."
-      resolution = "Sonuc, acilis vaadini kapatir ve karakterin degisimini okura somut davranisla gosterir."
+      opening_promise = "Okur, seçilen türün ana vaadini ve kapsamını ilk bölüm/parçada açıkça görür."
+      inciting_incident = "Ana soru, problem, olay, öğrenme hedefi veya karar ihtiyacı geri dönülmez biçimde kurulur."
+      midpoint_turn = "Okurun bilgisi, argümanın yönü veya ana odağın durumu ölçülebilir biçimde değişir."
+      climax = "Metin ana çatışmayı, karar sorusunu, tartışmayı, uygulama görevini veya şiirsel doruğu karşılar."
+      resolution = "Sonuç, açılış vaadini seçilen çıktı hedefiyle uyumlu biçimde kapatır."
     }
     chapter_count = $targetChapters
     max_chapters_per_batch = $maxChaptersPerBatch
@@ -1075,6 +1131,8 @@ plan_id: $planId
     target_pages = $targetPages
     target_words = $targetWords
     target_chapters = $targetChapters
+    writing_family = $contract.writing_family
+    writing_contract = $contract
     scale_tier = $scaleTier
     max_chapters_per_batch = $maxChaptersPerBatch
     audit_interval_chapters = $auditIntervalChapters
@@ -1096,13 +1154,13 @@ plan_id: $planId
     structure_model = $structureModel
     max_chapters_per_batch = $maxChaptersPerBatch
     audit_interval_chapters = $auditIntervalChapters
-    continuity_model = "world_graph_plus_promise_payoff"
+    continuity_model = if ($contract.writing_family -eq "fiction") { "world_graph_plus_promise_payoff" } else { "contract_scope_evidence_progression" }
     production_mode = "approval_gated_chunked_longform"
     chapters = $chapters
     required_state_files = $requiredStateFiles
   })
-  Write-Json -Path (Join-Path $state "character-state.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; characters = @([ordered]@{ id = "protagonist"; name = $protagonistName; stable_traits = @("gozlemci", "ic gerilimini saklayan", "karar aninda gec tepki veren"); knows = @("Kendi gorunen davranisinin ardinda bitmemis bir hesap oldugunu sezer."); does_not_know = @("Karsilasacagi sonucun onu hangi secime zorlayacagini bilmez."); arc_position = "opening" }); required = @("stable_traits", "knows", "does_not_know", "arc_position") })
-  Write-Json -Path (Join-Path $state "plot-ledger.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; main_question = "Karakter verilen konunun yarattigi gerilim karsisinda kacmak yerine sonucunu sahiplenebilecek mi?"; open_threads = @("Acilis anindaki sakli gerilim", "Karakterin gecmis kararinin bugune etkisi", "Son secimin bedeli"); closed_threads = @(); cause_effect_chain = @("Konu istegi karakterin rutinini kurar.", "Rutin bozulunca karakterin sakladigi duygu gorunur."); final_promises = @("Acilis vaadi kapanista davranisla cevaplanacak.", "Karakterin bilgi siniri her bolumde ledger'a islenecek.") })
+  Write-Json -Path (Join-Path $state "character-state.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; writing_family = $contract.writing_family; characters = @([ordered]@{ id = "primary_focus"; name = $protagonistName; stable_traits = @($contract.family_title, $contract.output_target, $contract.structure_template); knows = @($contract.planning_policy); does_not_know = @("AI yazımı başlamadan önce kullanıcı onayı ve kaynak/kanıt sınırları kesinleşmelidir."); arc_position = "opening" }); required = @("stable_traits", "knows", "does_not_know", "arc_position") })
+  Write-Json -Path (Join-Path $state "plot-ledger.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; writing_family = $contract.writing_family; main_question = if ($contract.premise) { $contract.premise } else { "Seçilen tür ailesinin ana vaadi tamamlanacak mı?" }; open_threads = @($contract.generation_rule, "Kullanıcı sınırları korunacak.", "Çıktı hedefi tamamlanacak."); closed_threads = @(); cause_effect_chain = @("Kitap haritası seçimleri runtime/book-contract.json sözleşmesine dönüştü.", "Plan ve yazım bu sözleşmeyi üst kaynak kabul eder."); final_promises = @("Açılış vaadi seçilen çıktı hedefiyle kapatılacak.", "Her bölüm/parça sözleşme ailesine uygun state güncelleyecek.") })
   Write-Json -Path (Join-Path $state "chapter-summaries.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; chapters = @() })
   Write-Json -Path (Join-Path $state "continuity-ledger.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; timeline = @(); locations = @(); object_state = [ordered]@{}; violations = @() })
   Write-Json -Path (Join-Path $state "world-state.json") -Value ([ordered]@{ schema_version = "1.0.0"; run_id = $RunId; scale_tier = $scaleTier; locations = @(); time_rules = @("Every chapter must declare where and when it occurs."); objects = @(); institutions = @(); world_constraints = @("No location, object, institution, or social rule may change without a state update.") })
@@ -1124,8 +1182,8 @@ plan_id: $planId
   }
   Write-Json -Path (Join-Path $state "volume-plan.json") -Value ([ordered]@{ schema_version = "1.0.0"; run_id = $RunId; scale_tier = $scaleTier; target_pages = $targetPages; target_words = $targetWords; target_chapters = $targetChapters; words_per_page_estimate = $wordsPerPage; words_per_chapter = $wordsPerChapter; max_chapters_per_batch = $maxChaptersPerBatch; audit_interval_chapters = $auditIntervalChapters; acts = $acts; audit_schedule = $auditSchedule; rule = "Writing must advance by approved chapter batches and run macro continuity audits on schedule." })
   Write-Json -Path (Join-Path $state "style-profile.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; profile = "Turkish print-ready prose"; narration = "Plan onayında bakış açısı ve zaman kesinleşir."; language = "tr-TR"; dialogue_policy = "dash_dialogue"; print_format = "A5, readable paragraphs, no technical labels in reader output"; forbidden = @("EP001 in reader output", "scene labels in reader output", "untracked time jump", "repeated chapter premise") })
-  Write-Json -Path (Join-Path $state "writing-type-profile.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; writing_type = "user_defined"; target_reader = "user_defined"; structure_model = $structureModel; scale_tier = $scaleTier; voice_model = "consistent book voice selected in approved plan"; evidence_policy = "No research/source claim without source artifacts."; supported_types = @("novel", "story", "novella", "essay", "memoir", "biography", "research_book", "self_help", "business_book", "academic"); continuity_policy = "world-graph-and-state-ledger-first"; completion_criteria = @("approved book plan", "approved layout plan", "chapter continuity ledgers", "world graph", "promise payoff ledger", "publication readiness gates") })
-  Write-Json -Path (Join-Path $state "genre-structure-template.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; template_id = $structureModel; scale_tier = $scaleTier; acts = $acts; chapter_rules = @("Each chapter must create new consequence.", "No chapter may restate the same situation without change.", "No character may use unknown information.", "Every chapter must update the world, relationship, knowledge, timeline, or promise/payoff state."); mandatory_ledgers = @("character-state.json", "plot-ledger.json", "continuity-ledger.json", "chapter-summaries.json", "world-state.json", "relationship-graph.json", "knowledge-graph.json", "promise-payoff-ledger.json", "timeline.json", "theme-ledger.json") })
+  Write-Json -Path (Join-Path $state "writing-type-profile.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; writing_type = $genreLabel; writing_family = $contract.writing_family; target_reader = $contract.target_reader; structure_model = $structureModel; scale_tier = $scaleTier; voice_model = "consistent voice selected in approved plan"; evidence_policy = "No research/source claim without source artifacts."; supported_types = @("novel", "story", "novella", "essay", "memoir", "biography", "research_book", "self_help", "business_book", "academic", "article", "blog", "instructional", "technical_document", "report", "whitepaper", "screenplay", "poetry"); continuity_policy = "writing-contract-first"; generation_rule = $contract.generation_rule; completion_criteria = @("approved book/content plan", "approved layout plan", "state ledgers updated", "writing contract obeyed", "publication readiness gates") })
+  Write-Json -Path (Join-Path $state "genre-structure-template.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; template_id = $structureModel; writing_family = $contract.writing_family; generation_rule = $contract.generation_rule; scale_tier = $scaleTier; acts = $acts; chapter_rules = @("Each chapter/section must create new consequence, evidence, example, argument, or reader value.", "No chapter/section may restate the same situation without change.", "Do not force character-only logic unless writing_family is fiction or screenplay.", "Every chapter/section must update the relevant state ledger."); mandatory_ledgers = @("character-state.json", "plot-ledger.json", "continuity-ledger.json", "chapter-summaries.json", "world-state.json", "relationship-graph.json", "knowledge-graph.json", "promise-payoff-ledger.json", "timeline.json", "theme-ledger.json") })
   Write-Json -Path (Join-Path $state "editorial-quality-scorecard.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; threshold_pass = 85; axes = @("continuity", "progression", "style", "language", "layout", "publication-readiness"); export_blockers = @("critical_continuity_issue", "missing_front_matter", "missing_cover_brief", "technical_marker_in_reader_output", "missing_story_choice_approval", "missing_book_plan_approval"); verdict = "DESIGN_PENDING_DETAIL" })
   Write-Json -Path (Join-Path $state "llm-adapter-contract.json") -Value ([ordered]@{ schema_version = "1.1.0"; run_id = $RunId; adapter_contract = "Provider or IDE agent must load approved plan/state, write only requested phase artifacts, and update state ledgers."; max_chapters_per_batch = $maxChaptersPerBatch; audit_interval_chapters = $auditIntervalChapters; required_input_state = $requiredStateFiles; required_output_state = @("revision/_state/chapter-summaries.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json"); local_adapter_boundary = "The local adapter creates scaffolding and export packages only from existing artifacts; it must not invent manuscript, preface, or cover copy."; authorship_policy = "Creative authorship belongs to provider command, IDE agent, or human writer."; research_policy = "No web/TDK/source research claim without source artifacts." })
   Write-Json -Path (Join-Path $state "create-plan.json") -Value ([ordered]@{
@@ -1155,7 +1213,7 @@ plan_id: $planId
     })
   })
   Write-Utf8 -Path (Join-Path $ProjectRoot "novel-config.md") -Content @"
-# Novel Config
+# Book Config
 
 project:
   name: "$projectName"
@@ -1285,7 +1343,7 @@ create_quality:
     export_requires_claim_audit = $true
   })
 
-  Write-AgentCompliance -PhaseName "design-big" -RequiredAgents @("concept-builder", "character-architect", "plot-hook-engineer", "book-structure-optimizer", "domain-researcher", "research-citation-auditor") -RequiredReferences @("skills/design-big/SKILL.md", "skills/polish/references/llm-agent-compliance-policy.md", "skills/polish/references/source-citation-style-tdk.md") -LoadedStateFiles @("runtime/book-request.md", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "runtime/approvals/story-choice.json") -OutputArtifacts @("novel-config.md", "design/01_concept_bootstrap.md", "design/02_character_core.md", "design/03_macro_plot_hooks.md", "design/04_book_plan.md", "design/05_chapter_plan.md", "design/06_layout_plan.md", "revision/_workspace/02_domain-researcher_design-big.md", "revision/_workspace/02_domain-researcher_design-big.json", "revision/_workspace/07_research-citation-auditor_design-big.md", "revision/_workspace/07_research-citation-auditor_design-big.json", "runtime/approvals/book-plan-approval.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/style-profile.json", "revision/_state/writing-type-profile.json", "revision/_state/genre-structure-template.json", "revision/_state/editorial-quality-scorecard.json", "revision/_state/llm-adapter-contract.json", "revision/_state/create-plan.json", "revision/_state/design-hashes.json")
+  Write-AgentCompliance -PhaseName "design-big" -RequiredAgents @("concept-builder", "character-architect", "plot-hook-engineer", "book-structure-optimizer", "domain-researcher", "research-citation-auditor") -RequiredReferences @("skills/design-big/SKILL.md", "skills/polish/references/llm-agent-compliance-policy.md", "skills/polish/references/source-citation-style-tdk.md") -LoadedStateFiles @("runtime/book-contract.json", "runtime/book-request.md", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "runtime/approvals/story-choice.json") -OutputArtifacts @("novel-config.md", "design/01_concept_bootstrap.md", "design/02_character_core.md", "design/03_macro_plot_hooks.md", "design/04_book_plan.md", "design/05_chapter_plan.md", "design/06_layout_plan.md", "revision/_workspace/02_domain-researcher_design-big.md", "revision/_workspace/02_domain-researcher_design-big.json", "revision/_workspace/07_research-citation-auditor_design-big.md", "revision/_workspace/07_research-citation-auditor_design-big.json", "runtime/approvals/book-plan-approval.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/style-profile.json", "revision/_state/writing-type-profile.json", "revision/_state/genre-structure-template.json", "revision/_state/editorial-quality-scorecard.json", "revision/_state/llm-adapter-contract.json", "revision/_state/create-plan.json", "revision/_state/design-hashes.json")
 }
 
 function Invoke-DesignSmall {
@@ -1346,11 +1404,11 @@ Tekrarlanan bölüm kurulumu, EP kodu, sahne etiketi, yayın kontrol notu ve tes
     range = $range
     research_claim = "none_by_local_adapter"
   })
-  Write-AgentCompliance -PhaseName "design-small" -RequiredAgents @("episode-architect", "continuity-bridge", "plot-hook-engineer", "domain-researcher") -RequiredReferences @("skills/design-small/SKILL.md", "skills/polish/references/handoff-contract.md", "skills/plot-hook/SKILL.md", "skills/polish/references/source-citation-style-tdk.md") -LoadedStateFiles @("runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/longform-plan.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/create-plan.json", "revision/_state/design-hashes.json", "runtime/approvals/book-plan-approval.json") -OutputArtifacts @("design/$range`_scene_plan.md", "design/04_character-detail_$range.md", "design/05_plot-detail_$range.md", "revision/_workspace/02_domain-researcher_design-small.md", "revision/_workspace/02_domain-researcher_design-small.json")
+  Write-AgentCompliance -PhaseName "design-small" -RequiredAgents @("episode-architect", "continuity-bridge", "plot-hook-engineer", "domain-researcher") -RequiredReferences @("skills/design-small/SKILL.md", "skills/polish/references/handoff-contract.md", "skills/plot-hook/SKILL.md", "skills/polish/references/source-citation-style-tdk.md") -LoadedStateFiles @("runtime/book-contract.json", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/longform-plan.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/create-plan.json", "revision/_state/design-hashes.json", "runtime/approvals/book-plan-approval.json") -OutputArtifacts @("design/$range`_scene_plan.md", "design/04_character-detail_$range.md", "design/05_plot-detail_$range.md", "revision/_workspace/02_domain-researcher_design-small.md", "revision/_workspace/02_domain-researcher_design-small.json")
 }
 
 function Invoke-Create {
-  throw "Create blocked in local adapter: this script will not write novel/story manuscript text. Use IDE manual mode or configure a provider/API/CLI command for create, then rerun validation/export."
+  throw "Create blocked in local adapter: this script will not write final manuscript text by itself. Use IDE manual mode or configure a provider/API/CLI command for create, then rerun validation/export."
 }
 
 function Invoke-Polish {
@@ -1359,6 +1417,110 @@ function Invoke-Polish {
 
 function Invoke-Rewrite {
   throw "Rewrite blocked in local adapter: this script will not rewrite creative text. Use IDE manual mode or configure a provider/API/CLI command for rewrite."
+}
+
+function Export-ToDesktop {
+  param(
+    [string]$DocxPath,
+    [string]$DisplayTitle
+  )
+
+  $desktop = [Environment]::GetFolderPath("Desktop")
+  if (-not $desktop -or -not (Test-Path -LiteralPath $desktop -PathType Container)) {
+    $desktop = Join-Path $env:USERPROFILE "Desktop"
+  }
+  if (-not (Test-Path -LiteralPath $desktop -PathType Container)) {
+    Write-Host "[local-phase] Desktop folder not found; skipping desktop package."
+    return
+  }
+
+  $clean = ($DisplayTitle -replace '[^\p{L}\p{N}]+', '-').Trim("-")
+  if (-not $clean) { $clean = "kitap-cikti" }
+
+  $package = Join-Path $desktop $clean
+  if (-not (Test-Path -LiteralPath $package -PathType Container)) {
+    New-Item -ItemType Directory -Path $package | Out-Null
+  }
+
+  $targetDocx = Join-Path $package "$clean.docx"
+  Copy-Item -LiteralPath $DocxPath -Destination $targetDocx -Force
+  Write-Host "[local-phase] DOCX kopyalandi: $targetDocx"
+
+  $targetPdf = Join-Path $package "$clean.pdf"
+  $word = $null
+  try {
+    $pdfJob = Start-Job -ScriptBlock {
+      param($Source, $Target)
+      $w = New-Object -ComObject Word.Application
+      try {
+        $w.Visible = $false
+        $w.DisplayAlerts = 0
+        $d = $w.Documents.Open($Source, $false, $true)
+        $d.ExportAsFixedFormat($Target, 17)
+        $d.Close($false)
+      }
+      finally {
+        $w.Quit()
+      }
+    } -ArgumentList $DocxPath, $targetPdf
+    if (Wait-Job -Job $pdfJob -Timeout 90) {
+      Receive-Job -Job $pdfJob | Out-Null
+      Remove-Job -Job $pdfJob -Force
+      if (Test-Path -LiteralPath $targetPdf -PathType Leaf) {
+        Write-Host "[local-phase] PDF olusturuldu: $targetPdf"
+      }
+      else {
+        Write-Host "[local-phase] PDF dosyasi olusturulamadi (Word COM hatasi)."
+      }
+    }
+    else {
+      Stop-Job -Job $pdfJob -ErrorAction SilentlyContinue
+      Remove-Job -Job $pdfJob -Force
+      Get-Process WINWORD -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+      Write-Host "[local-phase] PDF cevirmesi zaman asimina ugradi; atlandi."
+    }
+  }
+  catch {
+    Write-Host "[local-phase] PDF cevirmesi atlandi (Word COM yok veya hata): $($_.Exception.Message)"
+    if (Test-Path -LiteralPath $targetPdf) { Remove-Item -LiteralPath $targetPdf -Force }
+  }
+
+  $coverSource = $null
+  if ($ProjectRoot) {
+    $work = Join-Path $ProjectRoot "revision/_workspace"
+    $candidates = @(Get-ChildItem -LiteralPath $work -Filter "12_cover-design_*.png" -File -ErrorAction SilentlyContinue) +
+                  @(Get-ChildItem -LiteralPath $work -Filter "12_cover-design_*.jpg" -File -ErrorAction SilentlyContinue) +
+                  @(Get-ChildItem -LiteralPath (Join-Path $ProjectRoot "revision/export") -Filter "*.png" -File -ErrorAction SilentlyContinue)
+    if ($candidates.Count -gt 0) { $coverSource = $candidates[0].FullName }
+  }
+  if ($coverSource -and (Test-Path -LiteralPath $coverSource -PathType Leaf)) {
+    $ext = [System.IO.Path]::GetExtension($coverSource)
+    Copy-Item -LiteralPath $coverSource -Destination (Join-Path $package "kapak$ext") -Force
+    Write-Host "[local-phase] Kapak kopyalandi: $(Join-Path $package "kapak$ext")"
+  }
+
+  $kunye = @(
+    "Kitap: $DisplayTitle",
+    "Uretim tarihi: $(Get-Date -Format 'yyyy-MM-dd HH:mm')",
+    "Cikti paketi: $package"
+  )
+  $metaPath = $null
+  if ($ProjectRoot) {
+    $candidate = Join-Path $ProjectRoot "revision/_workspace/11_front-matter_publication-metadata.json"
+    if (Test-Path -LiteralPath $candidate -PathType Leaf) { $metaPath = $candidate }
+  }
+  if ($metaPath) {
+    try {
+      $meta = Read-Utf8 -Path $metaPath | ConvertFrom-Json
+      if ($meta.author) { $kunye += "Yazar: $($meta.author)" }
+      if ($meta.isbn) { $kunye += "ISBN: $($meta.isbn)" }
+      if ($meta.publisher) { $kunye += "Yayinevi: $($meta.publisher)" }
+      if ($meta.target_pages) { $kunye += "Hedef sayfa: $($meta.target_pages)" }
+    } catch {}
+  }
+  $kunyePath = Join-Path $package "Bilgi.txt"
+  [System.IO.File]::WriteAllLines($kunyePath, $kunye, (New-Object System.Text.UTF8Encoding($true)))
+  Write-Host "[local-phase] Tek paket hazir: $package"
 }
 
 function Invoke-Export {
@@ -1487,6 +1649,18 @@ function Invoke-Export {
     output_docx_path = "revision/export/$projectName`_$rangeLabel.docx"
   })
   Write-AgentCompliance -PhaseName "export" -RequiredAgents @("chief-editor-orchestrator", "export-approval-gate", "export-validator", "front-matter-editor", "cover-designer", "research-citation-auditor", "publication-compliance-checker", "final-proofreader", "book-exporter") -RequiredReferences @("skills/export-word/SKILL.md", "skills/polish/references/handoff-contract.md", "skills/polish/references/12-axes.md", "skills/polish/references/source-citation-style-tdk.md", "skills/polish/references/publication-metadata-checklist.md", "skills/polish/references/isbn-kunye-bandrol-checklist.md", "skills/export-word/references/docx-style-profile-template.md") -LoadedStateFiles @("runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json", "revision/_state/book-plan.json", "revision/_state/chapter-plan.json", "revision/_state/layout-plan.json", "revision/_state/longform-plan.json", "revision/_state/character-state.json", "revision/_state/plot-ledger.json", "revision/_state/chapter-summaries.json", "revision/_state/continuity-ledger.json", "revision/_state/world-state.json", "revision/_state/relationship-graph.json", "revision/_state/knowledge-graph.json", "revision/_state/promise-payoff-ledger.json", "revision/_state/timeline.json", "revision/_state/theme-ledger.json", "revision/_state/volume-plan.json", "revision/_state/style-profile.json", "revision/_state/llm-adapter-contract.json", "runtime/approvals/export-approval.json") -OutputArtifacts @("revision/_workspace/00_chief-editor-orchestrator_export.md", "revision/_workspace/00_chief-editor-orchestrator_export.json", "revision/_workspace/07_research-citation-auditor_export.md", "revision/_workspace/07_research-citation-auditor_export.json", "revision/_workspace/10_export-word_manifest_$rangeLabel.json", $styleProfileRel, "revision/_workspace/10_export-validator_verdict_$rangeLabel.json", "revision/_workspace/10_docx-reader-clean_report_$rangeLabel.md", "revision/_workspace/11_front-matter_report.md", "revision/_workspace/13_final-proofreader_report_$rangeLabel.md", "revision/_workspace/14_publication-compliance_verdict_$rangeLabel.json", "revision/_workspace/14_publication-compliance_report_$rangeLabel.md", "revision/export/$projectName`_$rangeLabel.docx")
+
+  if ($CopyToDesktop) {
+    $displayTitle = $projectName
+    $metaPath = Join-Path $work "11_front-matter_publication-metadata.json"
+    if (Test-Path -LiteralPath $metaPath -PathType Leaf) {
+      try {
+        $meta = Read-Utf8 -Path $metaPath | ConvertFrom-Json
+        if ($meta.title) { $displayTitle = [string]$meta.title }
+      } catch {}
+    }
+    Export-ToDesktop -DocxPath $docxPath -DisplayTitle $displayTitle
+  }
 }
 
 Push-Location $ProjectRoot

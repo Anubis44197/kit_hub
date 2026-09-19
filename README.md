@@ -1,7 +1,23 @@
-﻿# Novel Writing Engine
+# Novel Writing Engine
 
 Professional multi-agent pipeline for Turkish novel, story, and print-ready book production.
 
+## Agent Runtime Adaptation Status (2026-09-18)
+
+KitHub runtime includes guarded local-first adapter contracts for codebase-memory-mcp, Observer, OmniRoute, Headroom, and namespaced memory. Observer snapshots use `runtime/agent-runs/<runId>/observer.jsonl`. Studio Bridge exposes token-protected `GET /api/adapter-inventory`.
+
+Active adapters require evidence ("no adapter may be enabled without proof"): `scripts/ci/adapter_inventory_contract_test.ps1` enforces it.
+
+- **Observer** — active: every task run writes an observer snapshot (fail-open).
+- **Memory** — active: verification records feed the next run's context pack (`same_project_same_book_relevant_phase` selector).
+- **Headroom** — active pilot: deterministic engine (`scripts/headroom_reduce.ps1`), measured 48–78% reduction on real tool logs/JSON; creative text, phase contracts, context packs and evidence are policy-`excluded`.
+- **codebase-memory-mcp 0.11.0** — active read-only stdio MCP (17 tools). The binary must run from a DACL-clean path: install with `scripts/install_codebase_memory.ps1` (verified SHA-256, canonical path `%LOCALAPPDATA%\Programs\codebase-memory-mcp\`). The in-repo `.tools` copy cannot start because its ancestor chain contains untrusted mutation ACEs. Code graph context is opt-in: `scripts/query_codebase_graph.ps1` or `build_context_pack.ps1 -IncludeCodebaseContext` (fail-open; no user-folder ACL changes).
+- **OmniRoute** — gateway canary passes, real completion calls still fail closed (`401`): connect a provider in its dashboard, then `scripts/ci/omniroute_propose_fixture.ps1`.
+- **Model provider** — Studio stores OpenAI settings locally, but the API account needs credits; local Ollama works as a test provider.
+
+Readiness, syntax, verifier, memory-policy, adapter-canary, typography, and end-to-end task checks pass. Filesystem Context Pack fallback is retained.
+
+Detailed records: `docs/2026-09-18_TAM_AKTIFLESME_RAPORU.md` (activation report), `docs/2026-09-16_AGENT_RUNTIME_REPAIR_PROGRESS*.md` and `docs/2026-09-16_AGENT_RUNTIME_REPAIR_FINAL_STATUS.md` (earlier history), `_planlar/2026-09-18_tam-aktiflesme-plani.md` (day-by-day plan).
 ## Overview
 This repository provides an agent + skill based writing system for end-to-end book production: idea expansion, full-book design, chapter writing, continuity control, Turkish editorial polish, front matter, cover brief, and DOCX export.
 

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "adapter_id": "headroom",
+  "enabled": true,
+  "mode": "pilot",
+  "targets": ["tool_output", "repeated_log", "large_json"],
+  "excluded": ["book_request", "phase_contract", "context_pack", "verifier_evidence", "creative_text", "manuscript", "export"],
+  "max_input_bytes": 32768,
+  "min_reduction_ratio": 0.15,
+  "fallback": "raw_content",
+  "preserve_fields": ["source_hash", "path", "runId", "taskId", "phase"],
+  "notes": "Engine: scripts/headroom_reduce.ps1 (deterministic, fail-open). max_input_bytes pilot esigi 1 MiB'den 32 KiB'e indirildi: gercek arac/log ciktilari ~50-100 KiB araliginda oldugu icin 1 MiB esigi katmani hic devreye sokmuyordu. Yaratillik metni/sozlesme/baglam paketi excluded kalir."
+}

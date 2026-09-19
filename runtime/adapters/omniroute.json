@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "adapter_id": "omniroute",
+  "enabled": false,
+  "mode": "loopback_only",
+  "transport": "http",
+  "base_url": "http://127.0.0.1:8787",
+  "health_path": "/v1/models",
+  "canary_script": "scripts/ci/omniroute_gateway_canary.ps1",
+  "profiles": {
+    "auto/coding": { "strategy": "quality", "max_attempts": 2 },
+    "auto/fast": { "strategy": "latency", "max_attempts": 1 },
+    "auto/cheap": { "strategy": "cost", "max_attempts": 1 }
+  },
+  "fallback_policy": "fail_closed",
+  "allowed_operations": ["health_check", "propose_fixture"],
+  "denied_operations": ["remote_mode", "proxy_bypass", "account_pooling", "mcp_admin", "a2a_admin"],
+  "timeout_seconds": 30,
+  "notes": "Local gateway canary uses _external/omniroute-work and workspace DATA_DIR; provider calls remain disabled until an explicit low-risk propose fixture is approved."
+}

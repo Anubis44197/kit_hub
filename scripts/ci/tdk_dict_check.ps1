@@ -10,6 +10,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+try { $OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+
 function Write-Utf8Bom {
   param([string]$Path, [string]$Content)
   $dir = Split-Path -Parent $Path
@@ -78,6 +81,10 @@ $argsList += @(
 )
 if ($RequireProvider) {
   $argsList += "--require-provider"
+}
+
+if (-not $env:PYTHONIOENCODING) {
+  $env:PYTHONIOENCODING = "utf-8"
 }
 
 Write-Host "[tdk-dict-check] exec: $pythonExe $($argsList -join ' ')"

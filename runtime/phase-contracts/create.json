@@ -18,6 +18,7 @@
                                 "skills/polish/references/tdk-official-writing-rules.md"
                             ],
     "required_state_files":  [
+                                 "runtime/book-contract.json",
                                  "runtime/book-brief.json",
                                  "runtime/book-dna.json",
                                  "runtime/layout-profile.json",
@@ -53,6 +54,8 @@
                             ],
     "allowed_output_patterns":  [
                                     "episode/ep*.md",
+                                    "revision/_workspace/00_chief-editor-orchestrator_create.md",
+                                    "revision/_workspace/00_chief-editor-orchestrator_create.json",
                                     "revision/_workspace/04_quality-verifier_verdict_EP*.md",
                                     "revision/_workspace/*quality*verdict*EP*.md",
                                     "revision/_workspace/08_tdk-polisher_issues_EP*.json",
@@ -72,10 +75,11 @@
                                     "revision/_state/timeline.json",
                                     "revision/_state/theme-ledger.json",
                                     "revision/_state/volume-plan.json",
-                                    "revision/_state/style-profile.json",
-                                    "revision/_state/create-plan.json",
-                                    "revision/_state/design-hashes.json"
-                                ],
+                                     "revision/_state/style-profile.json",
+                                     "revision/_state/create-plan.json",
+                                     "revision/_state/design-hashes.json",
+                                     "revision/_state/*.json"
+                                 ],
     "denied_output_patterns":  [
                                    "revision/export/*",
                                    "*.docx",

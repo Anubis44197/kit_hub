@@ -1,0 +1,113 @@
+﻿{
+    "schema_version":  "1.0.0",
+    "run_id":  "RUN-IDE-TEST-001",
+    "source_prompt":  "# Rüzgârın Hatırası - 20 Sayfalık Test Kitabı\n\n- Tür: Kısa öykü / Edebi hikâye\n- Hedef sayfa: 20 sayfa\n- Hedef okur: Yetişkin edebiyat okuru\n- Alt tür: Edebi kurgu\n- Konu: İstanbul\u0027da yaşlı bir saat ustasının, yıllar önce bıraktığı mektubu okuyunca geçmişteki kararının bugünkü sonuçlarıyla yüzleşmesi. Saat tamircisi Kemal, dükkânını kapatmadan önce çekmecede bulduğu sararmış mektubu açar ve hayatının akışını değiştiren on sekiz yıllık bir sırrın kapısını aralar.\n- Karakterler: Kemal (saat ustası, 62 yaşında, ketum ve titiz), Müjde (mektubu yazan eski sevgili), genç çırak Efe (dış gözlemci). Karakterler sabit kalmalı, bilgi sınırları korunmalı.\n- Dönem ve mekân: Günümüz İstanbul\u0027u; Beyoğlu\u0027ndaki eski bir saat dükkânı, Kapalıçarşı, Boğaz kıyısı. Gerçek tarihî iddia yok.\n- Anlatıcı: Üçüncü tekil şahıs, sınırlı bakış açısı; geçmiş zaman.\n- Üslup: Sade, edebi, betimleyici ama yalın; kısa paragraflar, tireli diyaloglar.\n- Sınırlar: Şiddet, cinsellik, politika ve dini içerik olmayacak. Teknik bölüm/sahne etiketi yok. Test notu ve TL;DR yok.\n- Yayın paketi: Kapak briefi, ön söz, içindekiler, arka kapak yazısı ve A5 DOCX baskı taslağı.",
+    "brief_status":  "READY_FOR_APPROVAL",
+    "intake_policy":  "Do not propose, plan, write, polish, rewrite, or export until required_user_questions are answered or explicitly accepted by the user.",
+    "writing_intent":  {
+                           "writing_type":  "ask_user",
+                           "genre":  "ask_user_or_suggest",
+                           "target_reader":  "ask_user",
+                           "target_pages":  "ask_user",
+                           "target_words":  "derive_after_target_pages",
+                           "target_chapters":  "derive_after_target_pages"
+                       },
+    "required_user_questions":  [
+                                    {
+                                        "id":  "writing_type",
+                                        "question":  "Ne yazmak istiyorsunuz: roman, hikaye, novella, deneme, biyografi, ani, arastirma kitabi, cocuk kitabi veya baska bir tur mu?",
+                                        "required":  true,
+                                        "answer_required_for_approval":  true
+                                    },
+                                    {
+                                        "id":  "premise",
+                                        "question":  "Ana konu veya tek cumlelik fikir nedir?",
+                                        "required":  true,
+                                        "answer_required_for_approval":  true
+                                    },
+                                    {
+                                        "id":  "target_length",
+                                        "question":  "Hedef uzunluk nedir: sayfa, kelime veya bolum sayisi? Ornek: 10 sayfa, 270 sayfa, 500 sayfa.",
+                                        "required":  true,
+                                        "answer_required_for_approval":  true
+                                    },
+                                    {
+                                        "id":  "target_reader",
+                                        "question":  "Hedef okur kim?",
+                                        "required":  true,
+                                        "answer_required_for_approval":  true
+                                    },
+                                    {
+                                        "id":  "genre",
+                                        "question":  "Tur/alt tur nedir veya sistem hangi turleri onersin?",
+                                        "required":  true,
+                                        "answer_required_for_approval":  true
+                                    },
+                                    {
+                                        "id":  "character_policy",
+                                        "question":  "Karakterleri siz mi vereceksiniz, yoksa sistem karakter onerisi sunsun mu?",
+                                        "required":  true,
+                                        "answer_required_for_approval":  true
+                                    },
+                                    {
+                                        "id":  "setting_period",
+                                        "question":  "Mekan, donem ve gercek bilgi/kaynak gereksinimi var mi?",
+                                        "required":  true,
+                                        "answer_required_for_approval":  true
+                                    },
+                                    {
+                                        "id":  "pov_tense",
+                                        "question":  "Bakis acisi ve anlatim zamani tercihiniz var mi?",
+                                        "required":  true,
+                                        "answer_required_for_approval":  true
+                                    },
+                                    {
+                                        "id":  "style_tone",
+                                        "question":  "Uslup nasil olsun: sade, edebi, yogun betimlemeli, hizli tempolu, akademik veya baska?",
+                                        "required":  true,
+                                        "answer_required_for_approval":  true
+                                    },
+                                    {
+                                        "id":  "boundaries",
+                                        "question":  "Istenmeyen konu, sahne, final veya anlatim bicimi var mi?",
+                                        "required":  true,
+                                        "answer_required_for_approval":  true
+                                    },
+                                    {
+                                        "id":  "publication_package",
+                                        "question":  "Onsoz, icindekiler, kapak briefi, arka kapak yazisi ve basili kitap dizgisi isteniyor mu?",
+                                        "required":  true,
+                                        "answer_required_for_approval":  true
+                                    }
+                                ],
+    "answers":  {
+                    "writing_type":  "Kısa öykü / Edebi hikâye",
+                    "premise":  "İstanbul\u0027da yaşlı bir saat ustasının, yıllar önce bıraktığı mektubu okuyunca geçmişteki kararının bugünkü sonuçlarıyla yüzleşmesi. Saat tamircisi Kemal, dükkânını kapatmadan önce çekmecede bulduğu sararmış mektubu açar ve hayatının akışını değiştiren on sekiz yıllık bir sırrın kapısını aralar.",
+                    "target_length":  "20 sayfa sayfa",
+                    "target_pages":  "20 sayfa",
+                    "target_reader":  "Yetişkin edebiyat okuru",
+                    "genre":  "Edebi kurgu",
+                    "character_policy":  "Kullanıcı tarafından verilen karakterler kullanılacak: Kemal (saat ustası, 62 yaşında, ketum ve titiz), Müjde (mektubu yazan eski sevgili), genç çırak Efe (dış gözlemci). Karakterler sabit kalmalı, bilgi sınırları korunmalı.",
+                    "setting_period":  "Günümüz İstanbul\u0027u; Beyoğlu\u0027ndaki eski bir saat dükkânı, Kapalıçarşı, Boğaz kıyısı. Gerçek tarihî iddia yok.",
+                    "pov_tense":  "Üçüncü tekil şahıs, sınırlı bakış açısı; geçmiş zaman.",
+                    "style_tone":  "Sade, edebi, betimleyici ama yalın; kısa paragraflar, tireli diyaloglar.",
+                    "boundaries":  "Şiddet, cinsellik, politika ve dini içerik olmayacak. Teknik bölüm/sahne etiketi yok. Test notu ve TL;DR yok.",
+                    "publication_package":  "Kapak briefi, ön söz, içindekiler, arka kapak yazısı ve A5 DOCX baskı taslağı."
+                },
+    "suggested_defaults":  {
+                               "target_length":  "Ask the user; do not assume. If the user says \u0027sen sec\u0027, choose a length and record that approval.",
+                               "publication_package":  "publisher_submission_docx, print_preview_docx, title page, copyright placeholder, preface optional, table of contents, cover brief, back cover copy",
+                               "layout":  "A5, Times New Roman 11 pt, 1.15 line spacing, justified, first-line indent, chapter starts on new page"
+                           },
+    "approval_requirements":  [
+                                  "answers.writing_type must be filled",
+                                  "answers.target_length or answers.target_pages must be filled",
+                                  "answers.target_reader must be filled",
+                                  "answers.genre must be filled or explicitly delegated to the system",
+                                  "answers.character_policy must be filled",
+                                  "answers.style_tone must be filled",
+                                  "answers.publication_package must be filled"
+                              ],
+    "llm_suggestion_policy":  "If the user leaves fields blank, propose options and ask for approval; do not silently decide.",
+    "approval_required":  "runtime/approvals/book-brief-approval.json"
+}

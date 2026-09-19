@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kithub.local/schema/task-queue.schema.json",
+  "title": "Görev Kuyruğu (Task Queue)",
+  "description": "Ajanlara atanan görevlerin kuyruğu. Buzz buzz-acp queue.rs deseninden esinlenir: kanal başına kuyruk, batch, retry, deadline, iptal (steer/interrupt). KitHub karşılığı: proje başına tek kuyruk; görev scope'u faz/bölüm/ajan ile sınırlanır.",
+  "type": "object",
+  "required": ["schema_version", "updated_at", "tasks"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "agent", "status", "source", "created_at"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^task-[0-9]+$" },
+          "title": { "type": "string", "maxLength": 200 },
+          "agent": { "type": "string", "description": "runtime/agent-registry.json içindeki ajan adı" },
+          "phase": { "type": "string", "description": "İlgili faz (intake/propose/design-big/design-small/create/polish/rewrite/export)" },
+          "scope": {
+            "type": "object",
+            "description": "Görevin kapsamı: hangi bölüm/faz/ürün üzerinde çalışacak",
+            "properties": {
+              "kind": { "type": "string", "enum": ["phase", "episode", "chapter_range", "book"] },
+              "episode": { "type": "string", "description": "episode/epNNN.md gibi göreli yol" },
+              "phase": { "type": "string" },
+              "from_episode": { "type": "string" },
+              "to_episode": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_flight", "completed", "failed", "cancelled", "blocked"]
+          },
+          "priority": { "type": "string", "enum": ["low", "normal", "high"], "default": "normal" },
+          "source": { "type": "string", "enum": ["mention", "trigger", "manual", "pipeline"] },
+          "mention": {
+            "type": "object",
+            "description": "Bu görevi @mention ile oluşturan insan mesajı",
+            "properties": {
+              "author": { "type": "string" },
+              "channel": { "type": "string", "description": "Bölüm dosyası veya 'studio'" },
+              "text": { "type": "string", "maxLength": 2000 }
+            },
+            "additionalProperties": false
+          },
+          "created_at": { "type": "string", "format": "date-time" },
+          "started_at": { "type": ["string", "null"], "format": "date-time" },
+          "finished_at": { "type": ["string", "null"], "format": "date-time" },
+          "deadline": { "type": ["string", "null"], "format": "date-time", "description": "Aşılırsa görev timed_out olarak işaretlenir" },
+          "attempts": { "type": "integer", "minimum": 0, "default": 0 },
+          "max_attempts": { "type": "integer", "minimum": 1, "default": 2 },
+          "requires_approval": { "type": "boolean", "default": true },
+          "approval": {
+            "type": "object",
+            "properties": {
+              "status": { "type": ["string", "null"], "enum": ["approved", "denied", null] },
+              "by": { "type": ["string", "null"] },
+              "at": { "type": ["string", "null"], "format": "date-time" }
+            },
+            "additionalProperties": false
+          },
+          "result": {
+            "type": ["object", "null"],
+            "description": "Ajanın ürettiği özet + kanıt bağları",
+            "properties": {
+              "summary": { "type": "string" },
+              "verdict": { "type": ["string", "null"], "enum": ["PASS", "REWRITE", "BLOCKED", null] },
+              "issues": { "type": ["integer", "null"] },
+              "artifacts": { "type": "array", "items": { "type": "string" } }
+            },
+            "additionalProperties": false
+          },
+          "error": { "type": ["string", "null"], "maxLength": 1000 },
+          "run_id": { "type": ["string", "null"], "description": "İlişkili pipeline çalıştırması" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

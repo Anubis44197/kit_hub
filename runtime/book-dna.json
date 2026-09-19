@@ -1,0 +1,38 @@
+﻿{
+    "schema_version":  "1.0.0",
+    "run_id":  "RUN-IDE-TEST-001",
+    "answers_complete":  true,
+    "locked":  false,
+    "source_prompt":  "# Rüzgârın Hatırası - 20 Sayfalık Test Kitabı\n\n- Tür: Kısa öykü / Edebi hikâye\n- Hedef sayfa: 20 sayfa\n- Hedef okur: Yetişkin edebiyat okuru\n- Alt tür: Edebi kurgu\n- Konu: İstanbul\u0027da yaşlı bir saat ustasının, yıllar önce bıraktığı mektubu okuyunca geçmişteki kararının bugünkü sonuçlarıyla yüzleşmesi. Saat tamircisi Kemal, dükkânını kapatmadan önce çekmecede bulduğu sararmış mektubu açar ve hayatının akışını değiştiren on sekiz yıllık bir sırrın kapısını aralar.\n- Karakterler: Kemal (saat ustası, 62 yaşında, ketum ve titiz), Müjde (mektubu yazan eski sevgili), genç çırak Efe (dış gözlemci). Karakterler sabit kalmalı, bilgi sınırları korunmalı.\n- Dönem ve mekân: Günümüz İstanbul\u0027u; Beyoğlu\u0027ndaki eski bir saat dükkânı, Kapalıçarşı, Boğaz kıyısı. Gerçek tarihî iddia yok.\n- Anlatıcı: Üçüncü tekil şahıs, sınırlı bakış açısı; geçmiş zaman.\n- Üslup: Sade, edebi, betimleyici ama yalın; kısa paragraflar, tireli diyaloglar.\n- Sınırlar: Şiddet, cinsellik, politika ve dini içerik olmayacak. Teknik bölüm/sahne etiketi yok. Test notu ve TL;DR yok.\n- Yayın paketi: Kapak briefi, ön söz, içindekiler, arka kapak yazısı ve A5 DOCX baskı taslağı.",
+    "continuity_policy":  "No chapter writing before approved brief, approved book plan, and approved layout profile.",
+    "required_locks":  [
+                           "writing_type",
+                           "genre",
+                           "target_length",
+                           "pov",
+                           "tense",
+                           "character_policy",
+                           "setting_policy",
+                           "style_policy",
+                           "source_policy",
+                           "front_matter_policy",
+                           "cover_policy"
+                       ],
+    "locked_answers_required":  [
+                                    "writing_type",
+                                    "premise",
+                                    "target_length",
+                                    "target_reader",
+                                    "genre",
+                                    "character_policy",
+                                    "setting_period",
+                                    "pov_tense",
+                                    "style_tone",
+                                    "boundaries",
+                                    "publication_package"
+                                ],
+    "user_supplied_characters":  "Kemal (saat ustası, 62 yaşında, ketum ve titiz), Müjde (mektubu yazan eski sevgili), genç çırak Efe (dış gözlemci). Karakterler sabit kalmalı, bilgi sınırları korunmalı.",
+    "proposed_characters_allowed":  false,
+    "factual_source_policy":  "Biografi, arastirma, tarih, saglik, hukuk, teknik ve gercek kisi/kurum anlatilarinda kaynak artefakti olmadan dogruluk iddiasi kurulamaz.",
+    "plan_before_writing_policy":  "The system must present story direction, book plan, chapter plan, continuity model, and layout plan for user approval before any manuscript text is created."
+}

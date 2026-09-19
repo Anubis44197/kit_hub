@@ -1,10 +1,16 @@
 .claude/settings.local.json
 _workspace/
+_external/
 .DS_Store
 claudedocs/
 .omx/
 _github_push_*/
 node_modules/
+.tools/
+.freebuff/
+runtime/agent-runs/
+# Hafıza deposu: kayıtlar (records.jsonl) yerel çalışma verisidir; sözleşme (schema.json) versiyonlanır.
+runtime/memory/records.jsonl
 
 # Generated book/project outputs. Keep source control clean so agents do not
 # mistake stale smoke-test artifacts for the current manuscript.
@@ -29,6 +35,9 @@ runtime/browser-e2e-report-deepcheck.json
 runtime/probe_stdout.json
 runtime/test-interaction*.png
 runtime/fixture-reports/
+runtime/omniroute-data/
+runtime/run-integrity-report.json
+runtime/state-consistency-report.json
 runtime/provider-fixture-reports/
 studio-stdout.log
 studio-stderr.log

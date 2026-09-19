@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kithub.local/schema/task-feed.schema.json",
+  "title": "Görev Akışı (Task Feed)",
+  "description": "İnsan ve ajanların aynı akışta göründüğü, eklemeli (append-only) denetim akışı. Her kayıt bir olaydır; hiçbir kayıt silinmez, sadece düzeltme kaydı eklenir.",
+  "type": "object",
+  "required": ["schema_version", "updated_at", "entries"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "max_entries": { "type": "integer", "minimum": 50, "default": 500, "description": "Eski kayıtların budandığı üst sınır" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "at", "actor_type", "actor_id", "event", "message"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^feed-[0-9]+$" },
+          "at": { "type": "string", "format": "date-time" },
+          "actor_type": { "type": "string", "enum": ["human", "agent", "system"] },
+          "actor_id": { "type": "string", "description": "İnsan için kullanıcı adı (ör. Yazar), ajan için registry adı (ör. tdk-polisher), sistem için 'system'" },
+          "actor_role": { "type": "string", "description": "İnsan rolü (author/editor/reviewer/admin) veya ajan grubu" },
+          "event": {
+            "type": "string",
+            "enum": [
+              "task.created", "task.started", "task.completed", "task.failed",
+              "task.approved", "task.rejected", "task.cancelled", "task.steered",
+              "mention.created", "comment.replied", "approval.requested",
+              "approval.granted", "approval.denied", "phase.completed",
+              "episode.saved", "agent.message"
+            ]
+          },
+          "ref": {
+            "type": "object",
+            "description": "Olayın bağlandığı varlıklar",
+            "properties": {
+              "task_id": { "type": "string" },
+              "phase": { "type": "string" },
+              "episode": { "type": "string" },
+              "approval": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "message": { "type": "string", "maxLength": 2000, "description": "İnsan okunur Türkçe metin" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
