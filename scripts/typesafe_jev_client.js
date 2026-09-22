@@ -237,7 +237,7 @@ async function judgeAgentDecision(text, phase = 'create') {
 
     let finalVerdict = chosen;
     // Güvenlik eşiği: Eğer kritik sorun riski > 0.70 ise veya skor çok düşükse kararı REWRITE yap
-    if (issueRisk > 0.70 || scoreVal < 0.60) {
+    if (chosen !== 'BLOCKED' && (issueRisk > 0.70 || scoreVal < 0.60)) {
       finalVerdict = 'REWRITE';
     }
 
@@ -423,10 +423,11 @@ async function checkExportGate(text) {
       source: 'local_fallback',
       isFallback: true,
       warning: `Jev ulaşılamadı (${err.message}). Yerel export kuralları uygulandı.`,
-      approved: !hasPlaceholder && text.length > 500,
-      readyProbability: 0.85,
-      placeholderRisk: hasPlaceholder ? 0.99 : 0.05,
-      structuralScore: 1.5
+      approved: false,
+      reviewRequired: true,
+      readyProbability: null,
+      placeholderRisk: hasPlaceholder ? 0.99 : null,
+      structuralScore: null
     };
   }
 }

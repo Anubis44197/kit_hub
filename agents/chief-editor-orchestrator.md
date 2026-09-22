@@ -34,7 +34,7 @@ You are the supervising editor for the phase. You do not write creative manuscri
 `PASS` is valid only when all required phase agents, artifacts, handoffs, and approvals are present.
 
 ## Jev System One Decision Protocol
-- The orchestration decisions (`PASS`, `REWRITE`, `BLOCKED`) and phase transitions are continuously audited by the TypeSafe Jev Decision Judge (`scripts/typesafe_jev_client.js`).
-- If Jev assigns high confidence (>0.80) to `REWRITE` or identifies severe continuity/quality gaps, Chief Editor must enforce retry before phase advancement.
-- When Jev operates in fail-safe/offline fallback mode (e.g. quota limit), local deterministic rule evaluation takes over without blocking execution.
+- Critical create, polish, rewrite and export phases use the shared Jev decision gate (`scripts/jev_phase_gate.ps1`). The phase record includes the candidate and decision.
+- A Jev `BLOCKED` decision stops the phase. `REWRITE` requires revision before advancement, regardless of confidence.
+- When Jev is unavailable or phase text is missing, the phase requires review; local heuristics cannot approve critical phases or export.
 

@@ -2,10 +2,12 @@ param(
   [Parameter(Mandatory = $true)][string]$ProjectRoot,
   [Parameter(Mandatory = $true)][string]$RunId,
   [Parameter(Mandatory = $true)][string]$Phase,
-  [string]$TaskId = ""
+  [string]$TaskId = "",
+  [string]$JevClientPath = ""
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $JevClientPath) { $JevClientPath = Join-Path $PSScriptRoot "typesafe_jev_client.js" }
 $ProjectRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
 $runRoot = Join-Path $ProjectRoot ("runtime/agent-runs/{0}" -f $RunId)
 $contextPath = Join-Path $runRoot "context-pack.json"
@@ -38,51 +40,33 @@ else {
   } catch { $verdict = "revision_required"; $reasons += "Compliance evidence unreadable: $($_.Exception.Message)" }
 }
 
-# Jev Karar Hakemligi (System One Entegrasyonu - Fail-Safe / Kota Korumali)
+# Critical phases use the same evidence-backed Jev gate as the main pipeline.
 $jevDecision = $null
-$jevClientPath = Join-Path $PSScriptRoot "typesafe_jev_client.js"
-if (Test-Path -LiteralPath $jevClientPath -PathType Leaf) {
-  try {
-    $evalCandidate = $null
-    if (Test-Path -LiteralPath $evidencePath -PathType Leaf) {
-      $evObj = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
-      foreach ($item in @($evObj.evidence_files)) {
-        $cand = Join-Path $ProjectRoot (([string]$item.path) -replace '/', '\')
-        if ((Test-Path -LiteralPath $cand -PathType Leaf) -and ($cand -match '\.(md|txt)$')) {
-          $evalCandidate = $cand
-          break
-        }
-      }
+$jevGate = $null
+$gatePath = Join-Path $PSScriptRoot "jev_phase_gate.ps1"
+$gateReportPath = Join-Path $runRoot "jev-decision.json"
+if (-not (Test-Path -LiteralPath $gatePath -PathType Leaf)) {
+  $verdict = "revision_required"
+  $reasons += "Jev phase gate is missing."
+}
+else {
+  $gateOutput = & powershell -NoProfile -ExecutionPolicy Bypass -File $gatePath -ProjectRoot $ProjectRoot -RunId $RunId -Phase $Phase -EvidencePath $evidencePath -ReportPath $gateReportPath -ClientPath $JevClientPath
+  if (Test-Path -LiteralPath $gateReportPath -PathType Leaf) {
+    $jevGate = Get-Content -LiteralPath $gateReportPath -Raw | ConvertFrom-Json
+    $jevDecision = $jevGate.jev_decision
+    if ($jevGate.status -notin @("pass", "not_applicable")) {
+      $verdict = "revision_required"
+      $reasons += "Jev phase gate: $($jevGate.status): $($jevGate.reason)"
     }
-    if (-not $evalCandidate) {
-      $wsCandidate = Join-Path $ProjectRoot "revision/_workspace"
-      if (Test-Path -LiteralPath $wsCandidate -PathType Container) {
-        $recent = Get-ChildItem -LiteralPath $wsCandidate -Filter "*.md" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        if ($recent) { $evalCandidate = $recent.FullName }
-      }
-    }
-
-    if ($evalCandidate) {
-      $nodeOutput = & node $jevClientPath "judge" $evalCandidate $Phase 2>$null
-      if ($nodeOutput) {
-        $jevDecision = $nodeOutput | ConvertFrom-Json
-        if ($jevDecision.verdict -eq "REWRITE" -and $jevDecision.confidence -ge 0.80) {
-          $verdict = "revision_required"
-          $reasons += "Jev Hakemi revizyon karari verdi (Guven: $($jevDecision.confidence), Skor: $($jevDecision.qualityScore))."
-        }
-        elseif ($jevDecision.verdict -eq "BLOCKED") {
-          $verdict = "revision_required"
-          $reasons += "Jev Hakemi faza bloke karari verdi."
-        }
-      }
-    }
-  } catch {
-    # Fail-safe: Jev hatası veya kota sonu durumunda ana süreç aksamaz
-    Write-Host "[verifier] Jev hakemligi yedek moda gecti: $($_.Exception.Message)"
   }
+  else {
+    $verdict = "revision_required"
+    $reasons += "Jev phase gate produced no decision report."
+  }
+  if ($LASTEXITCODE -ne 0) { $verdict = "revision_required" }
 }
 
-$result = [ordered]@{ schema_version = "1.0.0"; run_id = $RunId; task_id = $TaskId; phase = $Phase; verdict = $verdict; checked_at = (Get-Date).ToString("o"); reasons = @($reasons); context_pack = $contextPath; evidence = $evidencePath; jev_decision = $jevDecision }
+$result = [ordered]@{ schema_version = "1.0.0"; run_id = $RunId; task_id = $TaskId; phase = $Phase; verdict = $verdict; checked_at = (Get-Date).ToString("o"); reasons = @($reasons); context_pack = $contextPath; evidence = $evidencePath; jev_decision = $jevDecision; jev_gate = $jevGate }
 $resultPath = Join-Path $runRoot "verification.json"
 $result | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $resultPath -Encoding utf8
 $result | ConvertTo-Json -Depth 20 -Compress

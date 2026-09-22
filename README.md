@@ -13,7 +13,7 @@ Active adapters require evidence ("no adapter may be enabled without proof"): `s
 - **Headroom** — active pilot: deterministic engine (`scripts/headroom_reduce.ps1`), measured 48–78% reduction on real tool logs/JSON; creative text, phase contracts, context packs and evidence are policy-`excluded`.
 - **codebase-memory-mcp 0.11.0** — active read-only stdio MCP (17 tools). The binary must run from a DACL-clean path: install with `scripts/install_codebase_memory.ps1` (verified SHA-256, canonical path `%LOCALAPPDATA%\Programs\codebase-memory-mcp\`). The in-repo `.tools` copy cannot start because its ancestor chain contains untrusted mutation ACEs. Code graph context is opt-in: `scripts/query_codebase_graph.ps1` or `build_context_pack.ps1 -IncludeCodebaseContext` (fail-open; no user-folder ACL changes).
 - **OmniRoute** — gateway canary passes, real completion calls still fail closed (`401`): connect a provider in its dashboard, then `scripts/ci/omniroute_propose_fixture.ps1`.
-- **TypeSafe AI (Jev Model)** — active: System One sub-500ms decision engine for agent output verification and phase gate refereeing (`scripts/typesafe_jev_client.js`, `scripts/verify_agent_run.ps1`). Includes automatic fail-safe fallback to local heuristic rules when quota/limits run out, plus SHA-256 local caching.
+- **TypeSafe AI (Jev Model)**: active decision client and shared phase gate (`scripts/typesafe_jev_client.js`, `scripts/jev_phase_gate.ps1`). Critical phases require a recorded decision; missing evidence or Jev outages require review.
 - **Model provider** — Studio stores OpenAI settings locally, but the API account needs credits; local Ollama works as a test provider.
 
 Readiness, syntax, verifier, memory-policy, adapter-canary, typography, and end-to-end task checks pass. Filesystem Context Pack fallback is retained.
@@ -55,6 +55,8 @@ In IDE mode, the IDE agent writes the requested files while KitHub validates the
 
 ## TypeSafe AI (Jev Engine) Karar Mekanizması & Hakemlik
 
+Critical phase decisions are recorded in `runtime/runs/<run-id>/jev-<phase>.json` for the main pipeline and `runtime/agent-runs/<run-id>/jev-decision.json` for provider tasks. `BLOCKED` stops the phase and `REWRITE` requires revision. Jev outages and missing text require review. Local heuristics cannot approve export. Jev evaluates the recorded candidate; other manuscript and publication gates continue to validate the project.
+
 KitHub, ajanların ürettiği metinlerin ve faz geçişlerinin doğrulanmasında **TypeSafe AI Jev (System One)** modelini karar hakemi olarak kullanır.
 
 - **Konfigürasyon:** Kök dizindeki `.env` dosyasında `TYPESAFE_API_KEY` ve `TYPESAFE_MODEL=jev-latest` şeklinde tanımlanır (`.env.example` şablon olarak mevcuttur).
@@ -63,8 +65,8 @@ KitHub, ajanların ürettiği metinlerin ve faz geçişlerinin doğrulanmasında
 - **Sıfır-Token Önbellek (Cache):** Aynı içerik ve faz kombinasyonları SHA-256 ile `runtime/.cache/jev_cache.json` içinde önbelleklenerek gereksiz API çağrıları önlenir.
 - **Doğrudan Test / CLI:**
   ```powershell
-  node scripts/typesafe_jev_client.js --gate "Bölüm taslağı tamamlandı, tüm kriterler karşılandı." --phase create
-  powershell -ExecutionPolicy Bypass -File scripts/invoke_jev.ps1 -Text "Taslak hazır" -Phase polish
+  node scripts/typesafe_jev_client.js gate "Synthetic draft is ready for review."
+  powershell -ExecutionPolicy Bypass -File scripts/invoke_jev.ps1 -Action quality -Text "Synthetic draft"
   ```
 
 ## KitHub Studio: New User Flow

@@ -2727,6 +2727,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     message = $null
   }
   $contractHashes = @()
+  $jevGate = $null
 
   try {
     Write-Host ""
@@ -2815,6 +2816,19 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     Assert-NoForbiddenPatterns -Root $ProjectRoot -Phase $phase -Patterns $negativePatterns -Enabled $enableNegativeEnforcement
     Validate-EpisodeTextQuality -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $enableTextQualityGates
     Validate-CrossChapterProgression -Root $ProjectRoot -Phase $phase -Config $cfg -Enabled $enableTextQualityGates
+    if ($phase -in @("create", "polish", "rewrite", "export")) {
+      $jevReportPath = Join-Path $runtimeDir ("runs/" + $runId + "/jev-" + $phase + ".json")
+      $jevGatePath = Join-Path $PSScriptRoot "jev_phase_gate.ps1"
+      $jevOutput = & powershell -NoProfile -ExecutionPolicy Bypass -File $jevGatePath -ProjectRoot $ProjectRoot -RunId $runId -Phase $phase -ReportPath $jevReportPath
+      $jevExit = $LASTEXITCODE
+      if (Test-Path -LiteralPath $jevReportPath -PathType Leaf) {
+        $jevGate = Read-Utf8 -Path $jevReportPath | ConvertFrom-Json
+      }
+      if ($jevExit -ne 0 -or -not $jevGate -or $jevGate.status -ne "pass") {
+        $gateReason = if ($jevGate) { "$($jevGate.status): $($jevGate.reason)" } else { "no decision report" }
+        throw "Jev phase gate failed for '$phase': $gateReason"
+      }
+    }
     $evidencePath = Join-Path $runtimeDir ("runs/" + $runId + "/evidence/" + $stepId + ".json")
     $evidence = [ordered]@{
       run_id = $runId
@@ -2832,6 +2846,7 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
       output_artifacts = $artifacts
       artifact_hashes = $artifactHashes
       contract_hashes = $contractHashes
+      jev_gate = $jevGate
       notes = @("artifact gate passed")
     }
     Save-PhaseEvidence -Path $evidencePath -Evidence $evidence
