@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
   [int]$Port = 8765,
   [string]$SessionToken = "",
@@ -453,7 +453,7 @@ function Save-ProviderSettings {
     provider = $provider
     model = $model
     baseUrl = $baseUrl
-    hasApiKey = $false
+    hasApiKey = -not [string]::IsNullOrWhiteSpace([string]$protected)
     tested = $tested
     settingsPath = $path
   }
@@ -3490,7 +3490,7 @@ try {
             $episodeName = [string]$result.relativePath
             $triggered = @(Evaluate-TaskTriggers -ProjectRoot $projectRoot -EventName "episode.saved" -Episode $episodeName)
           }
-          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $result.ok; result = $result; triggered = $triggered })
+          Write-JsonHttpResponse -Stream $stream -Value ([ordered]@{ ok = $result.ok; relativePath = $result.relativePath; words = $result.words; version = $result.version; result = $result; triggered = $triggered })
           continue
         }
 if ($method -eq "POST" -and $path -eq "/api/manage-chapter") {

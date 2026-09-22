@@ -13,6 +13,7 @@ Active adapters require evidence ("no adapter may be enabled without proof"): `s
 - **Headroom** — active pilot: deterministic engine (`scripts/headroom_reduce.ps1`), measured 48–78% reduction on real tool logs/JSON; creative text, phase contracts, context packs and evidence are policy-`excluded`.
 - **codebase-memory-mcp 0.11.0** — active read-only stdio MCP (17 tools). The binary must run from a DACL-clean path: install with `scripts/install_codebase_memory.ps1` (verified SHA-256, canonical path `%LOCALAPPDATA%\Programs\codebase-memory-mcp\`). The in-repo `.tools` copy cannot start because its ancestor chain contains untrusted mutation ACEs. Code graph context is opt-in: `scripts/query_codebase_graph.ps1` or `build_context_pack.ps1 -IncludeCodebaseContext` (fail-open; no user-folder ACL changes).
 - **OmniRoute** — gateway canary passes, real completion calls still fail closed (`401`): connect a provider in its dashboard, then `scripts/ci/omniroute_propose_fixture.ps1`.
+- **TypeSafe AI (Jev Model)** — active: System One sub-500ms decision engine for agent output verification and phase gate refereeing (`scripts/typesafe_jev_client.js`, `scripts/verify_agent_run.ps1`). Includes automatic fail-safe fallback to local heuristic rules when quota/limits run out, plus SHA-256 local caching.
 - **Model provider** — Studio stores OpenAI settings locally, but the API account needs credits; local Ollama works as a test provider.
 
 Readiness, syntax, verifier, memory-policy, adapter-canary, typography, and end-to-end task checks pass. Filesystem Context Pack fallback is retained.
@@ -51,6 +52,20 @@ Use API mode when the user wants the application itself to drive writing phases 
 In API mode, `scripts/studio_bridge.ps1` loads the saved provider settings and runs `scripts/provider_phase.ps1` through `runtime/runner-config.provider.template.json`. If provider settings or the API key are missing, the pipeline fails closed before claiming that agents ran.
 
 In IDE mode, the IDE agent writes the requested files while KitHub validates the artifacts, approvals, agent evidence, continuity, Turkish quality, layout, and DOCX export. IDE/manual evidence is intentionally labeled `execution_claim_mode=simulated`: it proves persisted artifacts and contracts, not that a live external agent process is still running. API/provider mode uses executed command evidence when configured.
+
+## TypeSafe AI (Jev Engine) Karar Mekanizması & Hakemlik
+
+KitHub, ajanların ürettiği metinlerin ve faz geçişlerinin doğrulanmasında **TypeSafe AI Jev (System One)** modelini karar hakemi olarak kullanır.
+
+- **Konfigürasyon:** Kök dizindeki `.env` dosyasında `TYPESAFE_API_KEY` ve `TYPESAFE_MODEL=jev-latest` şeklinde tanımlanır (`.env.example` şablon olarak mevcuttur).
+- **Entegrasyon Noktaları:** `scripts/verify_agent_run.ps1` ve `agents/chief-editor-orchestrator.md` karar süreçleri.
+- **Fail-Safe Kota/Limit Koruması:** Eğer API anahtarının bakiyesi biterse, kota dolarsa (429/402) veya ağ hatası alınırsa sistem asla kilitlenmez; otomatik olarak yerel kural motoruna (`judgeLocalFallback`) geçer ve iş akışını güvenle sürdürür.
+- **Sıfır-Token Önbellek (Cache):** Aynı içerik ve faz kombinasyonları SHA-256 ile `runtime/.cache/jev_cache.json` içinde önbelleklenerek gereksiz API çağrıları önlenir.
+- **Doğrudan Test / CLI:**
+  ```powershell
+  node scripts/typesafe_jev_client.js --gate "Bölüm taslağı tamamlandı, tüm kriterler karşılandı." --phase create
+  powershell -ExecutionPolicy Bypass -File scripts/invoke_jev.ps1 -Text "Taslak hazır" -Phase polish
+  ```
 
 ## KitHub Studio: New User Flow
 KitHub Studio is the recommended interface for normal use. The backend still runs through PowerShell scripts, but the user should work from the Studio screen instead of editing runtime files by hand.

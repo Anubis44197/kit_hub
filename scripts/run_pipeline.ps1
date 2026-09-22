@@ -2787,6 +2787,15 @@ for ($i = $fromIdx; $i -le $toIdx; $i++) {
     Validate-PhaseArtifacts -Phase $phase -Root $ProjectRoot
     Invoke-DictionaryCheck -Phase $phase -Root $ProjectRoot -RunId $runId -Config $cfg -Enabled $dictionaryCheckEnabled -CommandSafetyEnabled $enableCommandSafety
 
+    # Defter doldurucu (story ledger keeper): hikâye üreten fazların başarılı sonrasında
+    # revision/_state defterlerini bölüm içeriğiyle güncelle (fail-open: hata fazı düşürmez;
+    # en fazla kanıt/staleness kaybı olur). IDE (manual) ve command modlarında ortak kanca.
+    # Not: keeper her durumda exit 0 döner; çıktısı kanıt olarak loglanır.
+    if ($phase -in @("create","polish","rewrite")) {
+      $ledgerOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "update_story_ledgers.ps1") -ProjectRoot $ProjectRoot -RunId $runId -Phase $phase 2>&1
+      foreach ($ledgerLine in @($ledgerOut)) { if ("$ledgerLine".Trim()) { Write-Host "$ledgerLine" } }
+    }
+
     if ($requireExecutedClaimsForCriticalPhases -and $phase -in @("create","polish","rewrite","export") -and $phaseClaimMode -ne "executed") {
       throw "Phase '$phase' requires execution_claim_mode=executed. Configure command mode and real phase commands."
     }

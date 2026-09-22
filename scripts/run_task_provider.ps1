@@ -36,6 +36,13 @@ try {
   $memoryExit = if ($LASTEXITCODE -is [int]) { $LASTEXITCODE } else { 0 }
   if ($memoryExit -ne 0) { Write-Host "[runner] uyari: hafıza kaydi yazilamadi (exit=$memoryExit) - kanit kaybi, gorev etkilenmedi." }
 
+  # Defter doldurucu (story ledger keeper): başarılı hikâye koşusundan sonra
+  # revision/_state defterlerini bölüm içeriğiyle günceller (fail-open; hata görevi
+  # asla etkilemez). save_story_state_record.ps1'in OKUMASINDAN ÖNCE koşmalı.
+  try {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "update_story_ledgers.ps1") -ProjectRoot $ProjectRoot -RunId $RunId -TaskId $TaskId -Phase $Phase | Out-Null
+  } catch { Write-Host "[runner] defter guncellemesi atlandi: $($_.Exception.Message)" }
+
   # Hikâye durum kaydı (story_state): bölüm arttıkça karakter/olay/süreklilik özetini hafızaya tası
   # (fail-open; hata görevi asla etkilemez).
   try {

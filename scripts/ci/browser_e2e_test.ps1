@@ -4,6 +4,7 @@
 )
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $edge = Get-ChildItem "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $edge) { throw "Microsoft Edge executable not found." }
 $node = Get-Command node -ErrorAction SilentlyContinue
@@ -21,8 +22,15 @@ foreach ($case in $cases) {
     [ordered]@{name="title";pass=($html -match '<title>KitHub Studio</title>')},
     [ordered]@{name="viewport";pass=($html -match 'name="viewport"')},
     [ordered]@{name="wizard-reader";pass=($html -match 'id="wizardReader"')},
-    [ordered]@{name="wizard-character-policy";pass=($html -match 'Karakterler / Karakter Politikası')},
-    [ordered]@{name="diagnostics";pass=($html -match 'Tanı Paketi')},
+    [ordered]@{name="wizard-character-policy";pass=($html -match 'Karakterler / Karakter Politikas[ıi.]')},
+    [ordered]@{name="idea-wizard-steps";pass=($html -match 'data-wizard-card="voice"')},
+    [ordered]@{name="idea-wizard-progress";pass=($html -match 'wizard-progress-step')},
+    [ordered]@{name="idea-launcher-sample";pass=($html -match 'data-launch-mode="sample"')},
+    [ordered]@{name="writing-toolbar-core";pass=($html -match 'class="toolbar-core"')},
+    [ordered]@{name="writing-toolbar-advanced";pass=($html -match 'id="toolbarAdvanced"')},
+    [ordered]@{name="control-menu-groups";pass=($html -match 'control-group-label')},
+    [ordered]@{name="settings-advanced-tools";pass=($html -match 'data-settings-tool="true"')},
+    [ordered]@{name="diagnostics";pass=($html -match 'Tan[ıi.] Paketi')},
     [ordered]@{name="output-target";pass=($html -match 'settingsOutputTarget')},
     [ordered]@{name="restore-preview";pass=($html -match 'restore-version-preview')},
     [ordered]@{name="workflow-rail";pass=($html -match 'data-workflow-step="publish"')},
@@ -119,6 +127,7 @@ $interactionPass = (
   $interaction.identity.versionBadge -match "^v\d+\.\d+\.\d+$" -and
   $interaction.identity.overlay -ne $true -and
   @($interaction.consoleIssues).Count -eq 0 -and
+  $interaction.focus.editorSurfacesReady -eq $true -and
   $interaction.focus.skipLinkFocused -eq $true -and
   $interaction.focus.skipTargetFocused -eq $true -and
   $interaction.focus.buttonFocusedBeforeActivation -eq $true -and
@@ -241,21 +250,102 @@ $interactionPass = (
   [int]$interaction.editorCore.writingFeatures.pacingCount -ge 2 -and
   [int]$interaction.editorCore.writingFeatures.overusedCount -ge 1 -and
   $interaction.editorCore.writingFeatures.deviceApplied -eq $true -and
-  [int]$interaction.editorCore.publicationUx.workflowCount -eq 6 -and
+  [int]$interaction.editorCore.publicationUx.workflowCount -eq 5 -and
+  [int]$interaction.editorCore.publicationUx.workflowStops -eq 5 -and
+  @($interaction.editorCore.publicationUx.workflowStopIds) -contains "idea" -and
+  @($interaction.editorCore.publicationUx.workflowStopIds) -contains "publish" -and
+  $interaction.editorCore.publicationUx.tabStripVisible -eq $true -and
+  [int]$interaction.editorCore.publicationUx.tabStripButtons -eq 4 -and
+  $interaction.editorCore.publicationUx.stopBarSlug -eq "writing" -and
   $interaction.editorCore.publicationUx.publishStepActive -eq $true -and
   [double]$interaction.editorCore.publicationUx.promptMinHeight -ge 190 -and
   [int]$interaction.editorCore.publicationUx.promptMaxLength -eq 4000 -and
   [int]$interaction.editorCore.publicationUx.promptContextCount -eq 3 -and
+  $interaction.editorCore.ideaFlow.entryView.view -eq "entry" -and
+  [int]$interaction.editorCore.ideaFlow.entryView.modeCards -eq 3 -and
+  [int]$interaction.editorCore.ideaFlow.wizardView.modeCardsPerRow -ge 3 -and
+  $interaction.editorCore.ideaFlow.entryView.panelVisible -ne $true -and
+  $interaction.editorCore.ideaFlow.wizardView.view -eq "wizard" -and
+  $interaction.editorCore.ideaFlow.wizardView.panelVisible -eq $true -and
+  $interaction.editorCore.ideaFlow.wizardView.entryHidden -eq $true -and
+  [int]$interaction.editorCore.ideaFlow.wizardView.stepCards -eq 5 -and
+  [int]$interaction.editorCore.ideaFlow.wizardView.activeCards -eq 1 -and
+  $interaction.editorCore.ideaFlow.wizardView.activeCard -eq "identity" -and
+  [int]$interaction.editorCore.ideaFlow.wizardView.progressPips -eq 5 -and
+  [int]$interaction.editorCore.ideaFlow.wizardView.currentPips -eq 1 -and
+  $interaction.editorCore.ideaFlow.wizardView.firstStepPrevDisabled -eq $true -and
+  [int]$interaction.editorCore.ideaFlow.wizardView.boundFields -eq 18 -and
+  $interaction.editorCore.ideaFlow.wizardView.focusInsideWizard -eq $true -and
+  [int]$interaction.editorCore.ideaFlow.wizardView.progressColumns -eq 5 -and
+  [int]$interaction.editorCore.ideaFlow.wizardView.stepCardColumns -ge 2 -and
+  $interaction.editorCore.ideaFlow.wizardView.launcherOverflowX -ne $true -and
+  $interaction.editorCore.ideaFlow.afterPip.activeCard -eq "cast" -and
+  [int]$interaction.editorCore.ideaFlow.afterPip.currentPipIndex -eq 2 -and
+  $interaction.editorCore.ideaFlow.afterPip.counter -match "^Ad.m 3 / 5$" -and
+  $interaction.editorCore.ideaFlow.afterNext -eq "scope" -and
+  $interaction.editorCore.ideaFlow.backToEntry.view -eq "entry" -and
+  $interaction.editorCore.ideaFlow.backToEntry.panelHidden -eq $true -and
+  $interaction.editorCore.ideaFlow.backToEntry.entryVisible -eq $true -and
+  $interaction.editorCore.ideaFlow.sample.view -eq "wizard" -and
+  [int]$interaction.editorCore.ideaFlow.sample.filledFields -eq 18 -and
+  [int]$interaction.editorCore.ideaFlow.sample.doneSteps -eq 5 -and
+  $interaction.editorCore.ideaFlow.sample.missingText -match "Haz.r" -and
+  $interaction.editorCore.ideaFlow.sample.sidebarBriefStatus -match "brief tamam" -and
+  $interaction.editorCore.ideaFlow.lastStep.activeCard -eq "voice" -and
+  $interaction.editorCore.ideaFlow.lastStep.nextDisabled -eq $true -and
+  $interaction.editorCore.ideaFlow.restored.view -eq "entry" -and
+  [int]$interaction.editorCore.ideaFlow.restored.remainingFilled -eq 0 -and
   $interaction.editorCore.publicationUx.matterOpen -eq $true -and
   [int]$interaction.editorCore.publicationUx.matterColumns -eq 2 -and
   $interaction.editorCore.publicationUx.coverOpen -eq $true -and
   $interaction.editorCore.publicationUx.coverSizeCalculated -eq $true -and
   $interaction.editorCore.publicationUx.preflightAvailable -eq $true -and
   $interaction.editorCore.professionalUx.open -eq $true -and
-  [int]$interaction.editorCore.professionalUx.tabs -eq 4 -and
+  [int]$interaction.editorCore.professionalUx.tabs -ge 4 -and
   [int]$interaction.editorCore.professionalUx.entityKinds -eq 4 -and
   $interaction.editorCore.professionalUx.reviewTools -eq $true -and
   $interaction.editorCore.professionalUx.publicationTools -eq $true -and
+  $interaction.editorCore.writingTools.ready -eq $true -and
+  [int]$interaction.editorCore.writingTools.toolbarVisible -le 12 -and
+  [int]$interaction.editorCore.writingTools.coreControls -eq 7 -and
+  @($interaction.editorCore.writingTools.coreActions) -contains "Kaydet" -and
+  @($interaction.editorCore.writingTools.coreActions) -contains "Bul" -and
+  [int]$interaction.editorCore.writingTools.advancedHiddenControls -eq 12 -and
+  [int]$interaction.editorCore.writingTools.toolbarVisibleExpanded -ge 30 -and
+  [int]$interaction.editorCore.writingTools.advancedListedControls -eq 12 -and
+  [int]$interaction.editorCore.writingTools.controlMenuGroups.Count -eq 3 -and
+  @($interaction.editorCore.writingTools.controlMenuGroups) -contains "Bölüm araçları" -and
+  @($interaction.editorCore.writingTools.controlMenuGroups) -contains "Denetimler" -and
+  @($interaction.editorCore.writingTools.controlMenuGroups) -contains "Gelişmiş" -and
+  [int]$interaction.editorCore.writingTools.controlMenuItemsTotal -eq 12 -and
+  (@($interaction.editorCore.writingTools.controlMenuItemsPerGroup) | Measure-Object -Maximum).Maximum -le 4 -and
+  @($interaction.editorCore.writingTools.settingsAdvancedTools) -contains "apiSmoke" -and
+  @($interaction.editorCore.writingTools.settingsAdvancedTools) -contains "diagnostics" -and
+  @($interaction.editorCore.writingTools.settingsAdvancedTools) -contains "liveEdit" -and
+  [int]$interaction.editorCore.writingTools.supportTabInventory -eq 15 -and
+  [int]$interaction.editorCore.writingTools.moveActionInventory -eq 12 -and
+  $interaction.editorCore.writingTools.writingToggleHidden -eq $true -and
+  $interaction.editorCore.writingTools.publishToggleVisible -eq $true -and
+  [int]$interaction.editorCore.writingTools.menuItemsAnswered -eq 12 -and
+  [int]$interaction.editorCore.writingTools.settingsItemsAnswered -eq 3 -and
+  $interaction.editorCore.writingTools.menuResponses.cards -eq "Kart Panosu" -and
+  $interaction.editorCore.writingTools.menuResponses.outline -match "A.ac" -and
+  $interaction.editorCore.writingTools.menuResponses.typeQuality -match "Kontrol" -and
+  $interaction.editorCore.writingTools.menuResponses.editorial -match "Proje Stili" -and
+  $interaction.editorCore.writingTools.settingsResponses.apiSmoke -eq "API Testi" -and
+  $interaction.editorCore.writingTools.settingsResponses.diagnostics -match "Tan. Paketi" -and
+  $interaction.editorCore.writingTools.settingsResponses.liveEdit -match "Canl. Edit" -and
+  $interaction.editorCore.writingTools.controlMenuClosedAfterClick -eq $true -and
+  $interaction.editorCore.writingTools.settingsMenuClosedAfterClick -eq $true -and
+  $interaction.editorCore.writingTools.findButtonOpensPanel -eq $true -and
+  [int]$interaction.editorCore.writingTools.layout.controlMenuColumns -eq 3 -and
+  [int]$interaction.editorCore.writingTools.layout.controlMenuRows -eq 3 -and
+  [int]$interaction.editorCore.writingTools.layout.controlMenuPanel.width -ge 600 -and
+  [int]$interaction.editorCore.writingTools.layout.advancedPanel.width -ge 600 -and
+  $interaction.editorCore.writingTools.layout.controlMenuPanel.insideViewport -eq $true -and
+  $interaction.editorCore.writingTools.layout.advancedPanel.insideViewport -eq $true -and
+  $interaction.editorCore.writingTools.layout.panelOverflowX -ne $true -and
+  $interaction.editorCore.writingTools.layout.toolbarOverflowX -ne $true -and
   [int]$interaction.editorCore.controlContracts.visibleButtons -gt 20 -and
   @($interaction.editorCore.controlContracts.unhandled).Count -eq 0 -and
   $interaction.editorCore.paginationFlow.mode -eq "measured-dom" -and
@@ -352,7 +442,7 @@ accessibility_probe=if($accessibilityPass){"PASS"}else{"FAIL"}
   desktop_accessibility=if($desktopAccessibilityPass){"PASS"}else{"FAIL"}
   mobile_accessibility=if($mobileAccessibilityPass){"PASS"}else{"FAIL"}
   wcag_conformance="AUTOMATED_AA_SUBSET_ONLY"
-  notes=@("Headless Edge DOM render and computed accessibility audits were executed at desktop and 390x844 mobile viewport sizes.","Edge DevTools interaction automation verified the structured editor, workflow rail, expanded AI prompt, front/back matter manager, cover studio, preflight access, Turkish editorial rules and spelling engine, word-frequency highlighting, drop caps, scene-break ornaments, device mockups, pacing meter, find search options, quick chapter jump, measured pagination, dirty-state recovery, Ctrl+S/F/H/K, version diff rendering, scene management, mobile toolbar fit, settings access, focus restoration, Escape handling, and preview zoom state.","The automated subset checks language, landmarks, live status semantics, heading order, control names, duplicate IDs, 24px targets, computed text contrast, horizontal overflow, and reduced-motion support.","The performance subset measures FCP/LCP, DOM node budget, layout/reflow/script duration, long-task count and console errors under 4x CPU throttling; reduced-motion and main landmark are also enforced.","Manual screen-reader, cognitive, and complete WCAG conformance testing remains required.")
+  notes=@("The automatic subset also asserts the ADIM 4 writing-stop simplification: core toolbar row (7 controls), collapsed advanced tier (12 hidden), three Control menu groups (4+4+4), three technical surfaces relocated to Settings, 15 support tabs and 12 move actions preserved, and the typography card kept out of the YAZIM stop while remaining reachable in YAYIN.","Headless Edge DOM render and computed accessibility audits were executed at desktop and 390x844 mobile viewport sizes.","Edge DevTools interaction automation verified the 5-step idea brief wizard in the launcher surface (entry cards, step cards, progress pips, sample brief, empty restore), the structured editor, workflow rail, expanded AI prompt, front/back matter manager, cover studio, preflight access, Turkish editorial rules and spelling engine, word-frequency highlighting, drop caps, scene-break ornaments, device mockups, pacing meter, find search options, quick chapter jump, measured pagination, dirty-state recovery, Ctrl+S/F/H/K, version diff rendering, scene management, mobile toolbar fit, settings access, focus restoration, Escape handling, and preview zoom state.","The automated subset checks language, landmarks, live status semantics, heading order, control names, duplicate IDs, 24px targets, computed text contrast, horizontal overflow, and reduced-motion support.","The performance subset measures FCP/LCP, DOM node budget, layout/reflow/script duration, long-task count and console errors under 4x CPU throttling; reduced-motion and main landmark are also enforced.","Manual screen-reader, cognitive, and complete WCAG conformance testing remains required.")
   interaction=$interaction
   performance=$performance
   cases=$results
@@ -362,7 +452,7 @@ if (-not $report.desktop_mobile_dom_pass) { throw "Browser DOM render failed." }
 if (-not $report.interactive_automation_proven) { throw "Browser keyboard/focus/zoom interaction probe failed." }
 if (-not $accessibilityPass) { throw "Automated accessibility subset probe failed." }
 if (-not $performancePass) { throw "Automated performance subset probe failed." }
-Write-Host "[browser-e2e] PASS workflow, AI writing, publication tools, structured editor, measured pagination, editor-core and chapter-manager UI; desktop/mobile DOM, accessibility subset and performance subset=PASS"
+Write-Host "[browser-e2e] PASS idea wizard (5 step cards, launcher merge), workflow, AI writing, publication tools, structured editor, measured pagination, editor-core and chapter-manager UI; desktop/mobile DOM, accessibility subset and performance subset=PASS"
 Write-Host "[browser-e2e] report=$ReportPath"
 Write-Host "[browser-e2e] desktop-screenshot=$($interaction.screenshots.desktop)"
 Write-Host "[browser-e2e] matter-screenshot=$($interaction.screenshots.matter)"

@@ -58,12 +58,13 @@
 
 @media (max-width: 860px) {
   .professional-dialog { width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
-  .professional-shell { min-height: 0; grid-template-columns: 1fr; }
-  .professional-rail { padding: 10px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .professional-shell { min-height: 0; grid-template-columns: minmax(0, 1fr); max-width: 100%; min-width: 0; overflow-x: hidden; }
+  .professional-rail { padding: 10px; border-right: 0; border-bottom: 1px solid var(--line); min-width: 0; max-width: 100%; }
   .professional-rail strong { margin: 0 4px 8px; }
-  .professional-tabs { display: flex; overflow-x: auto; }
+  .professional-tabs { display: flex; overflow-x: auto; max-width: 100%; }
   .professional-tabs button { width: auto; flex: 0 0 auto; }
+  .professional-main { min-width: 0; max-width: 100%; overflow-x: hidden; }
   .professional-grid, .professional-split { grid-template-columns: 1fr; }
-  .professional-body { padding: 14px; }
+  .professional-body { padding: 14px; min-width: 0; max-width: 100%; box-sizing: border-box; }
   .professional-metrics { grid-template-columns: 1fr; }
 }

@@ -184,6 +184,105 @@ const desktopAccessibility = await evaluate(accessibilityExpression);
 const desktopScreenshot = await call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
 fs.writeFileSync(screenshotPath, Buffer.from(desktopScreenshot.data, "base64"));
 
+// Durak 1 FİKİR: launcher giriş kartlari ve 5 adimli brief sihirbazi tek yuzey olarak calismali.
+const ideaFlow = await evaluate(`(async () => {
+  const launcher = document.getElementById('modeLauncher');
+  const view = () => launcher?.dataset.launcherView || '';
+  const panel = document.querySelector('.wizard-panel');
+  const visible = element => {
+    if (!element) return false;
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+  };
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const entryView = { view: view(), panelVisible: visible(panel), modeCards: document.querySelectorAll('[data-launch-mode]').length };
+  document.querySelector('[data-launch-mode="new"]')?.click();
+  await pause(140);
+  const wizardView = {
+    view: view(),
+    panelVisible: visible(panel),
+    entryHidden: !visible(document.getElementById('launcherEntry')),
+    stepCards: document.querySelectorAll('.wizard-step-card').length,
+    activeCards: document.querySelectorAll('.wizard-step-card.is-active').length,
+    activeCard: document.querySelector('.wizard-step-card.is-active')?.dataset.wizardCard || '',
+    progressPips: document.querySelectorAll('.wizard-progress-step').length,
+    currentPips: document.querySelectorAll('.wizard-progress-step.is-current').length,
+    firstStepPrevDisabled: document.querySelector('.wizard-step-card.is-active [data-wizard-nav="prev"]')?.disabled === true,
+    boundFields: document.querySelectorAll('.wizard-step-card label input, .wizard-step-card label select, .wizard-step-card label textarea').length,
+    focusInsideWizard: Boolean(document.activeElement?.closest('.wizard-panel')),
+    progressColumns: getComputedStyle(document.getElementById('wizardProgress')).gridTemplateColumns.split(' ').filter(Boolean).length,
+    stepCardColumns: getComputedStyle(document.querySelector('.wizard-step-card.is-active')).gridTemplateColumns.split(' ').filter(Boolean).length,
+    modeCardsPerRow: getComputedStyle(document.querySelector('.mode-choice-grid.project-entry')).gridTemplateColumns.split(' ').filter(Boolean).length,
+    launcherOverflowX: (() => { const l = document.getElementById('modeLauncher'); return Boolean(l) && l.scrollWidth > l.clientWidth + 1; })()
+  };
+  document.querySelectorAll('.wizard-progress-step')[2]?.click();
+  await pause(90);
+  const afterPip = {
+    activeCard: document.querySelector('.wizard-step-card.is-active')?.dataset.wizardCard || '',
+    currentPipIndex: [...document.querySelectorAll('.wizard-progress-step')].findIndex(pip => pip.classList.contains('is-current')),
+    counter: document.querySelector('.wizard-step-card.is-active .wizard-step-count')?.textContent || ''
+  };
+  document.querySelector('.wizard-step-card.is-active [data-wizard-nav="next"]')?.click();
+  await pause(90);
+  const afterNext = document.querySelector('.wizard-step-card.is-active')?.dataset.wizardCard || '';
+  document.getElementById('wizardBackToEntry')?.click();
+  await pause(90);
+  const backToEntry = { view: view(), panelHidden: !visible(panel), entryVisible: visible(document.getElementById('launcherEntry')) };
+  document.querySelector('[data-launch-mode="sample"]')?.click();
+  await pause(160);
+  const briefFieldIds = ['wizardType','wizardTitle','wizardAuthor','wizardOutput','wizardPremise','wizardPurpose','wizardSetting','wizardCharacters','wizardNarrator','wizardEnding','wizardReader','wizardPages','wizardAudienceLevel','wizardStructure','wizardStyle','wizardBoundaries','wizardSourcePolicy','wizardSuccessCriteria'];
+  const sample = {
+    view: view(),
+    filledFields: briefFieldIds.filter(id => String(document.getElementById(id)?.value || '').trim()).length,
+    doneSteps: document.querySelectorAll('.wizard-progress-step.is-done').length,
+    completeness: document.getElementById('wizardCompleteness')?.textContent || '',
+    missingText: document.getElementById('wizardMissing')?.textContent || '',
+    sidebarBriefStatus: document.getElementById('briefStatusTitle')?.textContent || ''
+  };
+  [...document.querySelectorAll('.wizard-progress-step')].pop()?.click();
+  await pause(90);
+  const lastStep = {
+    activeCard: document.querySelector('.wizard-step-card.is-active')?.dataset.wizardCard || '',
+    nextDisabled: document.querySelector('.wizard-step-card.is-active [data-wizard-nav="next"]')?.disabled === true
+  };
+  return { entryView, wizardView, afterPip, afterNext, backToEntry, sample, lastStep };
+})()`);
+const auditIdeaScreenshotPath = screenshotPath.replace(/(\.[^.]+)$/, "-idea$1");
+fs.writeFileSync(auditIdeaScreenshotPath, Buffer.from((await call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false })).data, "base64"));
+
+// Sonraki denetimler temiz brief gormeli: ornek degerleri temizle ve giris kartlarina don.
+const ideaFlowRestored = await evaluate(`(async () => {
+  const briefFieldIds = ['wizardType','wizardTitle','wizardAuthor','wizardOutput','wizardPremise','wizardPurpose','wizardSetting','wizardCharacters','wizardNarrator','wizardEnding','wizardReader','wizardPages','wizardAudienceLevel','wizardStructure','wizardStyle','wizardBoundaries','wizardSourcePolicy','wizardSuccessCriteria'];
+  briefFieldIds.forEach(id => { const field = document.getElementById(id); if (field) field.value = ''; });
+  if (typeof applyGenreMode === 'function') applyGenreMode('');
+  if (typeof validateWizard === 'function') validateWizard();
+  if (typeof updateWizardVisualState === 'function') updateWizardVisualState();
+  document.getElementById('wizardBackToEntry')?.click();
+  await new Promise(resolve => setTimeout(resolve, 80));
+  return {
+    view: document.getElementById('modeLauncher')?.dataset.launcherView || '',
+    remainingFilled: briefFieldIds.filter(id => String(document.getElementById(id)?.value || '').trim()).length
+  };
+})()`);
+ideaFlow.restored = ideaFlowRestored;
+
+// Leave the launcher before the keyboard/focus and zoom checks: they target editor surfaces
+// (.toolbar buttons, focus-mode toggle, zoom select) that only render once the editor is open.
+const editorSurfacesReady = await evaluate(`(async () => {
+  const surfacesReady = () => Boolean(document.querySelector('.toolbar')?.getBoundingClientRect().height);
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    if (surfacesReady()) return true;
+    try {
+      if (typeof closeLauncher === 'function') closeLauncher();
+      document.querySelector('[data-workflow-step="write"]')?.click();
+    } catch {}
+    if (surfacesReady()) return true;
+    await new Promise(resolve => setTimeout(resolve, 400));
+  }
+  return surfacesReady();
+})()`);
+
 await evaluate(`(() => {
   document.activeElement?.blur();
   document.body.setAttribute('tabindex', '-1');
@@ -727,6 +826,11 @@ const publicationUx = await evaluate(`(() => {
   return {
     workflowCount: workflow.length,
     workflowLabels: workflow.map(item => item.textContent.trim()),
+    workflowStops: document.querySelectorAll('[data-workflow-stop]').length,
+    workflowStopIds: [...document.querySelectorAll('[data-workflow-step]')].map(item => item.dataset.workflowStop || ''),
+    tabStripVisible: (() => { const bar = document.querySelector('.stop-bar'); return Boolean(bar) && getComputedStyle(bar).display !== 'none' && bar.getBoundingClientRect().height > 0; })(),
+    tabStripButtons: document.querySelectorAll('.stop-bar .tabs button').length,
+    stopBarSlug: document.querySelector('.stop-bar')?.dataset.stop || '',
     publishStepActive,
     promptMinHeight,
     promptMaxLength: prompt?.maxLength || 4000,
@@ -1092,6 +1196,128 @@ await delay(180);
 const mobileProfessionalScreenshot = await call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
 fs.writeFileSync(mobileProfessionalScreenshotPath, Buffer.from(mobileProfessionalScreenshot.data, "base64"));
 await evaluate(`document.querySelector('.professional-dialog')?.close()`);
+
+// ADIM 4: YAZIM araç sadelesmesi — cekirdek satir + gelismis kat + Kontrol gruplari.
+// Not: burada kullanici-gozune gore "gorunur" sayan bir predicate kullanilir; kapali
+// <details> icerigi bu sayimda gorunmez kabul edilir (kullanicinin gercekte gordugu sey).
+await call("Emulation.clearDeviceMetricsOverride");
+await delay(400);
+const writingTools = await evaluate(`(() => {
+  const userVisible = element => {
+    if (!element) return false;
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    if (element.closest('[hidden]')) return false;
+    for (let node = element.parentElement; node; node = node.parentElement) {
+      if (node.tagName === 'DETAILS' && !node.open) {
+        const summary = node.querySelector(':scope > summary');
+        if (summary && (summary === element || summary.contains(element))) continue;
+        return false;
+      }
+    }
+    return true;
+  };
+  const selector = 'button, select, input, summary, textarea, a[href]';
+  const count = root => root ? [...root.querySelectorAll(selector)].filter(userVisible).length : 0;
+  if (typeof closeLauncher === 'function') closeLauncher();
+  if (typeof selectWorkflowStep === 'function') selectWorkflowStep('write', false);
+  const toolbar = document.querySelector('.toolbar');
+  const coreRow = document.querySelector('.toolbar-core');
+  const advanced = document.getElementById('toolbarAdvanced');
+  const controlMenu = document.getElementById('bookControlMenu');
+  const toggleType = document.getElementById('toggleType');
+  const collapsed = {
+    toolbar: count(toolbar),
+    core: count(coreRow),
+    stopBar: count(document.querySelector('.stop-bar')),
+    advancedHidden: advanced ? [...advanced.querySelectorAll(selector)].filter(node => !userVisible(node)).length : 0
+  };
+  const coreActions = coreRow ? [...coreRow.querySelectorAll('button')].map(node => node.textContent.trim() || node.title) : [];
+  if (advanced) advanced.open = true;
+  if (controlMenu) controlMenu.open = true;
+  const expanded = {
+    toolbar: count(toolbar),
+    advancedListed: count(advanced?.querySelector('.toolbar-advanced-list')),
+    controlMenuListed: count(controlMenu)
+  };
+  const panelBox = element => {
+    if (!element) return null;
+    const rect = element.getBoundingClientRect();
+    return { width: Math.round(rect.width), height: Math.round(rect.height), left: Math.round(rect.left), right: Math.round(rect.right), insideViewport: rect.left >= -1 && rect.right <= window.innerWidth + 1 && rect.top >= -1 && rect.bottom <= window.innerHeight + 1 };
+  };
+  const advancedPanel = advanced?.querySelector('.toolbar-advanced-list');
+  const controlPanel = controlMenu?.querySelector('.control-menu-groups');
+  const layout = {
+    advancedPanel: panelBox(advancedPanel),
+    controlMenuPanel: panelBox(controlPanel),
+    controlMenuColumns: controlPanel ? controlPanel.querySelectorAll('.control-group').length : 0,
+    controlMenuRows: controlPanel ? getComputedStyle(controlPanel).gridTemplateColumns.split(' ').length : 0,
+    panelOverflowX: Boolean((advancedPanel && advancedPanel.scrollWidth > advancedPanel.clientWidth + 1) || (controlPanel && controlPanel.scrollWidth > controlPanel.clientWidth + 1)),
+    toolbarOverflowX: toolbar ? toolbar.scrollWidth > toolbar.clientWidth + 1 : false
+  };
+  if (advanced) advanced.open = false;
+  if (controlMenu) controlMenu.open = false;
+  const groups = [...document.querySelectorAll('.control-group-label')].map(node => node.textContent.trim());
+  const itemsPerGroup = [...document.querySelectorAll('#bookControlMenu .control-group')].map(group => group.querySelectorAll('[data-support-tab]').length);
+  const settingsTools = [...document.querySelectorAll('[data-settings-tool]')].map(node => node.dataset.supportTab);
+  const supportTabs = new Set([...document.querySelectorAll('[data-support-tab]')].map(node => node.dataset.supportTab));
+  const moveActions = new Set([...document.querySelectorAll('[data-format], [data-edit], [data-align]')].map(node => node.dataset.format || node.dataset.edit || node.dataset.align));
+  const titleOf = () => document.getElementById('notesTitle')?.textContent?.trim() || '';
+  const menuResponses = {};
+  for (const button of document.querySelectorAll('#bookControlMenu [data-support-tab]')) {
+    button.click();
+    menuResponses[button.dataset.supportTab] = titleOf();
+  }
+  const controlMenuClosedAfterClick = controlMenu ? controlMenu.open === false : false;
+  const settingsResponses = {};
+  for (const button of document.querySelectorAll('[data-settings-tool]')) {
+    button.click();
+    settingsResponses[button.dataset.supportTab] = titleOf();
+  }
+  const settingsMenuClosedAfterClick = document.getElementById('settingsMenu')?.open === false;
+  const findButtonOpensPanel = (() => {
+    const findPanel = document.getElementById('findPanel');
+    if (!findPanel || !document.getElementById('toolbarFindBtn')) return null;
+    document.getElementById('toolbarFindBtn').click();
+    const opened = findPanel.hidden === false;
+    document.getElementById('closeFindBtn')?.click();
+    return opened && findPanel.hidden === true;
+  })();
+  if (typeof renderSupportTab === 'function') renderSupportTab('manuscript');
+  const writingToggleHidden = toggleType ? !userVisible(toggleType) : false;
+  selectWorkflowStep('publish', false);
+  const publishToggleVisible = toggleType ? userVisible(toggleType) : false;
+  selectWorkflowStep('write', false);
+  return {
+    ready: Boolean(toolbar && coreRow && advanced && controlMenu),
+    toolbarVisible: collapsed.toolbar,
+    coreControls: collapsed.core,
+    coreActions,
+    stopBarControls: collapsed.stopBar,
+    advancedHiddenControls: collapsed.advancedHidden,
+    toolbarVisibleExpanded: expanded.toolbar,
+    advancedListedControls: expanded.advancedListed,
+    controlMenuListedControls: expanded.controlMenuListed,
+    controlMenuGroups: groups,
+    controlMenuItemsPerGroup: itemsPerGroup,
+    menuResponses,
+    settingsResponses,
+    menuItemsAnswered: Object.values(menuResponses).filter(value => value).length,
+    settingsItemsAnswered: Object.values(settingsResponses).filter(value => value).length,
+    controlMenuClosedAfterClick,
+    settingsMenuClosedAfterClick,
+    findButtonOpensPanel,
+    layout,
+    controlMenuItemsTotal: [...document.querySelectorAll('#bookControlMenu [data-support-tab]')].length,
+    settingsAdvancedTools: settingsTools,
+    supportTabInventory: supportTabs.size,
+    moveActionInventory: moveActions.size,
+    writingToggleHidden,
+    publishToggleVisible
+  };
+})()`);
 socket.close();
 
 const result = {
@@ -1103,6 +1329,7 @@ const result = {
   mobileIdentity,
   consoleIssues,
   focus: {
+    editorSurfacesReady,
     skipLinkFocused,
     skipTargetFocused,
     buttonFocusedBeforeActivation: focusButtonBefore === "focusModeBtn",
@@ -1136,7 +1363,9 @@ const result = {
     typographyVariety,
     writingFeatures,
     publicationUx,
+    ideaFlow,
     professionalUx,
+    writingTools,
     controlContracts,
     paginationFlow,
     chapterSwitchGuard,
@@ -1149,6 +1378,7 @@ const result = {
   },
   screenshots: {
     desktop: screenshotPath,
+    idea: auditIdeaScreenshotPath,
     matter: auditMatterScreenshotPath,
     cover: auditCoverScreenshotPath,
     professional: auditProfessionalScreenshotPath,

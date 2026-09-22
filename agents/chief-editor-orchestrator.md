@@ -32,3 +32,9 @@ You are the supervising editor for the phase. You do not write creative manuscri
 - `BLOCKED`
 
 `PASS` is valid only when all required phase agents, artifacts, handoffs, and approvals are present.
+
+## Jev System One Decision Protocol
+- The orchestration decisions (`PASS`, `REWRITE`, `BLOCKED`) and phase transitions are continuously audited by the TypeSafe Jev Decision Judge (`scripts/typesafe_jev_client.js`).
+- If Jev assigns high confidence (>0.80) to `REWRITE` or identifies severe continuity/quality gaps, Chief Editor must enforce retry before phase advancement.
+- When Jev operates in fail-safe/offline fallback mode (e.g. quota limit), local deterministic rule evaluation takes over without blocking execution.
+
