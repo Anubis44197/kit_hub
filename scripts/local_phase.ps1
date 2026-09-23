@@ -133,6 +133,9 @@ function Get-RequestedChapterCount {
     $count = [int]$m.Groups[1].Value
     if ($count -ge 1 -and $count -le 120) { return $count }
   }
+  $wordCounts = @{ bir = 1; iki = 2; 'üç' = 3; uc = 3; 'dört' = 4; dort = 4; 'beş' = 5; bes = 5; 'altı' = 6; alti = 6; yedi = 7; sekiz = 8; dokuz = 9; on = 10 }
+  $wordMatch = [regex]::Match($raw, '(?i)\b(bir|iki|üç|uc|dört|dort|beş|bes|altı|alti|yedi|sekiz|dokuz|on)\s*(bölüm|bolum|chapter|chapters)\b')
+  if ($wordMatch.Success) { return $wordCounts[$wordMatch.Groups[1].Value.ToLowerInvariant()] }
   return 12
 }
 
@@ -170,9 +173,9 @@ function Get-RequestedPageCount {
 function Get-LongformScalePlan {
   $requestedPages = Get-RequestedPageCount
   $requestedChapters = Get-RequestedChapterCount
-  $wordsPerPage = 420
+  $wordsPerPage = 280 # Keep the planning estimate aligned with Studio project-summary.
   $pagesExplicit = $requestedPages -gt 0
-  $chaptersExplicit = [regex]::IsMatch((Get-BookSeed), "(?i)(\d+)\s*(bölüm|bolum|chapter|chapters)")
+  $chaptersExplicit = [regex]::IsMatch((Get-BookSeed), "(?i)(\d+|bir|iki|üç|uc|dört|dort|beş|bes|altı|alti|yedi|sekiz|dokuz|on)\s*(bölüm|bolum|chapter|chapters)")
 
   if ($pagesExplicit) {
     $targetPages = $requestedPages
@@ -182,7 +185,7 @@ function Get-LongformScalePlan {
     elseif ($targetPages -le 220) { $wordsPerChapter = 2500 }
     elseif ($targetPages -le 360) { $wordsPerChapter = 2700 }
     else { $wordsPerChapter = 3000 }
-    $targetChapters = [int]([Math]::Max(1, [Math]::Ceiling($targetWords / $wordsPerChapter)))
+    $targetChapters = if ($chaptersExplicit) { $requestedChapters } else { [int]([Math]::Max(1, [Math]::Ceiling($targetWords / $wordsPerChapter))) }
     $wordsPerChapter = [int]([Math]::Max(300, [Math]::Ceiling($targetWords / $targetChapters)))
   }
   else {
@@ -633,7 +636,7 @@ Bu aşama nihai metin yazmaz. Kullanıcı runtime/approvals/story-choice.json do
     })
   }
 
-  Write-AgentCompliance -PhaseName "propose" -RequiredAgents @("proposal-generator") -RequiredReferences @("skills/propose/SKILL.md") -LoadedStateFiles @("runtime/book-request.md", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json") -OutputArtifacts @("_workspace/01_proposals.md", "$slug`_proposal.md", "runtime/approvals/story-choice.json")
+  Write-AgentCompliance -PhaseName "propose" -RequiredAgents @("proposal-generator") -RequiredReferences @("skills/propose/SKILL.md") -LoadedStateFiles @("runtime/book-request.md", "runtime/book-contract.json", "runtime/book-brief.json", "runtime/book-dna.json", "runtime/layout-profile.json", "runtime/approvals/book-brief-approval.json") -OutputArtifacts @("_workspace/01_proposals.md", "$slug`_proposal.md", "runtime/approvals/story-choice.json")
 }
 
 function Get-BookRequestField {
@@ -1058,7 +1061,7 @@ plan_id: $planId
 - Yazı tipi: Times New Roman
 - Punto: 11
 - Satır aralığı: 1.15
-- Tahmini kelime/sayfa: 420
+- Tahmini kelime/sayfa: $wordsPerPage
 - Hedef sayfa: $targetPages
 - Hedef kelime: $targetWords
 - Ölçek profili: $scaleTier

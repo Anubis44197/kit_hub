@@ -2418,6 +2418,10 @@ function Validate-EpisodeTextQuality {
     }
 
     $dialogueLineCount = [regex]::Matches($rawText, "(?m)^\s*(?:-|—)\s+.*$").Count
+    if ($dialogueLineCount -eq 0) {
+      # Support approved manuscripts that use Turkish curly-quote dialogue.
+      $dialogueLineCount = [regex]::Matches($rawText, '(?m)^\s*.*[\u201C\u201D].*$').Count
+    }
     $nonEmptyLineCount = [regex]::Matches($rawText, "(?m)^\s*\S+.*$").Count
     if ($nonEmptyLineCount -gt 0) {
       $dialogueRatio = $dialogueLineCount / [double]$nonEmptyLineCount
